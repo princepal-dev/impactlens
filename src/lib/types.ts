@@ -42,6 +42,8 @@ export interface MediaAsset extends CloudinaryRef, AIMetadata {
   status: ProcessingStatus;
   analysisEngine: string;
   analyzedAt?: string;
+  /** Set when a person has corrected the metadata after analysis. */
+  editedAt?: string;
 }
 
 export interface Project {

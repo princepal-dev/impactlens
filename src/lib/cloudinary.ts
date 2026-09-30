@@ -1,6 +1,6 @@
 import "server-only";
 import { v2 as cloudinary, type UploadApiOptions, type UploadApiResponse } from "cloudinary";
-import { config, requireCloudinary } from "./config";
+import { cloudinaryUploadMode, config, requireCloudinary } from "./config";
 import type { CloudinaryRef } from "./types";
 
 let configured = false;
@@ -90,6 +90,14 @@ export async function uploadMedia(opts: {
 
   const blob = new Blob([new Uint8Array(opts.buffer)], { type: opts.mimeType });
   return toRef(await unsignedUpload(blob, opts.filename, folder), opts.filename);
+}
+
+/** Remove an asset from Cloudinary when it belongs to this account (imports from other clouds are left untouched). */
+export async function destroyMedia(ref: Pick<CloudinaryRef, "cloudinaryPublicId" | "secureUrl" | "resourceType">) {
+  if (cloudinaryUploadMode() !== "signed") return false;
+  if (!ref.secureUrl.includes(`/${config.cloudinary.cloudName}/`)) return false;
+  const res = await sdk().uploader.destroy(ref.cloudinaryPublicId, { resource_type: ref.resourceType, invalidate: true });
+  return res?.result === "ok";
 }
 
 const CLD_URL = /^https:\/\/res\.cloudinary\.com\/([^/]+)\/(image|video)\/upload\/(?:[^/]*,[^/]*\/|[a-z]_[^/]+\/)*(?:v\d+\/)?(.+?)(?:\.([a-z0-9]+))?$/i;

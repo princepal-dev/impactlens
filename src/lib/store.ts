@@ -68,6 +68,39 @@ export function createProject(input: Pick<Project, "name" | "category" | "locati
   return project;
 }
 
+export function updateProject(id: string, input: Partial<Pick<Project, "name" | "category" | "location" | "region" | "description" | "status">>) {
+  const current = getProject(id);
+  if (!current) return null;
+  const next = { ...current, ...input };
+  db()
+    .prepare("UPDATE projects SET name = ?, category = ?, location = ?, region = ?, description = ?, status = ? WHERE id = ?")
+    .run(next.name, next.category, next.location, next.region, next.description, next.status, current.id);
+  if (next.name !== current.name || next.category !== current.category) {
+    const rows = db().prepare("SELECT data FROM media_assets WHERE project_id = ?").all(current.id) as { data: string }[];
+    const update = db().prepare("UPDATE media_assets SET data = ? WHERE id = ?");
+    for (const r of rows) {
+      const a = parseAsset(r);
+      update.run(JSON.stringify({ ...a, project: next.name }), a.id);
+    }
+  }
+  return next;
+}
+
+/** Deletes a project. Its evidence is kept and becomes unassigned. */
+export function deleteProject(id: string) {
+  const p = getProject(id);
+  if (!p) return false;
+  const rows = db().prepare("SELECT data FROM media_assets WHERE project_id = ?").all(p.id) as { data: string }[];
+  const update = db().prepare("UPDATE media_assets SET project_id = NULL, data = ? WHERE id = ?");
+  for (const r of rows) {
+    const a = parseAsset(r);
+    update.run(JSON.stringify({ ...a, projectId: null, project: "Unassigned" }), a.id);
+  }
+  db().prepare("UPDATE reports SET project_id = NULL WHERE project_id = ?").run(p.id);
+  db().prepare("DELETE FROM projects WHERE id = ?").run(p.id);
+  return true;
+}
+
 // ---------- Media assets ----------
 const parseAsset = (r: { data: string }) => JSON.parse(r.data) as MediaAsset;
 
@@ -99,6 +132,10 @@ export async function saveAsset(asset: MediaAsset) {
       JSON.stringify(asset),
     );
   return asset;
+}
+
+export async function deleteAsset(id: string) {
+  return db().prepare("DELETE FROM media_assets WHERE id = ?").run(id).changes > 0;
 }
 
 export async function projectAssets(projectId: string) {
@@ -144,6 +181,10 @@ export async function listReports(): Promise<ReportContent[]> {
 export async function getReport(id: string) {
   const row = db().prepare("SELECT data FROM reports WHERE id = ?").get(id) as { data: string } | undefined;
   return row ? (JSON.parse(row.data) as ReportContent) : null;
+}
+
+export async function deleteReport(id: string) {
+  return db().prepare("DELETE FROM reports WHERE id = ?").run(id).changes > 0;
 }
 
 // ---------- Aggregates ----------

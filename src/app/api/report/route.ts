@@ -1,6 +1,6 @@
 import { errorResponse } from "@/lib/api";
 import { buildReport } from "@/lib/report";
-import { getReport, listReports } from "@/lib/store";
+import { deleteReport, getReport, listReports } from "@/lib/store";
 
 /** Receives a project ID + period and returns structured report content. */
 export async function POST(req: Request) {
@@ -21,4 +21,10 @@ export async function GET(req: Request) {
     return r ? Response.json(r) : Response.json({ error: "Not found" }, { status: 404 });
   }
   return Response.json(await listReports());
+}
+
+export async function DELETE(req: Request) {
+  const id = new URL(req.url).searchParams.get("id");
+  if (!id) return Response.json({ error: "Missing report id" }, { status: 400 });
+  return (await deleteReport(id)) ? Response.json({ ok: true }) : Response.json({ error: "Not found" }, { status: 404 });
 }
