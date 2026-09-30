@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { StageBadge } from "@/components/ImpactBadge";
 import { thumbUrl } from "@/lib/media-url";
-import { SAMPLES } from "@/lib/samples";
+import { SAMPLES, sampleTitle } from "@/lib/samples";
 import type { MediaAsset } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -39,15 +39,6 @@ function interleave<T>(items: T[], group: (item: T) => string, limit: number) {
   return out;
 }
 
-const humanize = (file: string) =>
-  file
-    .replace(/\.\w+$/, "")
-    .split("-")
-    .slice(1)
-    .filter((w) => !/^\d+$/.test(w))
-    .join(" ")
-    .replace(/^\w/, (c) => c.toUpperCase());
-
 const looksLikeFilename = (title: string) => !title || /\.(jpe?g|png|webp|heic|gif)$/i.test(title);
 
 function reelItems(assets: MediaAsset[]): ReelItem[] {
@@ -58,7 +49,7 @@ function reelItems(assets: MediaAsset[]): ReelItem[] {
     return interleave(loaded, (a) => a.projectId ?? "", MAX_ITEMS).map((a) => ({
       key: a.id,
       href: `/media/${a.id}`,
-      title: looksLikeFilename(a.title) ? humanize(a.id) : a.title,
+      title: looksLikeFilename(a.title) ? sampleTitle(a.id) : a.title,
       location: a.location,
       stage: a.stage,
       src: thumbUrl(a, 480, 320),
@@ -70,7 +61,7 @@ function reelItems(assets: MediaAsset[]): ReelItem[] {
   return interleave(bundled, (s) => s.projectId, MAX_ITEMS).map((s) => ({
     key: s.file,
     href: "/samples",
-    title: humanize(s.file),
+    title: sampleTitle(s.file),
     location: s.location,
     stage: s.stage,
     src: `/samples/${s.file}.jpg`,

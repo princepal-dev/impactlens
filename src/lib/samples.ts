@@ -176,3 +176,16 @@ export const DEFAULT_PAIRS: Record<string, [string, string]> = {
   "p-goa-coastal-cleanup": ["cg-litter-baseline", "cg-clean-beach"],
   "p-uttarakhand-forest": ["uk-stump-clearing", "uk-regrowth"],
 };
+
+/** Engine label for samples indexed from their field-log entry instead of AI analysis. */
+export const FIELD_LOG_ENGINE = "Field log";
+
+/** Readable title from a sample file name, e.g. "rj-tank-construction-1" → "Tank construction". */
+export const sampleTitle = (file: string) =>
+  file
+    .replace(/\.\w+$/, "")
+    .split("-")
+    .slice(1)
+    .filter((w) => !/^\d+$/.test(w))
+    .join(" ")
+    .replace(/^\w/, (c) => c.toUpperCase());

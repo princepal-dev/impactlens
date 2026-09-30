@@ -1,6 +1,6 @@
 import "server-only";
 import { db } from "./db";
-import { DEFAULT_PAIRS } from "./samples";
+import { DEFAULT_PAIRS, FIELD_LOG_ENGINE } from "./samples";
 import type { ActivityItem, MediaAsset, Project, ReportContent, WorkspaceSummary } from "./types";
 
 /** Data layer backed by SQLite. Every record here comes from a real upload, analysis or report. */
@@ -221,7 +221,7 @@ export async function orgStats() {
   const assets = await listAssets();
   const { n: reports } = db().prepare("SELECT COUNT(*) AS n FROM reports").get() as { n: number };
   const weekAgo = new Date(Date.now() - 7 * 864e5).toISOString();
-  const aiIndexed = assets.filter((a) => a.status === "indexed" && a.analysisEngine !== "Manual tagging").length;
+  const aiIndexed = assets.filter((a) => a.status === "indexed" && a.analysisEngine !== "Manual tagging" && a.analysisEngine !== FIELD_LOG_ENGINE).length;
   const sites = new Set(assets.filter((a) => a.location && a.location !== "Unknown").map((a) => a.location.toLowerCase()));
   return {
     totalAssets: assets.length,

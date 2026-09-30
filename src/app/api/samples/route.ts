@@ -3,12 +3,12 @@ import path from "path";
 import { analyzeMedia } from "@/lib/analyze";
 import { errorResponse, readBody } from "@/lib/api";
 import { uploadMedia } from "@/lib/cloudinary";
-import { config, requireAI, requireCloudinary } from "@/lib/config";
+import { config, requireCloudinary } from "@/lib/config";
 import { analysisFrameUrl } from "@/lib/media-url";
 import { rateLimit, withLock } from "@/lib/rate-limit";
-import { SAMPLE_PROJECTS, SAMPLES } from "@/lib/samples";
+import { FIELD_LOG_ENGINE, SAMPLE_PROJECTS, SAMPLES, sampleTitle } from "@/lib/samples";
 import { addActivity, ensureProject, getAsset, saveAsset } from "@/lib/store";
-import type { MediaAsset } from "@/lib/types";
+import type { AIMetadata, MediaAsset, Project } from "@/lib/types";
 
 export const maxDuration = 180;
 
@@ -34,13 +34,39 @@ export async function POST(req: Request) {
 
   try {
     requireCloudinary();
-    requireAI();
   } catch (e) {
     return errorResponse("samples", e, "Not configured");
   }
 
   const result = await withLock(`asset:${sample.file}`, () => importSample(sample));
   return result ?? Response.json({ error: "This sample is already being imported." }, { status: 409 });
+}
+
+const IMPACT_AREAS: Record<string, string[]> = {
+  "Water & Sanitation": ["Water Access"],
+  Environment: ["Environmental Protection"],
+  "Renewable Energy": ["Clean Energy"],
+};
+
+const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+/** Metadata recorded in the sample's field log, used when no AI provider can analyze the photo. */
+function fieldLogMetadata(sample: (typeof SAMPLES)[number], project: Project | null): Partial<AIMetadata> {
+  const title = sampleTitle(sample.file);
+  const stage = sample.stage ?? "implementation";
+  const category = project?.category ?? "Other";
+  const words = sample.file.split("-").slice(1).filter((w) => w.length > 2 && !/^\d+$/.test(w));
+  return {
+    title,
+    description: `${project?.name ?? "Field"} photo from ${sample.location}, recorded at the ${stage} stage.`,
+    activity: title,
+    category,
+    tags: [...new Set([...words, stage, slug(category), slug(sample.location.split(",")[0])])].slice(0, 8),
+    impactAreas: IMPACT_AREAS[category] ?? [],
+    stage,
+    confidence: 1,
+    beforeAfterCandidate: stage !== "implementation",
+  };
 }
 
 async function sampleBuffer(sample: (typeof SAMPLES)[number]) {
@@ -111,8 +137,15 @@ async function importSample(sample: (typeof SAMPLES)[number]) {
       });
       return Response.json({ asset });
     } catch (e) {
-      await saveAsset({ ...pending, status: "analysis_failed" });
-      throw e;
+      console.warn(`[samples] ${sample.file}: AI analysis unavailable, indexing from field log (${e instanceof Error ? e.message : e})`);
+      const asset = await saveAsset({
+        ...pending,
+        ...fieldLogMetadata(sample, project),
+        status: "indexed",
+        analysisEngine: FIELD_LOG_ENGINE,
+        analyzedAt: new Date().toISOString(),
+      });
+      return Response.json({ asset });
     }
   } catch (e) {
     return errorResponse("samples", e, "Sample import failed", 502);
@@ -123,7 +156,7 @@ async function importSample(sample: (typeof SAMPLES)[number]) {
 export async function PATCH(req: Request) {
   const { imported } = await readBody<{ imported: number }>(req);
   if (typeof imported === "number" && imported > 0 && imported <= SAMPLES.length) {
-    await addActivity({ type: "analysis", message: `Imported and AI-analyzed ${imported} sample photos`, href: "/media" });
+    await addActivity({ type: "analysis", message: `Imported ${imported} sample photos`, href: "/media" });
   }
   return Response.json({ ok: true });
 }
