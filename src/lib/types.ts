@@ -30,9 +30,10 @@ export interface CloudinaryRef {
   height: number;
   bytes?: number;
   createdAt: string;
-  /** "cloudinary" when the asset really lives in Cloudinary, "local" in demo mode. */
-  storage: "cloudinary" | "local";
+  storage: "cloudinary";
   originalFilename?: string;
+  /** Capture date read from EXIF (YYYY-MM-DD) when the file carries one. */
+  exifDate?: string;
 }
 
 export interface MediaAsset extends CloudinaryRef, AIMetadata {

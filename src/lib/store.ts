@@ -1,231 +1,180 @@
 import "server-only";
-import { promises as fs } from "fs";
-import path from "path";
-import { config, dataBackend } from "./config";
-import { DEFAULT_PAIRS, ORG_BASELINE, PROJECTS, SEED_ACTIVITY, SEED_ASSETS } from "./seed";
+import { db } from "./db";
+import { DEFAULT_PAIRS } from "./samples";
 import type { ActivityItem, MediaAsset, Project, ReportContent } from "./types";
 
-/**
- * Data layer. Seeded demo evidence is always present; user uploads, reports and
- * activity are persisted to Supabase when configured, otherwise to a local JSON file.
- */
+/** Data layer backed by SQLite. Every record here comes from a real upload, analysis or report. */
 
-interface LocalDB {
-  assets: MediaAsset[];
-  reports: ReportContent[];
-  activity: ActivityItem[];
-}
-
-const DB_FILE = path.join(process.cwd(), ".data", "db.json");
-const g = globalThis as unknown as { __impactlensDB?: LocalDB };
-
-async function load(): Promise<LocalDB> {
-  if (g.__impactlensDB) return g.__impactlensDB;
-  try {
-    g.__impactlensDB = JSON.parse(await fs.readFile(DB_FILE, "utf8")) as LocalDB;
-  } catch {
-    g.__impactlensDB = { assets: [], reports: [], activity: [] };
-  }
-  return g.__impactlensDB;
-}
-
-async function persist() {
-  if (!g.__impactlensDB) return;
-  try {
-    await fs.mkdir(path.dirname(DB_FILE), { recursive: true });
-    await fs.writeFile(DB_FILE, JSON.stringify(g.__impactlensDB, null, 2));
-  } catch (e) {
-    console.warn("[store] could not persist local db", e);
-  }
-}
-
-// ---------- Supabase (PostgREST) ----------
-const sb = async (pathname: string, init?: RequestInit) => {
-  const res = await fetch(`${config.supabase.url}/rest/v1/${pathname}`, {
-    ...init,
-    headers: {
-      apikey: config.supabase.key,
-      Authorization: `Bearer ${config.supabase.key}`,
-      "Content-Type": "application/json",
-      Prefer: "return=representation,resolution=merge-duplicates",
-      ...(init?.headers ?? {}),
-    },
-    cache: "no-store",
-  });
-  if (!res.ok) throw new Error(`Supabase ${res.status}: ${await res.text()}`);
-  return res.json();
+type ProjectRow = {
+  id: string;
+  slug: string;
+  name: string;
+  category: string;
+  location: string;
+  region: string;
+  description: string;
+  status: Project["status"];
+  start_date: string;
 };
 
-const toRow = (a: MediaAsset) => ({
-  id: a.id,
-  project_id: a.projectId,
-  cloudinary_public_id: a.cloudinaryPublicId,
-  secure_url: a.secureUrl,
-  resource_type: a.resourceType,
-  format: a.format,
-  width: a.width,
-  height: a.height,
-  bytes: a.bytes ?? null,
-  storage: a.storage,
-  original_filename: a.originalFilename ?? null,
-  title: a.title,
-  description: a.description,
-  project: a.project,
-  location: a.location,
-  category: a.category,
-  activity: a.activity,
-  tags: a.tags,
-  impact_areas: a.impactAreas,
-  objects: a.objects,
-  people_count: a.peopleCount,
-  stage: a.stage,
-  confidence: a.confidence,
-  capture_date: a.date || null,
-  before_after_candidate: a.beforeAfterCandidate,
-  status: a.status,
-  analysis_engine: a.analysisEngine,
-  analyzed_at: a.analyzedAt ?? null,
-  created_at: a.createdAt,
-});
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const fromRow = (r: any): MediaAsset => ({
+const toProject = (r: ProjectRow): Project => ({
   id: r.id,
-  projectId: r.project_id,
-  cloudinaryPublicId: r.cloudinary_public_id,
-  secureUrl: r.secure_url,
-  resourceType: r.resource_type,
-  format: r.format ?? "",
-  width: r.width ?? 0,
-  height: r.height ?? 0,
-  bytes: r.bytes ?? undefined,
-  storage: r.storage ?? "cloudinary",
-  originalFilename: r.original_filename ?? undefined,
-  createdAt: r.created_at,
-  title: r.title ?? "",
-  description: r.description ?? "",
-  project: r.project ?? "",
-  location: r.location ?? "",
-  category: r.category ?? "",
-  activity: r.activity ?? "",
-  tags: r.tags ?? [],
-  impactAreas: r.impact_areas ?? [],
-  objects: r.objects ?? [],
-  peopleCount: r.people_count,
-  stage: r.stage ?? "implementation",
-  confidence: Number(r.confidence ?? 0),
-  date: r.capture_date ?? "",
-  beforeAfterCandidate: !!r.before_after_candidate,
-  status: r.status ?? "indexed",
-  analysisEngine: r.analysis_engine ?? "",
-  analyzedAt: r.analyzed_at ?? undefined,
+  slug: r.slug,
+  name: r.name,
+  category: r.category,
+  location: r.location,
+  region: r.region,
+  description: r.description,
+  status: r.status,
+  startDate: r.start_date,
 });
 
-async function userAssets(): Promise<MediaAsset[]> {
-  if (dataBackend() === "supabase") {
-    try {
-      return ((await sb("media_assets?select=*&order=created_at.desc")) as unknown[]).map(fromRow);
-    } catch (e) {
-      console.warn("[store] supabase read failed, using local store", e);
-    }
-  }
-  return (await load()).assets;
+// ---------- Projects ----------
+export function listProjects(): Project[] {
+  return (db().prepare("SELECT * FROM projects ORDER BY created_at, rowid").all() as ProjectRow[]).map(toProject);
 }
 
-// ---------- Public API ----------
+export function getProject(idOrSlugOrName: string | null | undefined): Project | null {
+  if (!idOrSlugOrName) return null;
+  const row = db()
+    .prepare("SELECT * FROM projects WHERE id = ? OR slug = ? OR lower(name) = lower(?) LIMIT 1")
+    .get(idOrSlugOrName, idOrSlugOrName, idOrSlugOrName) as ProjectRow | undefined;
+  return row ? toProject(row) : null;
+}
+
+const slugify = (s: string) =>
+  s
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+
+export function createProject(input: Pick<Project, "name" | "category" | "location" | "region" | "description">): Project {
+  const base = slugify(input.name) || "project";
+  let slug = base;
+  for (let i = 2; getProject(slug); i++) slug = `${base}-${i}`;
+  const project: Project = {
+    ...input,
+    id: `p-${crypto.randomUUID().slice(0, 8)}`,
+    slug,
+    status: "Active",
+    startDate: new Date().toISOString().slice(0, 10),
+  };
+  db()
+    .prepare(
+      "INSERT INTO projects (id, slug, name, category, location, region, description, status, start_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    )
+    .run(project.id, project.slug, project.name, project.category, project.location, project.region, project.description, project.status, project.startDate);
+  return project;
+}
+
+// ---------- Media assets ----------
+const parseAsset = (r: { data: string }) => JSON.parse(r.data) as MediaAsset;
+
 export async function listAssets(): Promise<MediaAsset[]> {
-  const mine = await userAssets();
-  const seeded = [...SEED_ASSETS].sort((a, b) => b.date.localeCompare(a.date));
-  return [...mine, ...seeded];
+  return (db().prepare("SELECT data FROM media_assets ORDER BY capture_date DESC, created_at DESC").all() as { data: string }[]).map(parseAsset);
 }
 
-export async function getAsset(id: string) {
-  return (await listAssets()).find((a) => a.id === id) ?? null;
+export async function getAsset(id: string): Promise<MediaAsset | null> {
+  const row = db().prepare("SELECT data FROM media_assets WHERE id = ?").get(id) as { data: string } | undefined;
+  return row ? parseAsset(row) : null;
 }
 
 export async function saveAsset(asset: MediaAsset) {
-  if (dataBackend() === "supabase") {
-    try {
-      await sb("media_assets?on_conflict=id", { method: "POST", body: JSON.stringify(toRow(asset)) });
-      return asset;
-    } catch (e) {
-      console.warn("[store] supabase write failed, using local store", e);
-    }
-  }
-  const db = await load();
-  const i = db.assets.findIndex((a) => a.id === asset.id);
-  if (i >= 0) db.assets[i] = asset;
-  else db.assets.unshift(asset);
-  await persist();
+  db()
+    .prepare(
+      `INSERT INTO media_assets (id, project_id, cloudinary_public_id, secure_url, status, capture_date, created_at, data)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET project_id = excluded.project_id, cloudinary_public_id = excluded.cloudinary_public_id,
+         secure_url = excluded.secure_url, status = excluded.status, capture_date = excluded.capture_date, data = excluded.data`,
+    )
+    .run(
+      asset.id,
+      asset.projectId && getProject(asset.projectId) ? asset.projectId : null,
+      asset.cloudinaryPublicId,
+      asset.secureUrl,
+      asset.status,
+      asset.date || null,
+      asset.createdAt,
+      JSON.stringify(asset),
+    );
   return asset;
-}
-
-export function listProjects() {
-  return PROJECTS;
-}
-
-export function getProject(idOrSlugOrName: string): (Project & { archivedAssets: number }) | null {
-  const k = idOrSlugOrName.toLowerCase();
-  return PROJECTS.find((p) => p.id === k || p.slug === k || p.name.toLowerCase() === k) ?? null;
 }
 
 export async function projectAssets(projectId: string) {
   const p = getProject(projectId);
   if (!p) return [];
-  return (await listAssets()).filter((a) => a.projectId === p.id || a.project === p.name);
+  return (
+    db().prepare("SELECT data FROM media_assets WHERE project_id = ? ORDER BY capture_date DESC").all(p.id) as { data: string }[]
+  ).map(parseAsset);
 }
 
+// ---------- Activity ----------
 export async function addActivity(item: Omit<ActivityItem, "id" | "at">) {
-  const db = await load();
-  db.activity.unshift({ ...item, id: crypto.randomUUID(), at: new Date().toISOString() });
-  db.activity = db.activity.slice(0, 30);
-  await persist();
+  db()
+    .prepare("INSERT INTO activity (id, type, message, href, at) VALUES (?, ?, ?, ?, ?)")
+    .run(crypto.randomUUID(), item.type, item.message, item.href ?? null, new Date().toISOString());
 }
 
-export async function listActivity() {
-  const db = await load();
-  return [...db.activity, ...SEED_ACTIVITY].slice(0, 7);
+export async function listActivity(limit = 7): Promise<ActivityItem[]> {
+  const rows = db().prepare("SELECT * FROM activity ORDER BY at DESC LIMIT ?").all(limit) as {
+    id: string;
+    type: ActivityItem["type"];
+    message: string;
+    href: string | null;
+    at: string;
+  }[];
+  return rows.map((r) => ({ id: r.id, type: r.type, message: r.message, at: r.at, href: r.href ?? undefined }));
 }
 
+// ---------- Reports ----------
 export async function saveReport(r: ReportContent) {
-  const db = await load();
-  db.reports.unshift(r);
-  db.reports = db.reports.slice(0, 25);
-  await persist();
+  db()
+    .prepare("INSERT OR REPLACE INTO reports (id, project_id, created_at, data) VALUES (?, ?, ?, ?)")
+    .run(r.id, getProject(r.projectId) ? r.projectId : null, r.generatedAt, JSON.stringify(r));
   return r;
 }
 
-export async function listReports() {
-  return (await load()).reports;
+export async function listReports(): Promise<ReportContent[]> {
+  return (db().prepare("SELECT data FROM reports ORDER BY created_at DESC LIMIT 50").all() as { data: string }[]).map(
+    (r) => JSON.parse(r.data) as ReportContent,
+  );
 }
 
 export async function getReport(id: string) {
-  return (await load()).reports.find((r) => r.id === id) ?? null;
+  const row = db().prepare("SELECT data FROM reports WHERE id = ?").get(id) as { data: string } | undefined;
+  return row ? (JSON.parse(row.data) as ReportContent) : null;
 }
 
+// ---------- Aggregates ----------
 export async function orgStats() {
   const assets = await listAssets();
-  const reports = await listReports();
-  const mine = assets.filter((a) => !SEED_ASSETS.includes(a));
+  const { n: reports } = db().prepare("SELECT COUNT(*) AS n FROM reports").get() as { n: number };
+  const weekAgo = new Date(Date.now() - 7 * 864e5).toISOString();
+  const aiIndexed = assets.filter((a) => a.status === "indexed" && a.analysisEngine !== "Manual tagging").length;
+  const sites = new Set(assets.filter((a) => a.location && a.location !== "Unknown").map((a) => a.location.toLowerCase()));
   return {
-    totalAssets: ORG_BASELINE.otherAssets + PROJECTS.reduce((s, p) => s + p.archivedAssets, 0) + assets.length,
-    fieldSites: ORG_BASELINE.fieldSites,
-    reports: ORG_BASELINE.reports + reports.length,
-    aiCoverage: ORG_BASELINE.aiCoverage,
-    uploadedThisSession: mine.length,
+    totalAssets: assets.length,
+    addedThisWeek: assets.filter((a) => a.createdAt >= weekAgo).length,
+    fieldSites: sites.size,
+    reports,
+    aiCoverage: assets.length ? aiIndexed / assets.length : 0,
   };
 }
 
 export async function projectSummaries() {
   const assets = await listAssets();
-  return PROJECTS.map((p) => {
-    const list = assets.filter((a) => a.projectId === p.id || a.project === p.name);
+  return listProjects().map((p) => {
+    const list = assets.filter((a) => a.projectId === p.id);
     return {
       ...p,
-      liveAssets: list.length,
-      totalAssets: p.archivedAssets + list.length,
-      cover: list.find((a) => a.id === DEFAULT_PAIRS[p.id]?.[1]) ?? list.find((a) => a.stage === "completed") ?? list[0] ?? null,
-      lastUpdated: list.reduce((m, a) => (a.date > m ? a.date : m), ""),
+      totalAssets: list.length,
+      cover:
+        list.find((a) => a.id === DEFAULT_PAIRS[p.id]?.[1]) ??
+        list.find((a) => a.stage === "completed" && a.resourceType === "image") ??
+        list[0] ??
+        null,
+      lastUpdated: list.reduce((m, a) => (a.createdAt > m ? a.createdAt : m), ""),
     };
   });
 }
