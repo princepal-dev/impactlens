@@ -1,72 +1,183 @@
+<div align="center">
+
 # ImpactLens
 
-**AI-powered impact & sustainability media intelligence.** ImpactLens turns raw field photos and videos into structured, searchable, traceable evidence. Originals are stored and transformed by Cloudinary, analyzed by free vision models (Groq, OpenRouter), indexed in SQLite and compiled into impact reports that link every claim back to the original media.
+**Turn field photos and videos into searchable, traceable impact evidence.**
 
-Upload → Cloudinary → AI analyze → Auto-tag → Search → Compare → Generate report → Trace back to original evidence.
+ImpactLens stores every piece of field media in Cloudinary, has a vision model describe what it actually shows, and turns the result into evidence you can search in plain language, compare before and after, and compile into reports where every claim links back to the original file.
 
-## Setup
+![Next.js 16](https://img.shields.io/badge/Next.js-16-000?logo=nextdotjs)
+![React 19](https://img.shields.io/badge/React-19-149eca?logo=react)
+![Tailwind CSS v4](https://img.shields.io/badge/Tailwind-v4-38bdf8?logo=tailwindcss)
+![Cloudinary](https://img.shields.io/badge/Cloudinary-media-3448c5?logo=cloudinary)
+![OpenRouter + Groq](https://img.shields.io/badge/AI-OpenRouter%20%2B%20Groq-6d28d9)
+![SQLite](https://img.shields.io/badge/SQLite-node%3Asqlite-003b57?logo=sqlite)
 
-Requires Node.js 22.13+ (uses the built-in `node:sqlite`).
+![ImpactLens overview dashboard](docs/screenshots/overview.jpg)
+
+</div>
+
+---
+
+## Why
+
+NGOs, CSR teams and sustainability programmes collect thousands of field photos and clips: a village before a water tank was built, a beach before and after a cleanup, saplings six months after planting. Most of it ends up scattered across phones, WhatsApp groups and shared drives. When a funder asks *"show me what changed in Rajasthan this year"*, someone spends days digging through folders.
+
+ImpactLens makes that media useful:
+
+- **Upload once.** Originals go to Cloudinary untouched; the AI reads each photo or video and writes the title, description, tags, project stage and impact areas.
+- **Find anything.** Ask *"water projects completed in Rajasthan after January"* and get ranked results with an explanation of how the query was understood.
+- **Prove change.** Put a baseline and a later photo side by side, or on a slider, and get an AI description of what visibly changed.
+- **Report honestly.** Generate an impact report where every sentence cites the evidence it came from, and nothing beyond what's visible is claimed.
+
+## Features
+
+| | |
+| --- | --- |
+| **Media library**<br>Drag in photos or videos (JPG, PNG, WEBP, MP4, MOV, up to 100 MB) or import an existing Cloudinary URL. Browse as tiles, a masonry gallery, a sortable list or a timeline, filtered by project, stage or tag. | ![Media library gallery view](docs/screenshots/media.jpg) |
+| **AI evidence record**<br>Each asset gets AI-written metadata with a confidence score, plus a traceability chain: AI insight, then evidence record, then Cloudinary asset, then the original file. Edit the tags by hand or re-run the analysis at any time. | ![Evidence detail page](docs/screenshots/evidence.jpg) |
+| **Natural-language search**<br>Queries become structured filters (project type, location, activity, stage, dates) over every asset's AI metadata, and results are ranked by relevance. Press `/` or `⌘K` to search from anywhere, or use the mic. | ![Evidence search results](docs/screenshots/search.jpg) |
+| **Before and after compare**<br>Pick two assets from the same site and view them side by side or on a drag slider. **Compare** asks the AI to list observed changes, potential impact areas and a confidence score. Results are cached per pair. | ![Before/after slider with AI insights](docs/screenshots/compare.jpg) |
+| **Impact reports**<br>Choose a project and a date range to get an executive summary, an evidence timeline, a before-and-after section, impact areas, key evidence and AI insights, all citing their source assets. Share a link or export a clean PDF. | ![Generated impact report](docs/screenshots/report.jpg) |
+
+**Also included:**
+
+- **Ask ImpactLens** (`⌘J`): a voice or text assistant that answers questions about your evidence, shows matching media and can take you to the right page.
+- **Sample library**: 59 ready-made assets across five Indian programmes (water access, urban greening, solar, coastal cleanup, forest restoration). They're imported into your own Cloudinary account and analysed for real.
+- **Resilient AI queue**: if every AI provider is busy, uploads still succeed and a background worker analyses them later, giving way to anything you're actively doing.
+- Light and dark themes, loading skeletons, lazy-loaded responsive images, and per-route rate limiting.
+
+## How it works
+
+```mermaid
+flowchart LR
+    A["Upload photo / video"] --> B[("Cloudinary<br/>original + transforms")]
+    B --> C["Derived frames<br/>1 still, or 3 for video"]
+    C --> D{"AI vision<br/>OpenRouter → Groq"}
+    D --> E[("SQLite<br/>evidence index")]
+    E --> F[Search]
+    E --> G[Compare]
+    E --> H[Reports]
+    H -. every claim links back .-> B
+```
+
+1. **Store.** The file is uploaded to Cloudinary as-is, keeping EXIF data so capture dates are read automatically.
+2. **Analyse.** The AI never sees a re-upload, only Cloudinary-derived frames: one 1024 px JPEG for a photo, or three stills at 15%, 50% and 85% of a video, sent in time order so the model can describe how the scene changes.
+3. **Index.** The metadata is normalised to a fixed schema (title, description, activity, stage, tags, impact areas, people visible, confidence) and saved in SQLite.
+4. **Use.** Search, compare and reports all run on that index and always link back to the Cloudinary original.
+
+## Quick start
+
+Requires **Node.js 22.13+**, which provides the built-in `node:sqlite` module.
 
 ```bash
+git clone https://github.com/princepal-dev/impactlens.git
+cd impactlens
 npm install
-cp .env.example .env.local   # add your Cloudinary + Groq keys
+cp .env.example .env.local   # add your keys, see below
 npm run dev                  # http://localhost:3000
 ```
 
-| Variable | Where to get it |
+Then open **Sample library** to import the demo evidence, or drag your own photos into **Media**.
+
+### Environment variables
+
+| Variable | Required | Notes |
+| --- | --- | --- |
+| `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` | Yes | [Cloudinary console](https://console.cloudinary.com/), under Settings → API Keys |
+| `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | Yes* | Used for signed uploads. *Alternatively set `NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET` for unsigned uploads, which loses EXIF dates. |
+| `CLOUDINARY_FOLDER` | No | Defaults to `impactlens` |
+| `OPENROUTER_API_KEY` | At least one AI key | [openrouter.ai/keys](https://openrouter.ai/keys). The main provider, using free models only. |
+| `GROQ_API_KEY` | At least one AI key | [console.groq.com/keys](https://console.groq.com/keys). The fallback, using free-tier vision models. |
+| `OPENROUTER_MODEL`, `GROQ_MODEL` | No | Model to try first. Paid OpenRouter IDs are ignored. |
+| `AI_PROVIDERS` | No | Provider order, defaults to `openrouter,groq` |
+| `DATABASE_PATH` | No | Defaults to `.data/impactlens.db`, created automatically |
+
+`GET /api/health` reports whether the database, storage and AI providers are reachable.
+
+## AI providers
+
+ImpactLens runs entirely on **free** model tiers, and paid models are never called.
+
+- **OpenRouter (main).** It tries a curated list of free vision models, led by `stealth/space-bunny-alpha` (which doesn't count against the daily free quota), followed by Gemma 4, Nemotron 3, Qwen 3.8, dots-3, Inkling, Ling, Laguna and North. Models are sent three per request (OpenRouter's fallback limit), with `openrouter/free` as the last resort. A model is only called if the live catalogue prices it at zero.
+- **Groq (fallback).** It takes over when OpenRouter is down or rate-limited, picking an enabled vision model automatically and re-checking the model list when it looks stale.
+- **Failure handling.** When a provider says *"try again in 12s"*, that exact wait is honoured. A rate-limited provider hands over to the next one immediately. A provider whose key is rejected is skipped for 10 minutes, and when the daily quota runs out it pauses until the reported reset.
+- **Priority.** Requests you're waiting on always go first, and background re-analysis waits until the app has been quiet for 30 seconds.
+- **Video.** Clips are analysed from three frames. Native video input on OpenRouter needs an account balance of at least $1, and Groq accepts images only.
+
+## Cloudinary transformations
+
+| Use | Transformation |
 | --- | --- |
-| `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | [Cloudinary console](https://console.cloudinary.com/) → Settings → API Keys |
-| `OPENROUTER_API_KEY` | [OpenRouter](https://openrouter.ai/keys) — main AI provider, free models (`:free` models allow 50 requests/day, 1000/day after adding 10 credits) |
-| `GROQ_API_KEY` | [Groq](https://console.groq.com/keys) — used when OpenRouter is unavailable, free tier vision models (Qwen 3.8 27B) |
-| `AI_PROVIDERS` (optional) | Provider order, defaults to `openrouter,groq` |
-| `DATABASE_PATH` (optional) | Defaults to `.data/impactlens.db` |
+| Card thumbnails | `c_fill,g_auto,w_640,h_420,f_auto,q_auto` (smart crop keeps the subject) |
+| Responsive images | the same transformation at 0.5×, 1× and 1.5× for `srcSet` |
+| Full display | `c_limit,w_1600,f_auto,q_auto` |
+| Video playback / poster | `q_auto,f_auto:video` / `so_50p,c_fill,g_auto,…` |
+| AI frame (photo) | `c_limit,w_1024,f_jpg,q_auto` |
+| AI frames (video) | `so_15p` / `so_50p` / `so_85p` at `c_limit,w_1024` |
 
-OpenRouter's free models are tried first: `stealth/space-bunny-alpha` (not counted against the daily free-model quota), dots-3, Gemma 4, Nemotron 3, Qwen 3.8, Inkling, Ling, Laguna and North, three per request (OpenRouter's fallback limit), with `openrouter/free` as the last resort. Photos only go to models that read images, and only models the live catalogue prices at zero are called. If OpenRouter is down or rate-limited, Groq takes over. Providers listed in `AI_PROVIDERS` are tried in order with retries per provider; a provider whose key is rejected is skipped for 10 minutes. Without storage or any AI key, upload/analysis endpoints return `503` with a neutral message and the missing variables are logged server-side. `GET /api/health` reports database, storage and AI status.
-
-## Getting evidence in
-
-- **Upload** field photos or videos on **Media Library** (JPG, PNG, WEBP, MP4, MOV, ≤100 MB). Optionally assign a project and site location — both are passed to the AI as uploader context. Capture dates come from EXIF when present.
-- **Import from Cloudinary** by pasting a delivery URL; the original public ID is preserved.
-- **Import sample evidence** (Sample library): uploads 30 bundled photos from three Indian projects to your Cloudinary account and runs real AI analysis on each. When no AI provider is reachable, samples are indexed from their field-log entry and a background worker re-runs real AI analysis on them (and on failed uploads) as soon as a provider is available; **Re-analyze all** on Media or Sample library starts it immediately. Only project, site and capture date are supplied; titles, descriptions, tags, stages and impact areas are generated from the pixels.
-- **New Project** on the Overview creates additional projects.
-
-If analysis fails (rate limit, network), the asset stays in Cloudinary and can be retried or tagged manually from its evidence page.
-
-## Cloudinary usage
-
-- Originals are uploaded untouched (signed `upload_stream` with `image_metadata`, or unsigned preset).
-- Thumbnails: `c_fill,g_auto,w_640,h_420,f_auto,q_auto` (smart crop keeps the subject).
-- Display: `c_limit,w_1600,f_auto,q_auto`; videos get a generated poster frame (`so_1`) and `q_auto,f_auto:video` delivery.
-- AI analysis receives Cloudinary-derived frames — never a re-upload: one `c_limit,w_1024,f_jpg` still for photos; for videos, three stills at 15%, 50% and 85% of the clip (`so_15p`/`so_50p`/`so_85p`) sent in time order, so the model can describe what changes during the clip. Native video input on OpenRouter needs an account balance of at least $1, so frames are used instead.
-- Every evidence record lists its public ID, original URL and derived transformations for traceability.
+Every evidence page lists the public ID, the original URL and each derived URL, so any image in a report can be traced back to its unmodified source.
 
 ## API
 
 | Route | Purpose |
 | --- | --- |
-| `POST /api/upload` | multipart `file` (+ `projectId`, `location`) or JSON `{ url, projectId, location }` → pending asset in Cloudinary |
-| `POST /api/analyze` | `{ assetId }` → AI metadata (schema-normalized); `{ assetId, metadata }` saves manual tags |
-| `POST /api/search` | `{ query }` → natural-language evidence search with query interpretation |
-| `POST /api/compare` | `{ beforeId, afterId }` → two-image visual change analysis |
-| `POST /api/report` / `GET /api/report?id=` | generate / fetch impact reports |
-| `GET/POST /api/projects` | list / create projects |
-| `GET/POST /api/samples` | sample import status / import one sample |
+| `POST /api/upload` | Multipart `file` (with optional `projectId` and `location`), or JSON `{ url }` to import. Creates a pending asset. |
+| `POST /api/analyze` | `{ assetId }` runs AI analysis; `{ assetId, metadata }` saves manual tags |
+| `GET · PATCH · DELETE /api/assets/[id]` | Read, edit or delete an asset (`GET /api/assets` lists them) |
+| `POST /api/search` | `{ query }` returns interpreted filters and ranked results |
+| `POST /api/compare` | `{ beforeId, afterId }` returns the AI visual change analysis |
+| `POST · GET · DELETE /api/report` | Generate, fetch (`?id=`) or delete impact reports |
+| `POST /api/assistant` | Conversation turns in, answer plus matching assets and a suggested page out |
+| `GET · POST /api/projects`, `PATCH · DELETE /api/projects/[id]` | Manage projects |
+| `GET · POST /api/samples` | Sample import status; import one sample |
+| `GET · POST /api/reanalyze` | Background analysis queue status; start processing |
+| `GET /api/stats`, `GET /api/health` | Dashboard numbers; service health |
 
-## Demo walkthrough (2 minutes)
+## Project structure
 
-1. **Overview** — KPIs computed from indexed evidence, recent activity, projects.
-2. **Media Library** — drop a field photo, watch it upload to Cloudinary, get analyzed and indexed. **Open evidence** shows the traceability chain: AI insight → evidence record → Cloudinary asset → original media.
-3. **Evidence Search** — *"Show me water infrastructure projects in Rajasthan"*. Note the query interpretation and relevance scores.
-4. **Compare** — pick a project, drag the before/after slider, read the AI comparison of the two frames.
-5. **Impact Reports** — generate a report; every section cites source evidence. **Export Report** prints a clean PDF.
+```
+src/
+├── app/                 # Next.js App Router pages + API routes
+│   ├── api/             # upload, analyze, search, compare, report, assistant, …
+│   ├── media/           # library and evidence detail pages
+│   ├── search/  compare/  reports/  samples/  settings/
+│   └── page.tsx         # overview dashboard
+├── components/          # UI (MediaLibrary, CompareWorkspace, ReportPreview, VoiceAgent, …)
+│   └── ui/              # primitives: button, dialog, panel, smooth-image, …
+└── lib/
+    ├── ai.ts            # provider chain, retries, rate-limit handling
+    ├── analyze.ts       # vision prompt + metadata normalisation
+    ├── search.ts        # query interpretation + ranking
+    ├── compare.ts       # before/after analysis
+    ├── report.ts        # report builder
+    ├── reanalyze.ts     # background analysis worker
+    ├── cloudinary.ts    # uploads
+    ├── media-url.ts     # transformation URLs
+    ├── samples.ts       # sample library manifest
+    └── store.ts, db.ts  # SQLite persistence
+```
+
+## Scripts
+
+| Command | What it does |
+| --- | --- |
+| `npm run dev` | Start the dev server on port 3000 |
+| `npm run build` then `npm start` | Production build and server |
+| `npm run lint` | ESLint |
+
+Deploy anywhere that runs Node 22.13+ with a **persistent, writable disk** for the SQLite file, such as a VM, or a container with a mounted volume on Railway or Fly.io. Point `DATABASE_PATH` at that volume. Serverless platforms like Vercel don't keep files between requests, so the evidence index wouldn't persist there.
 
 ## Responsible AI
 
-The analysis prompt only describes what is visible. ImpactLens never invents beneficiary counts, litres, tonnes or kWh; reports use cautious wording ("visual evidence suggests…") and flag that outcomes beyond the media require additional verification.
+- The analysis prompt only describes what is **visible** in the frame.
+- ImpactLens never invents beneficiary counts, litres, tonnes or kWh.
+- Reports use cautious wording (*"visual evidence suggests…"*) and include a **Needs additional verification** section for anything imagery can't prove.
+- Locations come from the uploader or visible context, not verified GPS, and reports say so.
 
-## Stack
+## Credits
 
-Next.js 16 (App Router) · TypeScript · Tailwind CSS v4 · Radix UI · Lucide · Cloudinary · Groq / OpenRouter free models · SQLite (`node:sqlite`)
-
-Sample images: Wikimedia Commons contributors.
+- Bundled field photos: Wikimedia Commons contributors.
+- Unsplash samples: credited photographers, linked from each asset.
+- Video samples: [Mixkit](https://mixkit.co) (free licence).
+- The six same-angle before and after cleanup images (Calangute, Yamuna Ghat, Mandore stepwell) are AI-generated illustrations for demonstrating the compare feature.

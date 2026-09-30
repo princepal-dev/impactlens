@@ -6,8 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
-    "seed:cloudinary": "node scripts/seed-cloudinary.mjs"
+    "lint": "eslint"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.23",
