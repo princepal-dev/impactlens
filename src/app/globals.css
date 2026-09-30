@@ -129,11 +129,11 @@ body {
 .theme-fade *::before,
 .theme-fade *::after {
   transition:
-    background-color 0.35s var(--ease-out-soft),
-    border-color 0.35s var(--ease-out-soft),
-    color 0.35s var(--ease-out-soft),
-    fill 0.35s var(--ease-out-soft),
-    box-shadow 0.35s var(--ease-out-soft) !important;
+    background-color 0.7s ease-in-out,
+    border-color 0.7s ease-in-out,
+    color 0.7s ease-in-out,
+    fill 0.7s ease-in-out,
+    box-shadow 0.7s ease-in-out !important;
 }
 
 ::view-transition-old(root),

@@ -28,7 +28,8 @@ const notify = () => listeners.forEach((l) => l());
 /** Screen point the theme reveal expands from, usually the control that was clicked. */
 export type ThemeOrigin = { x: number; y: number };
 
-const REVEAL_MS = 560;
+const REVEAL_MS = 1100;
+const FADE_MS = 700;
 
 function swapClass(root: HTMLElement, resolved: ResolvedTheme) {
   root.classList.remove("light", "dark");
@@ -51,7 +52,7 @@ function apply(theme: Theme, origin?: ThemeOrigin) {
   if (!document.startViewTransition) {
     root.classList.add("theme-fade");
     swapClass(root, resolved);
-    setTimeout(() => root.classList.remove("theme-fade"), 400);
+    setTimeout(() => root.classList.remove("theme-fade"), FADE_MS + 50);
     return;
   }
 
@@ -66,7 +67,7 @@ function apply(theme: Theme, origin?: ThemeOrigin) {
     .then(() =>
       root.animate(
         { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${radius}px at ${x}px ${y}px)`] },
-        { duration: REVEAL_MS, easing: "cubic-bezier(0.22, 1, 0.36, 1)", pseudoElement: "::view-transition-new(root)" },
+        { duration: REVEAL_MS, easing: "cubic-bezier(0.65, 0, 0.35, 1)", pseudoElement: "::view-transition-new(root)" },
       ),
     )
     .catch(() => {});
