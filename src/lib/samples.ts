@@ -136,6 +136,18 @@ const FIELD_SAMPLES = [
   { file: "mh-solar-field", location: "Baramati, Maharashtra", date: "2026-09-02" },
 ].map((s) => ({ ...s, collection: "field" as const }));
 
+/** Before/after clean-up pairs shot from the same spot and angle, for side-by-side comparison. */
+const CLEANUP_PAIRS = (
+  [
+    { file: "cg-shore-before-cleanup", location: "Calangute, Goa", date: "2026-01-24", stage: "baseline" },
+    { file: "cg-shore-after-cleanup", location: "Calangute, Goa", date: "2026-08-30", stage: "completed" },
+    { file: "dl-yamuna-bank-before-cleanup", location: "Yamuna Ghat, New Delhi", date: "2026-01-30", stage: "baseline" },
+    { file: "dl-yamuna-bank-after-cleanup", location: "Yamuna Ghat, New Delhi", date: "2026-09-06", stage: "completed" },
+    { file: "rj-stepwell-before-cleanup", location: "Mandore, Jodhpur", date: "2026-02-06", stage: "baseline" },
+    { file: "rj-stepwell-after-cleanup", location: "Mandore, Jodhpur", date: "2026-09-14", stage: "completed" },
+  ] satisfies Omit<SampleMedia, "projectId" | "collection">[]
+).map((s) => ({ ...s, collection: "field" as const }));
+
 /** Free photos from Unsplash (Unsplash License), fetched from the Unsplash CDN at import time. */
 const UNSPLASH_SAMPLES = (
   [
@@ -163,17 +175,17 @@ const UNSPLASH_SAMPLES = (
   ] satisfies Omit<SampleMedia, "projectId" | "collection">[]
 ).map((s) => ({ ...s, collection: "unsplash" as const }));
 
-export const SAMPLES: SampleMedia[] = [...FIELD_SAMPLES, ...UNSPLASH_SAMPLES].map((s) => ({
+export const SAMPLES: SampleMedia[] = [...FIELD_SAMPLES, ...CLEANUP_PAIRS, ...UNSPLASH_SAMPLES].map((s) => ({
   ...s,
   projectId: PROJECT_BY_PREFIX[s.file.split("-")[0]],
 }));
 
 /** Preferred before/after pairs when the sample evidence has been imported. */
 export const DEFAULT_PAIRS: Record<string, [string, string]> = {
-  "p-rajasthan-water": ["rj-tank-construction-1", "rj-tank-completed"],
-  "p-delhi-greening": ["dl-dump-baseline-1", "dl-restored-path"],
+  "p-rajasthan-water": ["rj-stepwell-before-cleanup", "rj-stepwell-after-cleanup"],
+  "p-delhi-greening": ["dl-yamuna-bank-before-cleanup", "dl-yamuna-bank-after-cleanup"],
   "p-maharashtra-solar": ["mh-school-baseline", "mh-rooftop-1"],
-  "p-goa-coastal-cleanup": ["cg-litter-baseline", "cg-clean-beach"],
+  "p-goa-coastal-cleanup": ["cg-shore-before-cleanup", "cg-shore-after-cleanup"],
   "p-uttarakhand-forest": ["uk-stump-clearing", "uk-regrowth"],
 };
 
