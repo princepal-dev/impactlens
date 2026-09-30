@@ -1,10 +1,11 @@
 "use client";
 
-import { Film, ImageOff } from "lucide-react";
+import { ImageOff } from "lucide-react";
 import { useState } from "react";
-import { displayUrl, thumbUrl } from "@/lib/media-url";
+import { displayUrl, naturalSrcSet, thumbSrcSet, thumbUrl } from "@/lib/media-url";
 import type { CloudinaryRef } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { SmoothImage } from "./ui/smooth-image";
 
 type Ref = Pick<CloudinaryRef, "secureUrl" | "resourceType"> & { title?: string };
 
@@ -15,15 +16,19 @@ export function MediaThumb({
   h = 420,
   className,
   full,
+  sizes,
+  priority,
 }: {
   asset: Ref;
   w?: number;
   h?: number;
   className?: string;
   full?: boolean;
+  /** Rendered width hint; enables a responsive `srcSet` so small screens fetch smaller files. */
+  sizes?: string;
+  priority?: boolean;
 }) {
   const [failed, setFailed] = useState(false);
-  const src = full ? displayUrl(asset) : thumbUrl(asset, w, h);
 
   if (failed) {
     return (
@@ -40,26 +45,25 @@ export function MediaThumb({
           src={displayUrl(asset)}
           poster={thumbUrl(asset, w, h)}
           className="size-full object-cover"
-          preload="metadata"
+          preload="none"
           muted
           playsInline
-          controls={full}
+          controls
           onError={() => setFailed(true)}
         />
-        {!full && <Film className="absolute right-2 top-2 size-4 text-white/80" />}
       </div>
     );
   }
 
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={src}
+    <SmoothImage
+      src={full ? displayUrl(asset) : thumbUrl(asset, w, h)}
+      srcSet={sizes ? (full ? naturalSrcSet(asset) : thumbSrcSet(asset, w, h)) : undefined}
+      sizes={sizes}
       alt={asset.title ?? "Field media"}
-      loading="lazy"
-      decoding="async"
+      priority={priority}
       onError={() => setFailed(true)}
-      className={cn("bg-tint/[0.03] object-cover", className)}
+      className={cn("object-cover", className)}
     />
   );
 }

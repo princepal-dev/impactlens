@@ -17,7 +17,7 @@ export function SearchResultCard({ result, rank }: { result: SearchResult; rank:
       style={{ animationDelay: `${Math.min(rank, 8) * 40}ms` }}
     >
       <div className="relative aspect-[16/10] overflow-hidden rounded-xl bg-media">
-        <MediaThumb asset={asset} w={640} h={400} className="size-full transition-transform duration-700 ease-[var(--ease-out-soft)] group-hover:scale-[1.05]" />
+        <MediaThumb asset={asset} w={640} h={400} sizes="(min-width: 1536px) 25vw, (min-width: 1280px) 33vw, (min-width: 640px) 50vw, 100vw" priority={rank < 4} className="size-full transition-transform duration-700 ease-[var(--ease-out-soft)] group-hover:scale-[1.05]" />
         <div className="absolute inset-x-0 top-0 flex items-start justify-between p-2.5">
           <CloudinaryLabel asset={asset} />
           <span className="rounded-full bg-lime px-2 py-0.5 text-[11px] font-semibold tabular-nums text-lime-foreground">{pct(relevance)} match</span>

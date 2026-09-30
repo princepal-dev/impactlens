@@ -3,11 +3,12 @@
 import { ArrowRight, ChevronsLeftRight } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useRef, useState } from "react";
-import { displayUrl } from "@/lib/media-url";
+import { naturalSrcSet, naturalUrl } from "@/lib/media-url";
 import type { MediaAsset } from "@/lib/types";
 import { cn, fmtDate } from "@/lib/utils";
 import { StageBadge } from "./ImpactBadge";
 import { MediaThumb } from "./MediaThumb";
+import { SmoothImage } from "./ui/smooth-image";
 
 function Caption({ label, asset, align = "left" }: { label: string; asset: MediaAsset; align?: "left" | "right" }) {
   return (
@@ -19,6 +20,23 @@ function Caption({ label, asset, align = "left" }: { label: string; asset: Media
       </div>
       <StageBadge stage={asset.stage} />
     </div>
+  );
+}
+
+const SLIDER_SIZES = "(min-width: 1280px) 60vw, 100vw";
+const SIDE_SIZES = "(min-width: 768px) 40vw, 100vw";
+
+function SlideImage({ asset }: { asset: MediaAsset }) {
+  return (
+    <SmoothImage
+      src={naturalUrl(asset, 1600)}
+      srcSet={naturalSrcSet(asset)}
+      sizes={SLIDER_SIZES}
+      alt={asset.title}
+      loading="eager"
+      className="absolute inset-0 size-full object-cover"
+      draggable={false}
+    />
   );
 }
 
@@ -38,7 +56,7 @@ export function BeforeAfter({ before, after, mode }: { before: MediaAsset; after
       <div className="grid grid-cols-1 items-center gap-4 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
         <div>
           <div className="overflow-hidden rounded-2xl border border-line bg-media">
-            <MediaThumb asset={before} w={900} h={600} className="aspect-[3/2] w-full" />
+            <MediaThumb asset={before} w={900} h={600} sizes={SIDE_SIZES} className="aspect-[3/2] w-full" />
           </div>
           <Caption label="Before" asset={before} />
         </div>
@@ -47,7 +65,7 @@ export function BeforeAfter({ before, after, mode }: { before: MediaAsset; after
         </div>
         <div>
           <div className="overflow-hidden rounded-2xl border border-line bg-media">
-            <MediaThumb asset={after} w={900} h={600} className="aspect-[3/2] w-full" />
+            <MediaThumb asset={after} w={900} h={600} sizes={SIDE_SIZES} className="aspect-[3/2] w-full" />
           </div>
           <Caption label="After" asset={after} align="right" />
         </div>
@@ -78,11 +96,9 @@ export function BeforeAfter({ before, after, mode }: { before: MediaAsset; after
         aria-valuemax={100}
         aria-label="Before and after comparison"
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={displayUrl(after)} alt={after.title} className="absolute inset-0 size-full object-cover" draggable={false} />
+        <SlideImage asset={after} />
         <div className="absolute inset-0" style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={displayUrl(before)} alt={before.title} className="absolute inset-0 size-full object-cover" draggable={false} />
+          <SlideImage asset={before} />
         </div>
         <div className="pointer-events-none absolute inset-y-0 w-px bg-white/90 shadow-[0_0_12px_rgba(0,0,0,0.6)]" style={{ left: `${pos}%` }}>
           <div className="absolute left-1/2 top-1/2 grid size-9 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-white shadow-lg">

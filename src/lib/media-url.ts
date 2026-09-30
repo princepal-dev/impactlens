@@ -31,6 +31,23 @@ export function naturalUrl(a: Ref, w = 720) {
   return withTransform(a.secureUrl, `c_limit,w_${w},f_auto,q_auto`);
 }
 
+const isCloudinary = (a: Ref) => a.secureUrl.includes("/upload/");
+
+/** Thumbnails at half, full and 1.5× the requested size so small screens download less. */
+export function thumbSrcSet(a: Ref, w: number, h: number) {
+  if (!isCloudinary(a)) return undefined;
+  return [0.5, 1, 1.5]
+    .map((s) => [Math.round(w * s), Math.round(h * s)])
+    .map(([sw, sh]) => `${thumbUrl(a, sw, sh)} ${sw}w`)
+    .join(", ");
+}
+
+/** Aspect-preserving stills at several widths (masonry and full-size views). */
+export function naturalSrcSet(a: Ref, widths = [480, 720, 1080, 1600]) {
+  if (!isCloudinary(a)) return undefined;
+  return widths.map((w) => `${naturalUrl(a, w)} ${w}w`).join(", ");
+}
+
 export function displayUrl(a: Ref) {
   return withTransform(a.secureUrl, a.resourceType === "video" ? TRANSFORMS.video : TRANSFORMS.display);
 }

@@ -3,20 +3,25 @@
 import { AlertTriangle, ArrowUpRight, CalendarDays, Film, FolderKanban, ImageOff, MapPin, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { naturalUrl } from "@/lib/media-url";
+import { naturalSrcSet, naturalUrl } from "@/lib/media-url";
 import type { MediaAsset } from "@/lib/types";
 import { cn, fmtDate, pct, STAGE_STYLES } from "@/lib/utils";
 import { StageBadge } from "./ImpactBadge";
 import { MediaCard } from "./MediaCard";
 import { MediaThumb } from "./MediaThumb";
+import { SmoothImage } from "./ui/smooth-image";
+
+/** Items likely visible on first paint; fetched eagerly for a faster first view. */
+const ABOVE_FOLD = 4;
+const GALLERY_SIZES = "(min-width: 1800px) 20vw, (min-width: 1536px) 25vw, (min-width: 768px) 33vw, 50vw";
 
 const needsTagging = (a: MediaAsset) => a.status === "analysis_failed" || a.status === "uploaded";
 
 export function TilesView({ assets }: { assets: MediaAsset[] }) {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 min-[1800px]:grid-cols-5">
-      {assets.map((a) => (
-        <MediaCard key={a.id} asset={a} />
+      {assets.map((a, i) => (
+        <MediaCard key={a.id} asset={a} priority={i < ABOVE_FOLD} />
       ))}
     </div>
   );
@@ -26,14 +31,14 @@ export function TilesView({ assets }: { assets: MediaAsset[] }) {
 export function GalleryView({ assets }: { assets: MediaAsset[] }) {
   return (
     <div className="columns-2 gap-3 md:columns-3 2xl:columns-4 min-[1800px]:columns-5">
-      {assets.map((a) => (
-        <GalleryItem key={a.id} asset={a} />
+      {assets.map((a, i) => (
+        <GalleryItem key={a.id} asset={a} priority={i < ABOVE_FOLD} />
       ))}
     </div>
   );
 }
 
-function GalleryItem({ asset: a }: { asset: MediaAsset }) {
+function GalleryItem({ asset: a, priority }: { asset: MediaAsset; priority?: boolean }) {
   const [failed, setFailed] = useState(false);
   return (
     <Link href={`/media/${a.id}`} className="group relative mb-3 block break-inside-avoid overflow-hidden rounded-2xl bg-media">
@@ -42,14 +47,14 @@ function GalleryItem({ asset: a }: { asset: MediaAsset }) {
           <ImageOff className="size-5" />
         </div>
       ) : (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <SmoothImage
           src={naturalUrl(a)}
+          srcSet={naturalSrcSet(a)}
+          sizes={GALLERY_SIZES}
           alt={a.title}
-          loading="lazy"
-          decoding="async"
+          priority={priority}
           onError={() => setFailed(true)}
-          className="block h-auto w-full transition-transform duration-700 ease-[var(--ease-out-soft)] group-hover:scale-[1.04]"
+          className="block h-auto min-h-40 w-full object-cover transition-transform duration-700 ease-[var(--ease-out-soft)] group-hover:scale-[1.04]"
         />
       )}
       <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-transparent opacity-70 transition-opacity duration-300 group-hover:opacity-100" />

@@ -360,6 +360,41 @@ a.hero-stat:first-child:hover {
   animation: shimmer 1.4s infinite;
 }
 
+/* Images shimmer until decoded, then fade in instead of popping. */
+@keyframes img-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}
+.img-loading {
+  background: linear-gradient(100deg, var(--skeleton) 30%, var(--skeleton-shine) 50%, var(--skeleton) 70%) 0 0 / 300% 100%;
+  animation: img-shimmer 1.4s linear infinite;
+}
+@keyframes img-in {
+  from {
+    opacity: 0;
+    filter: blur(6px);
+  }
+}
+.img-in {
+  animation: img-in 0.5s var(--ease-out-soft);
+}
+@media (prefers-reduced-motion: reduce) {
+  .img-loading,
+  .img-in {
+    animation: none;
+  }
+}
+
+/* Skip layout and paint for cards scrolled out of view. */
+.cv-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 340px;
+}
+
 .print-only {
   display: none;
 }

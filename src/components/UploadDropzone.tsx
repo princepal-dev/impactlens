@@ -336,10 +336,10 @@ export function UploadDropzone({
                 <MediaThumb asset={j.asset} w={600} h={460} className="absolute inset-0 size-full" />
               ) : j.preview ? (
                 j.isVideo ? (
-                  <video src={j.preview} className="absolute inset-0 size-full object-cover" muted />
+                  <video src={j.preview} className="absolute inset-0 size-full object-cover" muted playsInline preload="metadata" />
                 ) : (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={j.preview} alt={j.name} className="absolute inset-0 size-full object-cover" />
+                  <img src={j.preview} alt={j.name} decoding="async" className="absolute inset-0 size-full object-cover" />
                 )
               ) : (
                 <div className="absolute inset-0 grid place-items-center text-subtle"><UploadCloud className="size-6" /></div>

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Suspense } from "react";
+import { preconnect } from "react-dom";
 import { AppHeader } from "@/components/AppHeader";
 import { Sidebar } from "@/components/Sidebar";
 import { ThemedToaster } from "@/components/ThemeToggle";
@@ -28,6 +29,7 @@ export const metadata: Metadata = {
 const EMPTY: WorkspaceSummary = { assets: 0, reports: 0, projects: 0, projectList: [] };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
+  preconnect("https://res.cloudinary.com");
   const summary = await workspaceSummary().catch(() => EMPTY);
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`} suppressHydrationWarning>

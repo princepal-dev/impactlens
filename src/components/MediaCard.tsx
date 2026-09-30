@@ -15,7 +15,19 @@ export function CloudinaryLabel({ asset }: { asset: Pick<MediaAsset, "format"> }
   );
 }
 
-export function MediaCard({ asset, highlight, relevance }: { asset: MediaAsset; highlight?: string[]; relevance?: number }) {
+const CARD_SIZES = "(min-width: 1800px) 20vw, (min-width: 1536px) 25vw, (min-width: 1280px) 33vw, (min-width: 640px) 50vw, 100vw";
+
+export function MediaCard({
+  asset,
+  highlight,
+  relevance,
+  priority,
+}: {
+  asset: MediaAsset;
+  highlight?: string[];
+  relevance?: number;
+  priority?: boolean;
+}) {
   const hl = new Set((highlight ?? []).map((h) => h.toLowerCase()));
   const analyzing = asset.status === "analyzing";
   const failed = asset.status === "analysis_failed" || asset.status === "uploaded";
@@ -23,10 +35,10 @@ export function MediaCard({ asset, highlight, relevance }: { asset: MediaAsset; 
   return (
     <Link
       href={`/media/${asset.id}`}
-      className="lift group flex flex-col overflow-hidden rounded-2xl border border-line bg-panel p-2 shadow-[var(--panel-shadow)]"
+      className="lift cv-auto group flex flex-col overflow-hidden rounded-2xl border border-line bg-panel p-2 shadow-[var(--panel-shadow)]"
     >
       <div className="relative aspect-[3/2] overflow-hidden rounded-xl bg-media">
-        <MediaThumb asset={asset} className="size-full transition-transform duration-700 ease-[var(--ease-out-soft)] group-hover:scale-[1.05]" />
+        <MediaThumb asset={asset} sizes={CARD_SIZES} priority={priority} className="size-full transition-transform duration-700 ease-[var(--ease-out-soft)] group-hover:scale-[1.05]" />
         <div className="absolute inset-x-0 top-0 flex items-start justify-between p-2.5">
           <CloudinaryLabel asset={asset} />
           {relevance !== undefined ? (

@@ -157,7 +157,7 @@ export default async function OverviewPage() {
                     href={`/media/${a.id}`}
                     className="lift group relative aspect-[4/5] overflow-hidden rounded-2xl border border-line bg-media"
                   >
-                    <MediaThumb asset={a} w={480} h={600} className="absolute inset-0 size-full transition-transform duration-700 ease-[var(--ease-out-soft)] group-hover:scale-[1.06]" />
+                    <MediaThumb asset={a} w={480} h={600} sizes="(min-width: 1024px) 20vw, 50vw" className="absolute inset-0 size-full transition-transform duration-700 ease-[var(--ease-out-soft)] group-hover:scale-[1.06]" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-transparent" />
                     <div className="absolute left-3 right-3 top-3 flex items-start justify-between">
                       <StageBadge stage={a.stage} />
@@ -187,7 +187,7 @@ export default async function OverviewPage() {
                   >
                     <div className="relative aspect-[16/9] overflow-hidden rounded-xl bg-media">
                       {p.cover ? (
-                        <MediaThumb asset={p.cover} w={640} h={360} className="size-full transition-transform duration-700 ease-[var(--ease-out-soft)] group-hover:scale-[1.05]" />
+                        <MediaThumb asset={p.cover} w={640} h={360} sizes="(min-width: 1280px) 25vw, (min-width: 640px) 50vw, 100vw" className="size-full transition-transform duration-700 ease-[var(--ease-out-soft)] group-hover:scale-[1.05]" />
                       ) : (
                         <div className="grid size-full place-items-center text-[12px] text-subtle">No evidence yet</div>
                       )}
