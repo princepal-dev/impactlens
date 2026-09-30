@@ -35,7 +35,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <Sidebar online={s.storage.connected && s.ai.connected} />
           <div className="min-w-0 flex-1">
             <MobileNav />
-            <main className="print-root mx-auto w-full max-w-[1280px] px-6 pb-20 pt-8 lg:px-10 lg:pt-10">{children}</main>
+            <main className="print-root w-full px-6 pb-20 pt-8 lg:px-10 lg:pt-10 2xl:px-12">{children}</main>
           </div>
         </div>
         <VoiceAgent />

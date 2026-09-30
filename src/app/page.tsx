@@ -58,7 +58,7 @@ function SectionHeader({ title, href, linkLabel }: { title: string; href?: strin
 export default async function OverviewPage() {
   const [stats, activity, projects, assets] = await Promise.all([orgStats(), listActivity(), projectSummaries(), listAssets()]);
   const reportProject = [...projects].sort((a, b) => b.totalAssets - a.totalAssets)[0];
-  const recent = [...assets].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 3);
+  const recent = [...assets].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 4);
 
   return (
     <div className="page-in">
@@ -115,12 +115,12 @@ export default async function OverviewPage() {
         </section>
       )}
 
-      <section className="mt-8 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+      <section className="mt-8 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_360px] 2xl:grid-cols-[minmax(0,1fr)_420px]">
         <div className="min-w-0 space-y-8">
           {recent.length > 0 && (
             <div>
               <SectionHeader title="Recent evidence" href="/media" linkLabel="Media library" />
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 [&>*:nth-child(4)]:hidden 2xl:[&>*:nth-child(4)]:flex">
                 {recent.map((a) => <MediaCard key={a.id} asset={a} />)}
               </div>
             </div>
@@ -129,7 +129,7 @@ export default async function OverviewPage() {
           {projects.length > 0 && (
             <div>
               <SectionHeader title="Projects" href="/settings" linkLabel="Manage" />
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
                 {projects.map((p) => (
                   <Link
                     key={p.id}

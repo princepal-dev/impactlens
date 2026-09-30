@@ -112,7 +112,7 @@ export function EvidenceSearch() {
             <div className="mb-6 flex items-center gap-2 text-[13px] text-accent">
               <Sparkles className="size-4 animate-pulse" /> Interpreting query and searching evidence…
             </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
               {Array.from({ length: 6 }).map((_, i) => <MediaCardSkeleton key={i} />)}
             </div>
           </div>
@@ -194,7 +194,7 @@ export function EvidenceSearch() {
             </Panel>
 
             {data.results.length ? (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                 {data.results.map((r, i) => <SearchResultCard key={r.asset.id} result={r} rank={i} />)}
               </div>
             ) : (

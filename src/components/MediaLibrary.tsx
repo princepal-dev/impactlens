@@ -112,7 +112,7 @@ export function MediaLibrary({
         </div>
 
         {filtered.length ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 min-[1800px]:grid-cols-5">
             {filtered.slice(0, visible).map((a) => <MediaCard key={a.id} asset={a} />)}
           </div>
         ) : null}

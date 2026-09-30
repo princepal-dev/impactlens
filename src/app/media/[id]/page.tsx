@@ -87,7 +87,7 @@ export default async function AssetPage({ params }: PageProps<"/media/[id]">) {
         <div className="min-w-0 space-y-6">
           <Panel className="overflow-hidden">
             <div className="relative bg-media">
-              <MediaThumb asset={asset} full className="max-h-[560px] w-full object-contain" />
+              <MediaThumb asset={asset} full className="max-h-[560px] w-full object-contain 2xl:max-h-[720px]" />
               <div className="absolute left-3 top-3"><CloudinaryLabel asset={asset} /></div>
             </div>
             <div className="flex items-center justify-between gap-3 border-t border-line px-4 py-3">
