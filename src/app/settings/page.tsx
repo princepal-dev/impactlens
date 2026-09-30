@@ -1,7 +1,8 @@
-import { Brain, Cloud, Database, FlaskConical } from "lucide-react";
+import { Brain, Cloud, Database } from "lucide-react";
+import { SampleImporter } from "@/components/SampleImporter";
 import { TopBar } from "@/components/TopBar";
 import { Panel } from "@/components/ui/panel";
-import { integrationStatus } from "@/lib/config";
+import { setupStatus } from "@/lib/config";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -20,52 +21,68 @@ function Row({ icon: Icon, title, status, ok, detail, env }: { icon: typeof Clou
             </div>
           </div>
         </div>
-        <span className={cn("flex shrink-0 items-center gap-1.5 rounded-[4px] border px-2 py-1 font-mono text-[11px]", ok ? "border-positive/30 text-positive" : "border-accent/30 text-accent")}>
-          <span className={cn("size-1.5 rounded-full", ok ? "bg-positive" : "bg-accent")} /> {status}
+        <span className={cn("flex shrink-0 items-center gap-1.5 rounded-[4px] border px-2 py-1 font-mono text-[11px]", ok ? "border-positive/30 text-positive" : "border-warning/30 text-warning")}>
+          <span className={cn("size-1.5 rounded-full", ok ? "bg-positive" : "bg-warning")} /> {status}
         </span>
       </div>
     </Panel>
   );
 }
 
+const ENV_TEMPLATE = `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=your-cloud-name
+CLOUDINARY_API_KEY=123456789012345
+CLOUDINARY_API_SECRET=your-api-secret
+GEMINI_API_KEY=your-gemini-key`;
+
 export default function SettingsPage() {
-  const s = integrationStatus();
+  const s = setupStatus();
   return (
     <div className="page-in max-w-4xl">
-      <TopBar eyebrow="Settings" title="Integrations" subtitle="ImpactLens runs end-to-end without credentials. Add keys to switch each layer from demo fallback to the live pipeline." />
+      <TopBar eyebrow="Settings" title="Integrations" subtitle="ImpactLens stores every original in Cloudinary, analyzes it with a vision model and keeps the evidence index in SQLite." />
       <div className="space-y-4">
         <Row
           icon={Cloud}
-          title="Cloudinary — media intelligence layer"
-          ok={s.cloudinary.mode !== "local"}
-          status={s.cloudinary.mode === "signed" ? `Signed · ${s.cloudinary.cloudName}` : s.cloudinary.mode === "unsigned" ? `Unsigned preset · ${s.cloudinary.cloudName}` : "Local demo storage"}
-          detail="Uploads, original asset references, f_auto/q_auto optimization, g_auto thumbnails, video poster frames and AI analysis frames."
-          env={["NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET", "NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET"]}
+          title="Cloudinary — media storage & transformations"
+          ok={!!s.cloudinary.mode}
+          status={s.cloudinary.mode === "signed" ? `Signed · ${s.cloudinary.cloudName}` : s.cloudinary.mode === "unsigned" ? `Unsigned preset · ${s.cloudinary.cloudName}` : "Not connected"}
+          detail="Uploads, original asset references, f_auto/q_auto optimization, g_auto thumbnails, video poster frames and AI analysis frames. Signed credentials also enable EXIF capture dates and importing assets by URL."
+          env={["NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET", "CLOUDINARY_FOLDER"]}
         />
         <Row
           icon={Brain}
           title="AI vision & language"
-          ok={s.ai.provider !== "demo"}
-          status={s.ai.label}
-          detail="Structured JSON metadata from field media, natural-language query interpretation, before/after comparison and report narrative. Falls back to a deterministic engine."
-          env={["GEMINI_API_KEY", "GEMINI_MODEL", "OPENAI_API_KEY", "OPENAI_MODEL"]}
+          ok={!!s.ai.provider}
+          status={s.ai.provider ? s.ai.label : "Not connected"}
+          detail="Structured JSON metadata from each photo or video frame, natural-language query interpretation, before/after comparison and report narrative. Get a free key at aistudio.google.com/apikey."
+          env={["GEMINI_API_KEY", "GEMINI_MODEL", "OPENAI_API_KEY"]}
         />
         <Row
           icon={Database}
           title="Evidence database"
-          ok={s.data.backend === "supabase"}
-          status={s.data.backend === "supabase" ? "Supabase / Postgres" : "Local JSON store"}
-          detail="Uploaded media records, AI metadata, reports and activity. Seeded demo evidence is always available."
-          env={["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"]}
+          ok
+          status={`SQLite · ${s.database.path}`}
+          detail="Projects, media records, AI metadata, reports and activity. Created automatically on first run."
+          env={["DATABASE_PATH"]}
         />
-        <Row
-          icon={FlaskConical}
-          title="Demo mode"
-          ok={!s.demoMode}
-          status={s.demoMode ? "DEMO_MODE=true" : "Auto (per integration)"}
-          detail="When enabled, all AI and storage calls use deterministic local fallbacks so a live demo can never fail because of an API key."
-          env={["DEMO_MODE"]}
-        />
+
+        {!s.ready && (
+          <Panel className="p-5">
+            <div className="text-[14px] font-medium">Connect your accounts</div>
+            <ol className="mt-3 list-decimal space-y-1.5 pl-5 text-[13px] text-muted">
+              <li>
+                Copy your cloud name, API key and API secret from the Cloudinary console (Settings → API Keys).
+              </li>
+              <li>Create a Gemini API key in Google AI Studio.</li>
+              <li>
+                Put them in <code className="font-mono text-foreground">.env.local</code> at the project root and restart{" "}
+                <code className="font-mono text-foreground">npm run dev</code>.
+              </li>
+            </ol>
+            <pre className="mt-4 overflow-x-auto rounded-md border border-line bg-black/40 p-3 font-mono text-[12px] text-muted">{ENV_TEMPLATE}</pre>
+          </Panel>
+        )}
+
+        <SampleImporter ready={s.ready} />
       </div>
     </div>
   );

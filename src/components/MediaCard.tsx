@@ -1,16 +1,16 @@
 import { AlertTriangle, CalendarDays, Film, Loader2, MapPin, Sparkles } from "lucide-react";
 import Link from "next/link";
 import type { MediaAsset } from "@/lib/types";
-import { cn, fmtDate, pct } from "@/lib/utils";
+import { fmtDate, pct } from "@/lib/utils";
 import { ImpactBadge, StageBadge } from "./ImpactBadge";
 import { MediaThumb } from "./MediaThumb";
 import { Tag } from "./ui/badge";
 
-export function CloudinaryLabel({ asset }: { asset: Pick<MediaAsset, "storage"> }) {
+export function CloudinaryLabel({ asset }: { asset: Pick<MediaAsset, "format"> }) {
   return (
     <span className="inline-flex items-center gap-1 rounded-[3px] bg-black/60 px-1.5 py-0.5 font-mono text-[9.5px] uppercase tracking-wider text-white/75 backdrop-blur">
-      <span className={cn("size-1 rounded-full", asset.storage === "cloudinary" ? "bg-accent" : "bg-white/50")} />
-      {asset.storage === "cloudinary" ? "Cloudinary optimized" : "Demo asset"}
+      <span className="size-1 rounded-full bg-accent" />
+      Cloudinary{asset.format ? ` · ${asset.format}` : " optimized"}
     </span>
   );
 }

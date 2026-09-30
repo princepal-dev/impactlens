@@ -1,6 +1,6 @@
 import { MediaLibrary } from "@/components/MediaLibrary";
 import { TopBar } from "@/components/TopBar";
-import { cloudinaryUploadMode } from "@/lib/config";
+import { setupStatus } from "@/lib/config";
 import { listAssets, listProjects } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +18,7 @@ export default async function MediaPage({ searchParams }: PageProps<"/media">) {
       <MediaLibrary
         initial={assets}
         projects={listProjects()}
-        storageMode={cloudinaryUploadMode()}
+        ready={setupStatus().ready}
         initialProject={typeof sp.project === "string" ? sp.project : undefined}
         autoUpload={sp.upload === "1"}
       />

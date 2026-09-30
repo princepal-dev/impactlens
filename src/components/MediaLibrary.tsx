@@ -14,13 +14,13 @@ import { Input, Select } from "./ui/panel";
 export function MediaLibrary({
   initial,
   projects,
-  storageMode,
+  ready,
   initialProject,
   autoUpload,
 }: {
   initial: MediaAsset[];
   projects: Project[];
-  storageMode: "signed" | "unsigned" | "local";
+  ready: boolean;
   initialProject?: string;
   autoUpload?: boolean;
 }) {
@@ -51,7 +51,7 @@ export function MediaLibrary({
     <div className="space-y-10">
       <UploadDropzone
         projects={projects}
-        storageMode={storageMode}
+        ready={ready}
         autoFocus={autoUpload}
         onIndexed={(a) => setAssets((list) => [a, ...list.filter((x) => x.id !== a.id)])}
       />

@@ -1,6 +1,6 @@
 import { CompareWorkspace } from "@/components/CompareWorkspace";
 import { TopBar } from "@/components/TopBar";
-import { DEFAULT_PAIRS } from "@/lib/seed";
+import { DEFAULT_PAIRS } from "@/lib/samples";
 import { listAssets, listProjects } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +12,7 @@ export default async function ComparePage({ searchParams }: PageProps<"/compare"
       <TopBar eyebrow="Compare" title="Before & After Evidence" subtitle="Compare field evidence across project stages." />
       <CompareWorkspace
         projects={listProjects()}
-        assets={await listAssets()}
+        assets={(await listAssets()).filter((a) => a.status === "indexed")}
         defaults={DEFAULT_PAIRS}
         initialProject={typeof sp.project === "string" ? sp.project : undefined}
         initialAfter={typeof sp.after === "string" ? sp.after : undefined}

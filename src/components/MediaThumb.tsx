@@ -6,9 +6,9 @@ import { displayUrl, thumbUrl } from "@/lib/media-url";
 import type { CloudinaryRef } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-type Ref = Pick<CloudinaryRef, "secureUrl" | "storage" | "resourceType"> & { title?: string };
+type Ref = Pick<CloudinaryRef, "secureUrl" | "resourceType"> & { title?: string };
 
-/** Renders a Cloudinary-optimized thumbnail (or local demo file) with graceful fallbacks. */
+/** Renders a Cloudinary-optimized thumbnail with graceful fallbacks. */
 export function MediaThumb({
   asset,
   w = 640,
@@ -25,7 +25,7 @@ export function MediaThumb({
   const [failed, setFailed] = useState(false);
   const src = full ? displayUrl(asset) : thumbUrl(asset, w, h);
 
-  if (failed || (!src && asset.resourceType !== "video")) {
+  if (failed) {
     return (
       <div className={cn("grid place-items-center bg-white/[0.03] text-subtle", className)}>
         <ImageOff className="size-5" />
@@ -33,12 +33,12 @@ export function MediaThumb({
     );
   }
 
-  if (asset.resourceType === "video" && (!src || full)) {
+  if (asset.resourceType === "video" && full) {
     return (
       <div className={cn("relative bg-black", className)}>
         <video
           src={displayUrl(asset)}
-          poster={thumbUrl(asset, w, h) ?? undefined}
+          poster={thumbUrl(asset, w, h)}
           className="size-full object-cover"
           preload="metadata"
           muted
@@ -54,7 +54,7 @@ export function MediaThumb({
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={src!}
+      src={src}
       alt={asset.title ?? "Field media"}
       loading="lazy"
       onError={() => setFailed(true)}

@@ -32,7 +32,7 @@ export function SourceTrace({ asset }: { asset: MediaAsset }) {
     ["format", asset.format || "—"],
     ["dimensions", asset.width ? `${asset.width} × ${asset.height}` : "—"],
     ["createdAt", asset.createdAt],
-    ["storage", asset.storage === "cloudinary" ? "Cloudinary" : "Local demo storage (Cloudinary-ready reference)"],
+    ["storage", "Cloudinary"],
   ];
   return (
     <div className="space-y-5">

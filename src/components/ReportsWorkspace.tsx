@@ -13,7 +13,20 @@ import { Button } from "./ui/button";
 import { Panel, Select } from "./ui/panel";
 
 const STEPS = ["Analyzing project evidence…", "Grouping media…", "Comparing before/after evidence…", "Extracting impact themes…", "Building report…"];
-const MONTHS = ["2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06", "2026-07", "2026-08", "2026-09"];
+/** Every month from the earliest evidence to the current month (inclusive). */
+function monthRange(dates: string[]) {
+  const now = new Date().toISOString().slice(0, 7);
+  const valid = dates.filter((d) => /^\d{4}-\d{2}/.test(d)).map((d) => d.slice(0, 7));
+  const start = valid.length ? valid.reduce((m, d) => (d < m ? d : m)) : now;
+  const end = valid.length ? valid.reduce((m, d) => (d > m ? d : m), now) : now;
+  const out: string[] = [];
+  const cursor = new Date(`${start}-01T00:00:00Z`);
+  while (cursor.toISOString().slice(0, 7) <= end) {
+    out.push(cursor.toISOString().slice(0, 7));
+    cursor.setUTCMonth(cursor.getUTCMonth() + 1);
+  }
+  return out;
+}
 const monthLabel = (m: string) => new Date(`${m}-01T00:00:00Z`).toLocaleString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
 const lastDay = (m: string) => new Date(Date.UTC(+m.slice(0, 4), +m.slice(5, 7), 0)).toISOString().slice(0, 10);
 
@@ -29,8 +42,9 @@ export function ReportsWorkspace({
   const router = useRouter();
   const params = useSearchParams();
   const [projectId, setProjectId] = useState(projects.find((p) => p.slug === params.get("project"))?.id ?? projects[0].id);
-  const [from, setFrom] = useState("2026-01");
-  const [to, setTo] = useState("2026-09");
+  const [months] = useState(() => monthRange(Object.values(assets).map((a) => a.date)));
+  const [from, setFrom] = useState(months[0]);
+  const [to, setTo] = useState(months[months.length - 1]);
   const [step, setStep] = useState(-1);
   const [report, setReport] = useState<ReportContent | null>(() => initialHistory.find((r) => r.id === params.get("id")) ?? null);
   const [history, setHistory] = useState(initialHistory);
@@ -97,13 +111,13 @@ export function ReportsWorkspace({
             <label className="space-y-1.5">
               <span className="label-mono">From</span>
               <Select value={from} onChange={(e) => setFrom(e.target.value)} disabled={busy}>
-                {MONTHS.map((m) => <option key={m} value={m} disabled={m > to}>{monthLabel(m)}</option>)}
+                {months.map((m) => <option key={m} value={m} disabled={m > to}>{monthLabel(m)}</option>)}
               </Select>
             </label>
             <label className="space-y-1.5">
               <span className="label-mono">To</span>
               <Select value={to} onChange={(e) => setTo(e.target.value)} disabled={busy}>
-                {MONTHS.map((m) => <option key={m} value={m} disabled={m < from}>{monthLabel(m)}</option>)}
+                {months.map((m) => <option key={m} value={m} disabled={m < from}>{monthLabel(m)}</option>)}
               </Select>
             </label>
             <label className="space-y-1.5">

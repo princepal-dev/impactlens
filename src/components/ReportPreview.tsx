@@ -178,7 +178,7 @@ export function ReportPreview({ report, assets }: { report: ReportContent; asset
                   <td className="px-3 py-2 font-mono text-[11px] text-muted max-md:hidden">{a.cloudinaryPublicId}</td>
                   <td className="px-3 py-2">
                     <a href={a.secureUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-mono text-[11px] text-accent hover:underline">
-                      {a.storage === "cloudinary" ? "secure_url" : "source"} <ExternalLink className="size-3" />
+                      secure_url <ExternalLink className="size-3" />
                     </a>
                   </td>
                 </tr>

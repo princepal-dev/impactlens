@@ -17,8 +17,11 @@ import { CategoryIcon } from "@/components/ImpactBadge";
 import { MediaThumb } from "@/components/MediaThumb";
 import { MetricCard } from "@/components/MetricCard";
 import { TopBar } from "@/components/TopBar";
+import { NewProjectDialog } from "@/components/NewProjectDialog";
+import { SampleImporter } from "@/components/SampleImporter";
 import { Button } from "@/components/ui/button";
 import { Panel, PanelHeader } from "@/components/ui/panel";
+import { setupStatus } from "@/lib/config";
 import { listActivity, orgStats, projectSummaries } from "@/lib/store";
 import { fmtDate, timeAgo } from "@/lib/utils";
 
@@ -35,20 +38,25 @@ const ACTIVITY_ICONS = {
 
 export default async function OverviewPage() {
   const [stats, activity, projects] = await Promise.all([orgStats(), listActivity(), projectSummaries()]);
+  const { ready } = setupStatus();
+  const reportProject = [...projects].sort((a, b) => b.totalAssets - a.totalAssets)[0];
 
   return (
     <div className="page-in">
       <TopBar
-        eyebrow="Impact Intelligence · Demo Organization"
+        eyebrow="Impact Intelligence"
         title="Impact Intelligence"
         subtitle="Turn field media into searchable evidence and measurable impact."
         actions={
           <>
-            <Button variant="secondary" asChild>
-              <Link href="/reports?project=rajasthan-water-access&auto=1">
-                <FileText /> Generate Report
-              </Link>
-            </Button>
+            <NewProjectDialog />
+            {stats.totalAssets > 0 && reportProject && (
+              <Button variant="secondary" asChild>
+                <Link href={`/reports?project=${reportProject.slug}&auto=1`}>
+                  <FileText /> Generate Report
+                </Link>
+              </Button>
+            )}
             <Button variant="primary" asChild>
               <Link href="/media?upload=1">
                 <Plus /> Upload Media
@@ -59,11 +67,17 @@ export default async function OverviewPage() {
       />
 
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Media assets" value={stats.totalAssets.toLocaleString("en-IN")} hint="photos & videos indexed" icon={Images} trend={stats.uploadedThisSession ? `+${stats.uploadedThisSession} today` : "+24 this week"} />
+        <MetricCard label="Media assets" value={stats.totalAssets.toLocaleString("en-IN")} hint="photos & videos indexed" icon={Images} trend={stats.addedThisWeek ? `+${stats.addedThisWeek} this week` : undefined} />
         <MetricCard label="Field sites" value={String(stats.fieldSites)} hint="locations with evidence" icon={MapPinned} />
         <MetricCard label="Impact reports" value={String(stats.reports)} hint="generated from evidence" icon={FileText} />
-        <MetricCard label="AI tagging coverage" value={`${Math.round(stats.aiCoverage * 100)}%`} hint="assets with structured metadata" icon={ScanSearch} />
+        <MetricCard label="AI tagging coverage" value={stats.totalAssets ? `${Math.round(stats.aiCoverage * 100)}%` : "—"} hint="assets with AI metadata" icon={ScanSearch} />
       </section>
+
+      {stats.totalAssets === 0 && (
+        <section className="mt-6">
+          <SampleImporter ready={ready} compact />
+        </section>
+      )}
 
       <section className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[1fr_380px]">
         <div>
@@ -84,7 +98,11 @@ export default async function OverviewPage() {
                 className="group flex flex-col overflow-hidden rounded-lg border border-line bg-panel transition-all duration-200 hover:-translate-y-0.5 hover:border-line-strong"
               >
                 <div className="relative aspect-[16/10] overflow-hidden">
-                  {p.cover && <MediaThumb asset={p.cover} w={560} h={350} className="size-full transition-transform duration-500 group-hover:scale-[1.04]" />}
+                  {p.cover ? (
+                    <MediaThumb asset={p.cover} w={560} h={350} className="size-full transition-transform duration-500 group-hover:scale-[1.04]" />
+                  ) : (
+                    <div className="grid size-full place-items-center bg-white/[0.02] font-mono text-[11px] text-subtle">No evidence yet</div>
+                  )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-transparent" />
                   <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between">
                     <span className="inline-flex items-center gap-1.5 rounded-[4px] bg-black/50 px-2 py-1 text-[11px] text-white/90 backdrop-blur">
@@ -98,7 +116,7 @@ export default async function OverviewPage() {
                   <dl className="mt-3 space-y-1.5 text-[12.5px]">
                     <div className="flex justify-between gap-3"><dt className="text-subtle">Location</dt><dd className="truncate text-right text-muted">{p.region.replace(", India", "")}</dd></div>
                     <div className="flex justify-between"><dt className="text-subtle">Assets</dt><dd className="font-mono text-muted">{p.totalAssets}</dd></div>
-                    <div className="flex justify-between"><dt className="text-subtle">Updated</dt><dd className="text-muted">{fmtDate(p.lastUpdated)}</dd></div>
+                    <div className="flex justify-between"><dt className="text-subtle">Updated</dt><dd className="text-muted">{p.lastUpdated ? fmtDate(p.lastUpdated) : "—"}</dd></div>
                     <div className="flex items-center justify-between">
                       <dt className="text-subtle">Status</dt>
                       <dd className="flex items-center gap-1.5 text-positive"><span className="size-1.5 rounded-full bg-positive" />{p.status}</dd>
@@ -129,7 +147,10 @@ export default async function OverviewPage() {
 
         <Panel className="h-fit">
           <PanelHeader eyebrow="Live" title="Recent activity" />
-          <ul className="px-5 py-2">
+          {activity.length === 0 && (
+            <p className="px-5 py-6 text-[13px] text-muted">Uploads, analyses, comparisons and reports will appear here.</p>
+          )}
+          <ul className="px-5 py-2 empty:hidden">
             {activity.map((a, i) => {
               const Icon = ACTIVITY_ICONS[a.type] ?? Sparkles;
               return (

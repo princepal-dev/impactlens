@@ -31,23 +31,23 @@ type Job = {
 
 export function UploadDropzone({
   projects,
-  storageMode,
+  ready,
   autoFocus,
   onIndexed,
 }: {
   projects: Project[];
-  storageMode: "signed" | "unsigned" | "local";
+  ready: boolean;
   autoFocus?: boolean;
   onIndexed?: (a: MediaAsset) => void;
 }) {
   const [drag, setDrag] = useState(false);
   const [projectId, setProjectId] = useState("");
+  const [location, setLocation] = useState("");
   const [jobs, setJobs] = useState<Job[]>([]);
   const [importOpen, setImportOpen] = useState(false);
   const [importUrl, setImportUrl] = useState("");
   const input = useRef<HTMLInputElement>(null);
   const zone = useRef<HTMLDivElement>(null);
-  const cloud = storageMode !== "local";
 
   useEffect(() => {
     if (autoFocus) {
@@ -71,8 +71,8 @@ export function UploadDropzone({
         const json = await res.json();
         clearTimeout(t);
         if (!res.ok) {
-          patch(key, { error: "ai", asset: json.asset ?? asset, errorMessage: json.message });
-          toast.warning("AI analysis unavailable", { description: "The asset is saved and can be manually tagged." });
+          patch(key, { error: "ai", asset: json.asset ?? asset, errorMessage: json.error });
+          toast.warning("AI analysis failed", { description: json.error ?? "The asset is saved and can be manually tagged." });
           return;
         }
         patch(key, { step: 3 });
@@ -82,8 +82,8 @@ export function UploadDropzone({
         toast.success("Evidence indexed", { description: json.asset.title });
       } catch {
         clearTimeout(t);
-        patch(key, { error: "ai" });
-        toast.warning("AI analysis unavailable", { description: "The asset is saved and can be manually tagged." });
+        patch(key, { error: "ai", errorMessage: "Network error while contacting the analysis service." });
+        toast.warning("AI analysis failed", { description: "The asset is saved and can be manually tagged." });
       }
     },
     [projectId, onIndexed],
@@ -96,7 +96,7 @@ export function UploadDropzone({
         fetch("/api/upload", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url: job.source.url, projectId: projectId || undefined }),
+          body: JSON.stringify({ url: job.source.url, projectId: projectId || undefined, location: location || undefined }),
         })
           .then(async (r) => {
             const json = await r.json();
@@ -114,6 +114,7 @@ export function UploadDropzone({
       const fd = new FormData();
       fd.append("file", job.source.file!);
       if (projectId) fd.append("projectId", projectId);
+      if (location.trim()) fd.append("location", location.trim());
       const xhr = new XMLHttpRequest();
       xhr.open("POST", "/api/upload");
       xhr.upload.onprogress = (e) => e.lengthComputable && patch(job.key, { progress: Math.round((e.loaded / e.total) * 100) });
@@ -137,10 +138,14 @@ export function UploadDropzone({
       };
       xhr.send(fd);
     },
-    [analyze, projectId],
+    [analyze, projectId, location],
   );
 
   const addFiles = (files: FileList | File[]) => {
+    if (!ready) {
+      toast.error("Connect Cloudinary and Gemini first", { description: "Add your keys on the Settings page." });
+      return;
+    }
     const list = Array.from(files).filter((f) => ACCEPT.split(",").includes(f.type));
     if (!list.length) {
       toast.error("Unsupported format", { description: `Use ${FORMATS.join(", ")}.` });
@@ -160,6 +165,10 @@ export function UploadDropzone({
   };
 
   const importFromUrl = () => {
+    if (!ready) {
+      toast.error("Connect Cloudinary and Gemini first", { description: "Add your keys on the Settings page." });
+      return;
+    }
     if (!/^https?:\/\//.test(importUrl.trim())) {
       toast.error("Enter a valid Cloudinary or public media URL");
       return;
@@ -187,8 +196,8 @@ export function UploadDropzone({
       return j.step > i ? "done" : j.step === i ? "active" : "pending";
     };
     return [
-      { label: j.source.url ? "Importing Cloudinary asset…" : cloud ? "Uploading to Cloudinary…" : "Uploading to demo storage…", detail: j.step === 0 ? `${j.progress}%` : undefined, state: s(0) },
-      { label: cloud || j.source.url ? "Cloudinary asset created" : "Asset stored (demo mode)", detail: j.asset?.cloudinaryPublicId, state: s(1) },
+      { label: j.source.url ? "Importing Cloudinary asset…" : "Uploading to Cloudinary…", detail: j.step === 0 ? `${j.progress}%` : undefined, state: s(0) },
+      { label: "Cloudinary asset created", detail: j.asset?.cloudinaryPublicId, state: s(1) },
       { label: "AI analyzing media…", state: s(2) },
       { label: "Extracting impact metadata…", state: s(3) },
       { label: "Evidence indexed", detail: j.step >= 5 && j.asset ? `${j.asset.tags.length} tags · ${j.asset.impactAreas.length} impact areas` : undefined, state: s(4) },
@@ -235,15 +244,28 @@ export function UploadDropzone({
               <Link2 /> Upload from Cloudinary
             </Button>
           </div>
-          <div className="mx-auto mt-6 flex max-w-sm flex-col items-center gap-3 sm:flex-row sm:justify-center">
+          <div className="mx-auto mt-6 flex max-w-xl flex-col items-center gap-3 sm:flex-row sm:justify-center">
             <span className="label-mono whitespace-nowrap">Assign to</span>
-            <Select value={projectId} onChange={(e) => setProjectId(e.target.value)} className="h-8 w-60 text-[12.5px]" onClick={(e) => e.stopPropagation()}>
+            <Select value={projectId} onChange={(e) => setProjectId(e.target.value)} className="h-8 w-56 text-[12.5px]" onClick={(e) => e.stopPropagation()}>
               <option value="">Auto-detect project with AI</option>
               {projects.map((p) => (
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
             </Select>
+            <Input
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+              placeholder="Site, e.g. Osian, Rajasthan (optional)"
+              className="h-8 w-60 text-[12.5px]"
+            />
           </div>
+          {!ready && (
+            <p className="mt-4 text-[12.5px] text-warning">
+              Uploads are disabled until Cloudinary and Gemini are connected. <Link href="/settings" className="underline underline-offset-4">Open settings</Link>
+            </p>
+          )}
           <div className="mt-5 flex items-center justify-center gap-1.5">
             {FORMATS.map((f) => (
               <span key={f} className="rounded-[3px] border border-line px-1.5 py-0.5 font-mono text-[10px] text-subtle">{f}</span>
@@ -257,7 +279,7 @@ export function UploadDropzone({
         <Panel key={j.key} className="page-in overflow-hidden">
           <div className="grid grid-cols-1 lg:grid-cols-[240px_250px_1fr] 2xl:grid-cols-[320px_260px_1fr]">
             <div className="relative aspect-[4/3] border-b border-line bg-black lg:aspect-auto lg:min-h-[260px] lg:border-b-0 lg:border-r">
-              {j.asset && j.step >= 1 && j.asset.storage === "cloudinary" ? (
+              {j.asset && j.step >= 1 ? (
                 <MediaThumb asset={j.asset} w={600} h={460} className="absolute inset-0 size-full" />
               ) : j.preview ? (
                 j.isVideo ? (
@@ -300,8 +322,8 @@ export function UploadDropzone({
               )}
               {j.error === "ai" && (
                 <div className="flex h-full flex-col items-start justify-center gap-3">
-                  <div className="flex items-center gap-2 text-warning"><AlertTriangle className="size-4" /> <span className="font-medium">AI analysis unavailable</span></div>
-                  <p className="text-[13px] text-muted">The asset is still saved and can be manually tagged.</p>
+                  <div className="flex items-center gap-2 text-warning"><AlertTriangle className="size-4" /> <span className="font-medium">AI analysis failed</span></div>
+                  <p className="text-[13px] text-muted">{j.errorMessage ? `${j.errorMessage} ` : ""}The asset is saved in Cloudinary and can be retried or tagged manually.</p>
                   <div className="flex gap-2">
                     <Button size="sm" onClick={() => j.asset && analyze(j.key, j.asset)}><RotateCcw /> Retry analysis</Button>
                     {j.asset && <Button size="sm" variant="ghost" asChild><Link href={`/media/${j.asset.id}?tag=1`}>Tag manually</Link></Button>}

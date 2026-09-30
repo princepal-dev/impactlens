@@ -25,10 +25,10 @@ export function Logo({ className }: { className?: string }) {
   );
 }
 
-export function Sidebar({ status }: { status: { demoMode: boolean; cloudinary: string; ai: string } }) {
+export function Sidebar({ status }: { status: { ready: boolean; cloudinary: string | null; ai: string | null } }) {
   const pathname = usePathname();
   const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
-  const live = status.cloudinary !== "local" && status.ai !== "demo";
+  const live = status.ready;
 
   return (
     <aside className="no-print sticky top-0 z-30 flex h-screen w-[232px] shrink-0 flex-col border-r border-line bg-[#0b0b0b]/95 max-lg:hidden">
@@ -59,14 +59,18 @@ export function Sidebar({ status }: { status: { demoMode: boolean; cloudinary: s
 
       <div className="mx-5 mt-8 rounded-md border border-line p-3">
         <div className="flex items-center gap-2">
-          <span className={cn("size-1.5 rounded-full", live ? "bg-positive" : "bg-accent")} />
-          <span className="font-mono text-[10.5px] uppercase tracking-wider text-muted">
-            {live ? "Live pipeline" : status.demoMode || (status.cloudinary === "local" && status.ai === "demo") ? "Demo mode" : "Hybrid mode"}
-          </span>
+          <span className={cn("size-1.5 rounded-full", live ? "bg-positive" : "bg-warning")} />
+          <span className="font-mono text-[10.5px] uppercase tracking-wider text-muted">{live ? "Live pipeline" : "Setup required"}</span>
         </div>
         <div className="mt-2 space-y-1 text-[11px] text-subtle">
-          <div className="flex justify-between"><span>Storage</span><span className="text-muted">{status.cloudinary === "local" ? "Local" : "Cloudinary"}</span></div>
-          <div className="flex justify-between"><span>AI</span><span className="text-muted">{status.ai === "demo" ? "Demo engine" : status.ai === "gemini" ? "Gemini" : "OpenAI"}</span></div>
+          <div className="flex justify-between">
+            <span>Storage</span>
+            <span className={status.cloudinary ? "text-muted" : "text-warning"}>{status.cloudinary ? "Cloudinary" : "Not connected"}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>AI</span>
+            <span className={status.ai ? "text-muted" : "text-warning"}>{status.ai === "gemini" ? "Gemini" : status.ai === "openai" ? "OpenAI" : "Not connected"}</span>
+          </div>
         </div>
       </div>
 
@@ -85,7 +89,7 @@ export function Sidebar({ status }: { status: { demoMode: boolean; cloudinary: s
             <Building2 className="size-3.5" />
           </div>
           <div className="min-w-0">
-            <div className="truncate text-[12.5px] text-foreground">Demo Organization</div>
+            <div className="truncate text-[12.5px] text-foreground">My Organization</div>
             <div className="truncate text-[11px] text-subtle">Sustainability team</div>
           </div>
         </div>
