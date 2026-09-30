@@ -23,12 +23,17 @@ export const config = {
   },
   openrouter: {
     apiKey: env("OPENROUTER_API_KEY"),
-    /** Optional comma-separated preference list; otherwise free vision models are discovered automatically. */
+    /** Optional comma-separated preference list of free models; otherwise free vision models are discovered automatically. */
     models: env("OPENROUTER_MODEL")
       .split(",")
       .map((m) => m.trim())
-      .filter(Boolean),
+      .filter((m) => m.endsWith(":free") || m === "openrouter/free"),
   },
+  /** Optional comma-separated provider order, e.g. "openrouter,gemini". Defaults to OpenRouter free models only. */
+  providers: env("AI_PROVIDERS")
+    .split(",")
+    .map((p) => p.trim().toLowerCase())
+    .filter(Boolean),
   databasePath: path.resolve(/*turbopackIgnore: true*/ process.cwd(), env("DATABASE_PATH") || ".data/impactlens.db"),
 };
 
@@ -55,20 +60,29 @@ export type AIProvider = "gemini" | "openai" | "openrouter";
 
 export const PROVIDER_NAMES: Record<AIProvider, string> = { gemini: "Google Gemini", openai: "OpenAI", openrouter: "OpenRouter" };
 
+const hasKey: Record<AIProvider, () => boolean> = {
+  gemini: () => !!config.gemini.apiKey,
+  openai: () => !!config.openai.apiKey,
+  openrouter: () => !!config.openrouter.apiKey,
+};
+
 /** Configured AI providers in priority order; later ones take over when earlier ones fail. */
-export const aiProviders = (): AIProvider[] =>
-  [
-    config.gemini.apiKey && ("gemini" as const),
-    config.openai.apiKey && ("openai" as const),
-    config.openrouter.apiKey && ("openrouter" as const),
-  ].filter((p): p is AIProvider => !!p);
+export const aiProviders = (): AIProvider[] => {
+  const requested = config.providers.filter((p): p is AIProvider => p in hasKey);
+  const order: AIProvider[] = requested.length
+    ? requested
+    : hasKey.openrouter()
+      ? ["openrouter"]
+      : ["gemini", "openai"];
+  return [...new Set(order)].filter((p) => hasKey[p]());
+};
 
 export const aiProvider = (): AIProvider | null => aiProviders()[0] ?? null;
 
 export const aiEngineLabel = (provider: AIProvider | null = aiProvider()) => {
   if (provider === "gemini") return `Gemini · ${config.gemini.model}`;
   if (provider === "openai") return `OpenAI · ${config.openai.model}`;
-  if (provider === "openrouter") return config.openrouter.models.length ? `OpenRouter · ${config.openrouter.models[0]}` : "OpenRouter · free models";
+  if (provider === "openrouter") return "OpenRouter · free models";
   return "Not configured";
 };
 

@@ -200,7 +200,7 @@ const FALLBACK_FREE_MODELS = ["google/gemma-4-31b-it:free", "google/gemma-4-26b-
 const PREFERRED = [/gemma/i, /qwen/i, /inkling/i, /nemotron-3-super/i, /llama/i, /mistral/i];
 const EXCLUDED = /safety|guard|code|coder|lyria/i;
 const MODELS_TTL_MS = 60 * 60_000;
-let freeModels: { vision: string[]; text: string[]; at: number } | null = null;
+let freeModels: { vision: string[]; text: string[]; live: boolean; at: number } | null = null;
 
 const rank = (m: OpenRouterModel) => {
   const i = PREFERRED.findIndex((re) => re.test(m.id));
@@ -208,7 +208,7 @@ const rank = (m: OpenRouterModel) => {
 };
 
 /** Free chat models from OpenRouter's live catalogue, JSON-capable and best-known families first. */
-async function openRouterFreeModels(): Promise<{ vision: string[]; text: string[] }> {
+async function openRouterFreeModels(): Promise<{ vision: string[]; text: string[]; live: boolean }> {
   if (freeModels && Date.now() - freeModels.at < MODELS_TTL_MS) return freeModels;
   try {
     const res = await fetch("https://openrouter.ai/api/v1/models", { signal: AbortSignal.timeout(10000) });
@@ -219,10 +219,10 @@ async function openRouterFreeModels(): Promise<{ vision: string[]; text: string[
       .filter((m) => (m.architecture?.output_modalities ?? ["text"]).join() === "text")
       .sort((a, b) => rank(a) - rank(b) || (b.context_length ?? 0) - (a.context_length ?? 0));
     const vision = free.filter((m) => m.architecture?.input_modalities?.includes("image")).map((m) => m.id);
-    freeModels = { vision, text: free.map((m) => m.id), at: Date.now() };
+    freeModels = { vision, text: free.map((m) => m.id), live: true, at: Date.now() };
   } catch (e) {
     console.warn("[ai] OpenRouter model catalogue unavailable, using built-in list:", e instanceof Error ? e.message : e);
-    freeModels = { vision: FALLBACK_FREE_MODELS, text: FALLBACK_FREE_MODELS, at: Date.now() - MODELS_TTL_MS + 5 * 60_000 };
+    freeModels = { vision: FALLBACK_FREE_MODELS, text: FALLBACK_FREE_MODELS, live: false, at: Date.now() - MODELS_TTL_MS + 5 * 60_000 };
   }
   return freeModels;
 }
@@ -230,7 +230,9 @@ async function openRouterFreeModels(): Promise<{ vision: string[]; text: string[
 async function callOpenRouter(opts: CallOptions): Promise<CallResult> {
   const discovered = await openRouterFreeModels();
   const pool = opts.images.length ? discovered.vision : discovered.text;
-  const models = [...new Set([...config.openrouter.models, ...pool.slice(0, 2), FREE_ROUTER])].slice(0, 3);
+  const available = new Set(pool);
+  const preferred = config.openrouter.models.filter((m) => m !== FREE_ROUTER && (!discovered.live || available.has(m)));
+  const models = [...new Set([...preferred, ...pool.slice(0, 2), FREE_ROUTER])].slice(0, 3);
   if (!models.includes(FREE_ROUTER)) models[models.length - 1] = FREE_ROUTER;
   const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
@@ -305,7 +307,7 @@ async function runProvider<T>(
 
 /**
  * Ask the configured models for a JSON object. Providers are tried in priority order
- * (Gemini → OpenAI → OpenRouter free models); each retries transient failures before
+ * (OpenRouter free models by default, see `aiProviders`); each retries transient failures before
  * the next one takes over. Returns the parsed object and the engine that produced it.
  */
 export async function generateJSON<T>(opts: {
