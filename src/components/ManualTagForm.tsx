@@ -4,6 +4,7 @@ import { Loader2, Save } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import { requestJSON } from "@/lib/http";
 import type { MediaAsset, Project } from "@/lib/types";
 import { Button } from "./ui/button";
 import { Input, Select } from "./ui/panel";
@@ -34,13 +35,9 @@ export function ManualTagForm({ asset, projects, onSaved }: { asset: MediaAsset;
     e.preventDefault();
     if (!f.title.trim()) return toast.error("Title is required");
     setSaving(true);
-    const res = await fetch(`/api/assets/${asset.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(f),
-    }).catch(() => null);
+    const res = await requestJSON(`/api/assets/${encodeURIComponent(asset.id)}`, { method: "PATCH", json: f });
     setSaving(false);
-    if (!res?.ok) return toast.error("Could not save changes", { description: "Try again." });
+    if (!res.ok) return toast.error("Could not save changes", { description: res.error });
     toast.success(indexed ? "Metadata updated" : "Evidence tagged and indexed");
     onSaved?.();
     router.refresh();

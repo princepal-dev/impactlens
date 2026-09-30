@@ -4,6 +4,7 @@ import { AlertTriangle, ArrowRight, CloudUpload, Link2, RotateCcw, UploadCloud, 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { requestJSON } from "@/lib/http";
 import type { MediaAsset, Project } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { AIAnalysisPanel } from "./AIAnalysisPanel";
@@ -14,7 +15,12 @@ import { Dialog, DialogContent } from "./ui/dialog";
 import { Input, Panel, Select } from "./ui/panel";
 
 const ACCEPT = "image/jpeg,image/png,image/webp,video/mp4,video/quicktime";
+const EXTENSIONS = /\.(jpe?g|png|webp|mp4|mov)$/i;
 const FORMATS = ["JPG", "PNG", "WEBP", "MP4", "MOV"];
+const MAX_BYTES = 100 * 1024 * 1024;
+const CONCURRENCY = 2;
+const UPLOAD_TIMEOUT_MS = 10 * 60_000;
+const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 type Job = {
   key: string;
@@ -22,12 +28,28 @@ type Job = {
   preview: string | null;
   isVideo: boolean;
   progress: number;
+  queued?: boolean;
   step: number; // 0 upload, 1 created, 2 analyzing, 3 extracting, 4 indexed
   error?: "upload" | "ai";
   errorMessage?: string;
   asset?: MediaAsset;
   source: { file?: File; url?: string };
 };
+
+type Task = { key: string; run: () => Promise<void> };
+
+/** Start queued tasks until `CONCURRENCY` are in flight; each completion pulls the next one. */
+function drain(queue: { current: Task[] }, active: { current: number }, onStart: (key: string) => void) {
+  while (active.current < CONCURRENCY && queue.current.length) {
+    const task = queue.current.shift()!;
+    active.current++;
+    onStart(task.key);
+    task.run().finally(() => {
+      active.current--;
+      drain(queue, active, onStart);
+    });
+  }
+}
 
 export function UploadDropzone({
   projects,
@@ -46,6 +68,9 @@ export function UploadDropzone({
   const [importUrl, setImportUrl] = useState("");
   const input = useRef<HTMLInputElement>(null);
   const zone = useRef<HTMLDivElement>(null);
+  const queue = useRef<Task[]>([]);
+  const active = useRef(0);
+  const previews = useRef(new Set<string>());
 
   useEffect(() => {
     if (autoFocus) {
@@ -54,116 +79,152 @@ export function UploadDropzone({
     }
   }, [autoFocus]);
 
+  useEffect(() => {
+    const urls = previews.current;
+    return () => urls.forEach((u) => URL.revokeObjectURL(u));
+  }, []);
+
   const patch = (key: string, p: Partial<Job>) => setJobs((js) => js.map((j) => (j.key === key ? { ...j, ...p } : j)));
+
+  const enqueue = useCallback((key: string, run: () => Promise<void>) => {
+    queue.current.push({ key, run });
+    patch(key, { queued: true });
+    drain(queue, active, (k) => patch(k, { queued: false }));
+  }, []);
 
   const analyze = useCallback(
     async (key: string, asset: MediaAsset) => {
-      patch(key, { step: 2, asset });
+      patch(key, { step: 2, asset, error: undefined });
       const t = setTimeout(() => patch(key, { step: 3 }), 900);
-      try {
-        const res = await fetch("/api/analyze", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ assetId: asset.id, projectId: projectId || undefined }),
-        });
-        const json = await res.json();
-        clearTimeout(t);
-        if (!res.ok) {
-          patch(key, { error: "ai", asset: json.asset ?? asset, errorMessage: json.error });
-          toast.warning("AI analysis failed", { description: json.error ?? "The asset is saved and can be manually tagged." });
-          return;
-        }
-        patch(key, { step: 3 });
-        await new Promise((r) => setTimeout(r, 450));
-        patch(key, { step: 5, asset: json.asset });
-        onIndexed?.(json.asset);
-        toast.success("Evidence indexed", { description: json.asset.title });
-      } catch {
-        clearTimeout(t);
-        patch(key, { error: "ai", errorMessage: "Network error while contacting the analysis service." });
-        toast.warning("AI analysis failed", { description: "The asset is saved and can be manually tagged." });
+      const res = await requestJSON<{ asset: MediaAsset }>("/api/analyze", {
+        method: "POST",
+        json: { assetId: asset.id, projectId: projectId || undefined },
+        timeoutMs: 200_000,
+      });
+      clearTimeout(t);
+      if (!res.ok) {
+        const saved = (res.data?.asset as MediaAsset | undefined) ?? asset;
+        patch(key, { error: "ai", asset: saved, errorMessage: res.error });
+        toast.warning("AI analysis failed", { description: "The asset is saved and can be retried or tagged manually." });
+        return;
       }
+      patch(key, { step: 3 });
+      await wait(450);
+      patch(key, { step: 5, asset: res.data.asset });
+      onIndexed?.(res.data.asset);
+      toast.success("Evidence indexed", { description: res.data.asset.title });
     },
     [projectId, onIndexed],
   );
 
-  const run = useCallback(
-    (job: Job) => {
-      patch(job.key, { step: 0, progress: 0, error: undefined });
-      if (job.source.url) {
-        fetch("/api/upload", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url: job.source.url, projectId: projectId || undefined, location: location || undefined }),
-        })
-          .then(async (r) => {
-            const json = await r.json();
-            if (!r.ok) throw new Error(json.error);
-            patch(job.key, { step: 1, progress: 100, asset: json.asset });
-            await new Promise((res) => setTimeout(res, 400));
-            analyze(job.key, json.asset);
-          })
-          .catch((e) => {
-            patch(job.key, { error: "upload", errorMessage: e.message });
-            toast.error("Upload failed", { description: e.message || "Try again." });
-          });
-        return;
-      }
-      const fd = new FormData();
-      fd.append("file", job.source.file!);
-      if (projectId) fd.append("projectId", projectId);
-      if (location.trim()) fd.append("location", location.trim());
-      const xhr = new XMLHttpRequest();
-      xhr.open("POST", "/api/upload");
-      xhr.upload.onprogress = (e) => e.lengthComputable && patch(job.key, { progress: Math.round((e.loaded / e.total) * 100) });
-      xhr.onload = async () => {
-        let json: { asset?: MediaAsset; error?: string } = {};
-        try {
-          json = JSON.parse(xhr.responseText);
-        } catch {}
-        if (xhr.status >= 300 || !json.asset) {
-          patch(job.key, { error: "upload", errorMessage: json.error });
-          toast.error("Upload failed", { description: json.error || "Try again." });
-          return;
-        }
-        patch(job.key, { step: 1, progress: 100, asset: json.asset });
-        await new Promise((r) => setTimeout(r, 450));
-        analyze(job.key, json.asset);
-      };
-      xhr.onerror = () => {
-        patch(job.key, { error: "upload" });
-        toast.error("Upload failed", { description: "Network error. Try again." });
-      };
-      xhr.send(fd);
-    },
-    [analyze, projectId, location],
+  const uploadFile = useCallback(
+    (key: string, file: File) =>
+      new Promise<MediaAsset | null>((resolve) => {
+        const fd = new FormData();
+        fd.append("file", file);
+        if (projectId) fd.append("projectId", projectId);
+        if (location.trim()) fd.append("location", location.trim());
+        const xhr = new XMLHttpRequest();
+        const fail = (message: string) => {
+          patch(key, { error: "upload", errorMessage: message });
+          toast.error("Upload failed", { description: message });
+          resolve(null);
+        };
+        xhr.open("POST", "/api/upload");
+        xhr.timeout = UPLOAD_TIMEOUT_MS;
+        xhr.upload.onprogress = (e) => e.lengthComputable && patch(key, { progress: Math.round((e.loaded / e.total) * 100) });
+        xhr.onload = () => {
+          let json: { asset?: MediaAsset; error?: string } = {};
+          try {
+            json = JSON.parse(xhr.responseText);
+          } catch {}
+          if (xhr.status >= 300 || !json.asset) {
+            fail(json.error || (xhr.status === 413 ? "The file is too large." : `Upload failed (${xhr.status || "network"}).`));
+            return;
+          }
+          resolve(json.asset);
+        };
+        xhr.onerror = () => fail("Network error. Check your connection and try again.");
+        xhr.ontimeout = () => fail("The upload timed out. Please try again.");
+        xhr.send(fd);
+      }),
+    [projectId, location],
   );
 
-  const addFiles = (files: FileList | File[]) => {
-    const list = Array.from(files).filter((f) => ACCEPT.split(",").includes(f.type));
-    if (!list.length) {
-      toast.error("Unsupported format", { description: `Use ${FORMATS.join(", ")}.` });
-      return;
+  const importUrlAsset = useCallback(
+    async (key: string, url: string) => {
+      const res = await requestJSON<{ asset: MediaAsset }>("/api/upload", {
+        method: "POST",
+        json: { url, projectId: projectId || undefined, location: location.trim() || undefined },
+        timeoutMs: 200_000,
+      });
+      if (res.ok) return res.data.asset;
+      patch(key, { error: "upload", errorMessage: res.error });
+      toast.error("Upload failed", { description: res.error });
+      return null;
+    },
+    [projectId, location],
+  );
+
+  const run = useCallback(
+    (job: Job) => {
+      patch(job.key, { step: 0, progress: 0, error: undefined, errorMessage: undefined });
+      enqueue(job.key, async () => {
+        const asset = job.source.url ? await importUrlAsset(job.key, job.source.url) : await uploadFile(job.key, job.source.file!);
+        if (!asset) return;
+        patch(job.key, { step: 1, progress: 100, asset });
+        await wait(400);
+        await analyze(job.key, asset);
+      });
+    },
+    [enqueue, importUrlAsset, uploadFile, analyze],
+  );
+
+  const retryAnalysis = (j: Job) => j.asset && enqueue(j.key, () => analyze(j.key, j.asset!));
+
+  const dismiss = (j: Job) => {
+    queue.current = queue.current.filter((t) => t.key !== j.key);
+    if (j.preview?.startsWith("blob:")) {
+      URL.revokeObjectURL(j.preview);
+      previews.current.delete(j.preview);
     }
-    const newJobs: Job[] = list.map((f) => ({
-      key: crypto.randomUUID(),
-      name: f.name,
-      preview: URL.createObjectURL(f),
-      isVideo: f.type.startsWith("video"),
-      progress: 0,
-      step: 0,
-      source: { file: f },
-    }));
+    setJobs((js) => js.filter((x) => x.key !== j.key));
+  };
+
+  const addFiles = (files: FileList | File[]) => {
+    const all = Array.from(files);
+    const supported = all.filter((f) => ACCEPT.split(",").includes(f.type) || EXTENSIONS.test(f.name));
+    const list = supported.filter((f) => f.size > 0 && f.size <= MAX_BYTES);
+    if (supported.length < all.length) toast.error("Unsupported format", { description: `Use ${FORMATS.join(", ")}.` });
+    if (list.length < supported.length) toast.error("Some files were skipped", { description: "Files must be under 100 MB." });
+    if (!list.length) return;
+    const newJobs: Job[] = list.map((f) => {
+      const preview = URL.createObjectURL(f);
+      previews.current.add(preview);
+      return {
+        key: crypto.randomUUID(),
+        name: f.name,
+        preview,
+        isVideo: f.type.startsWith("video") || /\.(mp4|mov)$/i.test(f.name),
+        progress: 0,
+        step: 0,
+        source: { file: f },
+      };
+    });
     setJobs((js) => [...newJobs, ...js]);
     newJobs.forEach(run);
   };
 
   const importFromUrl = () => {
-    if (!/^https?:\/\//.test(importUrl.trim())) {
+    const url = importUrl.trim();
+    let valid = false;
+    try {
+      valid = ["http:", "https:"].includes(new URL(url).protocol);
+    } catch {}
+    if (!valid) {
       toast.error("Enter a valid Cloudinary or public media URL");
       return;
     }
-    const url = importUrl.trim();
     const job: Job = {
       key: crypto.randomUUID(),
       name: url.split("/").pop()?.split("?")[0] || "cloudinary-asset",
@@ -186,7 +247,11 @@ export function UploadDropzone({
       return j.step > i ? "done" : j.step === i ? "active" : "pending";
     };
     return [
-      { label: j.source.url ? "Importing Cloudinary asset…" : "Uploading to Cloudinary…", detail: j.step === 0 ? `${j.progress}%` : undefined, state: s(0) },
+      {
+        label: j.queued && j.step === 0 ? "Waiting in queue…" : j.source.url ? "Importing Cloudinary asset…" : "Uploading to Cloudinary…",
+        detail: j.step === 0 && !j.queued ? `${j.progress}%` : undefined,
+        state: s(0),
+      },
       { label: "Cloudinary asset created", detail: j.asset?.cloudinaryPublicId, state: s(1) },
       { label: "AI analyzing media…", state: s(2) },
       { label: "Extracting impact metadata…", state: s(3) },
@@ -257,7 +322,11 @@ export function UploadDropzone({
             ))}
           </div>
         </div>
-        <input ref={input} type="file" multiple accept={ACCEPT} className="hidden" onChange={(e) => e.target.files && addFiles(e.target.files)} />
+        <input ref={input} type="file" multiple accept={ACCEPT} className="hidden" onChange={(e) => {
+            if (e.target.files) addFiles(e.target.files);
+            e.target.value = "";
+          }}
+        />
       </div>
 
       {jobs.map((j) => (
@@ -284,7 +353,7 @@ export function UploadDropzone({
               )}
               <div className="absolute left-2.5 top-2.5 max-w-[85%] truncate rounded-[3px] bg-black/60 px-1.5 py-0.5 font-mono text-[10.5px] text-white/80 backdrop-blur">{j.name}</div>
               <button
-                onClick={() => setJobs((js) => js.filter((x) => x.key !== j.key))}
+                onClick={() => dismiss(j)}
                 className="absolute right-2 top-2 rounded bg-black/60 p-1 text-white/70 hover:text-white"
                 aria-label="Dismiss"
               >
@@ -310,7 +379,7 @@ export function UploadDropzone({
                   <div className="flex items-center gap-2 text-warning"><AlertTriangle className="size-4" /> <span className="font-medium">AI analysis failed</span></div>
                   <p className="text-[13px] text-muted">{j.errorMessage ? `${j.errorMessage} ` : ""}The asset is saved in Cloudinary and can be retried or tagged manually.</p>
                   <div className="flex gap-2">
-                    <Button size="sm" onClick={() => j.asset && analyze(j.key, j.asset)}><RotateCcw /> Retry analysis</Button>
+                    <Button size="sm" onClick={() => retryAnalysis(j)}><RotateCcw /> Retry analysis</Button>
                     {j.asset && <Button size="sm" variant="ghost" asChild><Link href={`/media/${j.asset.id}`}>Tag manually</Link></Button>}
                   </div>
                 </div>

@@ -2,7 +2,8 @@
 
 import { AlertTriangle, ChevronDown, Cpu, SearchX, Sparkles } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
+import { requestJSON } from "@/lib/http";
 import type { SearchResponse } from "@/lib/types";
 import { cn, fmtDate } from "@/lib/utils";
 import { EmptyState } from "./EmptyState";
@@ -29,29 +30,25 @@ export function EvidenceSearch() {
   const [q, setQ] = useState(initial);
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<SearchResponse | null>(null);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const latest = useRef(0);
   const [inspector, setInspector] = useState(false);
 
   const run = useCallback(
     async (query: string) => {
       setQ(query);
       setLoading(true);
-      setError(false);
+      setError(null);
+      const id = ++latest.current;
       router.replace(`/search?q=${encodeURIComponent(query)}`, { scroll: false });
-      try {
-        const res = await fetch("/api/search", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ query }),
-        });
-        if (!res.ok) throw new Error();
-        setData(await res.json());
-      } catch {
-        setError(true);
+      const res = await requestJSON<SearchResponse>("/api/search", { method: "POST", json: { query }, timeoutMs: 60_000 });
+      if (id !== latest.current) return;
+      if (res.ok) setData(res.data);
+      else {
+        setError(res.error);
         setData(null);
-      } finally {
-        setLoading(false);
       }
+      setLoading(false);
     },
     [router],
   );
@@ -114,7 +111,7 @@ export function EvidenceSearch() {
             tone="error"
             icon={AlertTriangle}
             title="Search is temporarily unavailable"
-            description="Something went wrong while searching. Try again."
+            description={error}
             action={<Button size="sm" onClick={() => run(q)}>Try again</Button>}
           />
         )}

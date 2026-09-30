@@ -4,6 +4,7 @@ import { AlertTriangle, Download, FileText, History, RotateCcw, Sparkles, Trash2
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { requestJSON } from "@/lib/http";
 import type { MediaAsset, Project, ReportContent } from "@/lib/types";
 import { cn, timeAgo } from "@/lib/utils";
 import { EmptyState } from "./EmptyState";
@@ -48,30 +49,28 @@ export function ReportsWorkspace({
   const [step, setStep] = useState(-1);
   const [report, setReport] = useState<ReportContent | null>(() => initialHistory.find((r) => r.id === params.get("id")) ?? null);
   const [history, setHistory] = useState(initialHistory);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const autoRan = useRef(false);
   const busy = step >= 0 && step < STEPS.length;
 
   const generate = useCallback(async () => {
-    setError(false);
+    setError(null);
     setReport(null);
     setStep(0);
-    const request = fetch("/api/report", {
+    const request = requestJSON<ReportContent>("/api/report", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ projectId, from: `${from}-01`, to: lastDay(to) }),
-    }).then(async (r) => {
-      const json = await r.json();
-      if (!r.ok) throw new Error(json.error);
-      return json as ReportContent;
+      json: { projectId, from: `${from}-01`, to: lastDay(to) },
+      timeoutMs: 120_000,
     });
     try {
       for (let i = 1; i < STEPS.length; i++) {
         await new Promise((r) => setTimeout(r, 650));
         setStep(i);
       }
-      const r = await request;
-      await new Promise((res) => setTimeout(res, 400));
+      const res = await request;
+      if (!res.ok) throw new Error(res.error);
+      const r = res.data;
+      await new Promise((done) => setTimeout(done, 400));
       setStep(STEPS.length);
       setReport(r);
       setHistory((h) => [r, ...h]);
@@ -79,9 +78,10 @@ export function ReportsWorkspace({
       toast.success("Impact report generated", { description: r.project });
       setTimeout(() => document.getElementById("report-top")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
     } catch (e) {
+      const message = e instanceof Error && e.message ? e.message : "Report generation failed. Try again.";
       setStep(-1);
-      setError(true);
-      toast.error("Report generation failed", { description: e instanceof Error ? e.message : "Try again." });
+      setError(message);
+      toast.error("Report generation failed", { description: message });
     }
   }, [projectId, from, to, router]);
 
@@ -93,8 +93,8 @@ export function ReportsWorkspace({
   }, [params, generate]);
 
   async function removeReport(id: string) {
-    const res = await fetch(`/api/report?id=${id}`, { method: "DELETE" }).catch(() => null);
-    if (!res?.ok) return toast.error("Could not delete report");
+    const res = await requestJSON(`/api/report?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+    if (!res.ok) return toast.error("Could not delete report", { description: res.error });
     setHistory((h) => h.filter((r) => r.id !== id));
     if (report?.id === id) {
       setReport(null);
@@ -154,7 +154,7 @@ export function ReportsWorkspace({
           )}
           {error && (
             <div className="mt-6 flex items-center justify-between gap-3 rounded-md border border-warning/30 bg-warning/5 px-4 py-3 text-[13px]">
-              <span className="flex items-center gap-2 text-warning"><AlertTriangle className="size-4" /> Report generation failed. Try again.</span>
+              <span className="flex items-center gap-2 text-warning"><AlertTriangle className="size-4" /> {error}</span>
               <Button size="sm" onClick={generate}><RotateCcw /> Try again</Button>
             </div>
           )}

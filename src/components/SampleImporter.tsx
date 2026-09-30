@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
+import { requestJSON } from "@/lib/http";
 
 type SampleStatus = { file: string; projectId: string; status: string | null };
 
@@ -21,10 +22,9 @@ export function SampleImporter({ compact = false }: { compact?: boolean }) {
 
   useEffect(() => {
     let alive = true;
-    fetch("/api/samples")
-      .then((r) => r.json())
-      .then((d: SampleStatus[]) => alive && setSamples(d))
-      .catch(() => alive && setSamples([]));
+    requestJSON<SampleStatus[]>("/api/samples", { timeoutMs: 20_000 }).then((r) => {
+      if (alive) setSamples(r.ok && Array.isArray(r.data) ? r.data : []);
+    });
     return () => {
       alive = false;
     };
@@ -47,27 +47,26 @@ export function SampleImporter({ compact = false }: { compact?: boolean }) {
       while (queue.length && !stop.current && !fatal) {
         const file = queue.shift()!;
         setCurrent((c) => [...c, file]);
-        try {
-          const res = await fetch("/api/samples", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ file }),
-          });
-          const json = await res.json();
-          if (res.status === 503) fatal = json.error;
-          if (!res.ok) throw new Error(json.error ?? "Import failed");
+        let res = await requestJSON("/api/samples", { method: "POST", json: { file }, timeoutMs: 200_000 });
+        if (!res.ok && res.status === 429) {
+          await new Promise((r) => setTimeout(r, 15_000));
+          res = await requestJSON("/api/samples", { method: "POST", json: { file }, timeoutMs: 200_000 });
+        }
+        if (res.ok) {
           imported++;
           setSamples((list) => list?.map((s) => (s.file === file ? { ...s, status: "indexed" } : s)) ?? list);
-        } catch (e) {
-          setErrors((list) => [...list, { file, error: e instanceof Error ? e.message : String(e) }]);
-        } finally {
-          setCurrent((c) => c.filter((f) => f !== file));
+        } else {
+          if (res.status === 503) fatal = res.error;
+          const error = res.error;
+          setErrors((list) => [...list, { file, error }]);
+          setSamples((list) => list?.map((s) => (s.file === file ? { ...s, status: "analysis_failed" } : s)) ?? list);
         }
+        setCurrent((c) => c.filter((f) => f !== file));
       }
     };
 
     await Promise.all(Array.from({ length: CONCURRENCY }, worker));
-    if (imported) await fetch("/api/samples", { method: "PATCH", body: JSON.stringify({ imported }) });
+    if (imported) await requestJSON("/api/samples", { method: "PATCH", json: { imported } });
     setRunning(false);
     router.refresh();
     if (fatal) toast.error(fatal);

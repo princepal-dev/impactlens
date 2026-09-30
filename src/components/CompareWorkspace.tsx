@@ -4,6 +4,7 @@ import { AlertTriangle, Columns2, Eye, FileText, Info, RotateCcw, Sparkles, Spli
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { requestJSON } from "@/lib/http";
 import type { ComparisonResult, MediaAsset, Project } from "@/lib/types";
 import { cn, fmtDate, pct } from "@/lib/utils";
 import { BeforeAfter } from "./BeforeAfter";
@@ -44,32 +45,28 @@ export function CompareWorkspace({
   const [[beforeId, afterId], setPair] = useState<[string, string]>(() => pairFor(startProject.id, initialAfter));
   const [mode, setMode] = useState<"slider" | "side">("side");
   const [attempt, setAttempt] = useState(0);
-  const [resp, setResp] = useState<{ key: string; data?: ComparisonResult; error?: boolean }>({ key: "" });
+  const [resp, setResp] = useState<{ key: string; data?: ComparisonResult; error?: string }>({ key: "" });
 
   const before = list.find((a) => a.id === beforeId);
   const after = list.find((a) => a.id === afterId);
   const key = `${beforeId}|${afterId}|${attempt}`;
   const loading = !!before && !!after && resp.key !== key;
   const result = resp.key === key ? resp.data ?? null : null;
-  const error = resp.key === key && !!resp.error;
+  const error = resp.key === key ? resp.error : undefined;
 
   useEffect(() => {
     if (!before || !after) return;
-    let cancelled = false;
-    fetch("/api/compare", {
+    const controller = new AbortController();
+    requestJSON<ComparisonResult>("/api/compare", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ beforeId: before.id, afterId: after.id }),
-    })
-      .then(async (r) => {
-        if (!r.ok) throw new Error();
-        const json = await r.json();
-        if (!cancelled) setResp({ key, data: json });
-      })
-      .catch(() => !cancelled && setResp({ key, error: true }));
-    return () => {
-      cancelled = true;
-    };
+      json: { beforeId: before.id, afterId: after.id },
+      signal: controller.signal,
+      timeoutMs: 120_000,
+    }).then((r) => {
+      if (controller.signal.aborted) return;
+      setResp(r.ok ? { key, data: r.data } : { key, error: r.error });
+    });
+    return () => controller.abort();
   }, [before, after, key]);
 
   const changeProject = (pid: string) => {
@@ -139,7 +136,7 @@ export function CompareWorkspace({
             )}
             {!loading && error && (
               <div className="flex items-center justify-between gap-3 text-[13px] text-warning">
-                <span className="flex items-center gap-2"><AlertTriangle className="size-4" /> Comparison unavailable. Try again.</span>
+                <span className="flex items-center gap-2"><AlertTriangle className="size-4" /> {error}</span>
                 <Button size="sm" onClick={() => setAttempt((n) => n + 1)}><RotateCcw /> Retry</Button>
               </div>
             )}

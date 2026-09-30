@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import { requestJSON } from "@/lib/http";
 import type { Project } from "@/lib/types";
 import { CategoryIcon } from "./ImpactBadge";
 import { NewProjectDialog } from "./NewProjectDialog";
@@ -26,14 +27,9 @@ export function ProjectManager({ projects }: { projects: Row[] }) {
 
   async function save(id: string) {
     setBusy(true);
-    const res = await fetch(`/api/projects/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(draft),
-    }).catch(() => null);
-    const json = await res?.json().catch(() => ({}));
+    const res = await requestJSON(`/api/projects/${encodeURIComponent(id)}`, { method: "PATCH", json: draft });
     setBusy(false);
-    if (!res?.ok) return toast.error(json?.error ?? "Could not update project");
+    if (!res.ok) return toast.error("Could not update project", { description: res.error });
     toast.success("Project updated");
     setEditing(null);
     router.refresh();
@@ -41,10 +37,10 @@ export function ProjectManager({ projects }: { projects: Row[] }) {
 
   async function remove(p: Row) {
     setBusy(true);
-    const res = await fetch(`/api/projects/${p.id}`, { method: "DELETE" }).catch(() => null);
+    const res = await requestJSON(`/api/projects/${encodeURIComponent(p.id)}`, { method: "DELETE" });
     setBusy(false);
     setPendingDelete(null);
-    if (!res?.ok) return toast.error("Could not delete project");
+    if (!res.ok) return toast.error("Could not delete project", { description: res.error });
     toast.success(`Project "${p.name}" deleted`);
     router.refresh();
   }

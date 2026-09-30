@@ -4,6 +4,7 @@ import { Loader2, Pencil, RotateCcw, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import { requestJSON } from "@/lib/http";
 import type { MediaAsset, Project } from "@/lib/types";
 import { ManualTagForm } from "./ManualTagForm";
 import { Button } from "./ui/button";
@@ -17,23 +18,18 @@ export function AssetActions({ asset, projects }: { asset: MediaAsset; projects:
 
   async function reanalyze() {
     setBusy("analyze");
-    const res = await fetch("/api/analyze", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ assetId: asset.id }),
-    }).catch(() => null);
-    const json = await res?.json().catch(() => ({}));
+    const res = await requestJSON<{ asset: MediaAsset }>("/api/analyze", { method: "POST", json: { assetId: asset.id }, timeoutMs: 200_000 });
     setBusy(null);
-    if (!res?.ok) return toast.error(json?.error ?? "AI analysis could not be completed", { description: "Try again in a moment." });
-    toast.success("Evidence re-analyzed", { description: json.asset.title });
     router.refresh();
+    if (!res.ok) return toast.error(res.error, { description: "Try again in a moment." });
+    toast.success("Evidence re-analyzed", { description: res.data.asset.title });
   }
 
   async function remove() {
     setBusy("delete");
-    const res = await fetch(`/api/assets/${asset.id}`, { method: "DELETE" }).catch(() => null);
+    const res = await requestJSON(`/api/assets/${encodeURIComponent(asset.id)}`, { method: "DELETE" });
     setBusy(null);
-    if (!res?.ok) return toast.error("Could not delete this asset");
+    if (!res.ok) return toast.error("Could not delete this asset", { description: res.error });
     toast.success("Asset deleted");
     router.push("/media");
     router.refresh();

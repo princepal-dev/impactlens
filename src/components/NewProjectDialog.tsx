@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Input, Select } from "@/components/ui/panel";
+import { requestJSON } from "@/lib/http";
 
 const CATEGORIES = ["Water & Sanitation", "Environment", "Renewable Energy", "Infrastructure", "Community", "Other"];
 
@@ -19,22 +20,12 @@ export function NewProjectDialog() {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
     setSaving(true);
-    try {
-      const res = await fetch("/api/projects", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(Object.fromEntries(form)),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? "Could not create project");
-      toast.success(`Project "${json.name}" created`);
-      setOpen(false);
-      router.refresh();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not create project");
-    } finally {
-      setSaving(false);
-    }
+    const res = await requestJSON<{ name: string }>("/api/projects", { method: "POST", json: Object.fromEntries(form) });
+    setSaving(false);
+    if (!res.ok) return toast.error(res.error);
+    toast.success(`Project "${res.data.name}" created`);
+    setOpen(false);
+    router.refresh();
   }
 
   return (

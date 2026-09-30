@@ -11,6 +11,8 @@ import { UploadDropzone } from "./UploadDropzone";
 import { Button } from "./ui/button";
 import { Input, Select } from "./ui/panel";
 
+const PAGE_SIZE = 48;
+
 export function MediaLibrary({
   initial,
   projects,
@@ -27,6 +29,9 @@ export function MediaLibrary({
   const [project, setProject] = useState(projects.find((p) => p.slug === initialProject)?.id ?? "all");
   const [stage, setStage] = useState("all");
   const [q, setQ] = useState("");
+  const filterKey = `${project}|${stage}|${q}`;
+  const [page, setPage] = useState({ key: filterKey, n: PAGE_SIZE });
+  const visible = page.key === filterKey ? page.n : PAGE_SIZE;
 
   const filtered = useMemo(
     () =>
@@ -97,9 +102,17 @@ export function MediaLibrary({
 
         {filtered.length ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-            {filtered.map((a) => <MediaCard key={a.id} asset={a} />)}
+            {filtered.slice(0, visible).map((a) => <MediaCard key={a.id} asset={a} />)}
           </div>
-        ) : (
+        ) : null}
+        {filtered.length > visible ? (
+          <div className="mt-6 flex justify-center">
+            <Button size="sm" variant="secondary" onClick={() => setPage({ key: filterKey, n: visible + PAGE_SIZE })}>
+              Load more <span className="font-mono text-subtle">{filtered.length - visible}</span>
+            </Button>
+          </div>
+        ) : null}
+        {filtered.length ? null : (
           <EmptyState
             icon={ImageOff}
             title="No media matches these filters"
