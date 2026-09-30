@@ -80,7 +80,7 @@ export function CompareWorkspace({
   return (
     <div className="space-y-6">
       <Panel className="p-4">
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-[1.2fr_1fr_1fr_auto] md:items-end">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end">
           <label className="space-y-1.5">
             <span className="label-mono">Project</span>
             <Select value={projectId} onChange={(e) => changeProject(e.target.value)}>
@@ -121,7 +121,7 @@ export function CompareWorkspace({
         <EmptyState icon={Eye} title="Select two assets to compare" description="Choose a before and an after asset from the same project." />
       )}
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.4fr_1fr]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <Panel>
           <PanelHeader
             eyebrow="Based on uploaded media"

@@ -72,7 +72,7 @@ export default async function OverviewPage() {
       </section>
 
       {stats.totalAssets === 0 && (
-        <section className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-[1fr_1.2fr]">
+        <section className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
           <Panel className="flex flex-col justify-between p-6">
             <div>
               <div className="label-mono">Get started</div>
@@ -94,7 +94,7 @@ export default async function OverviewPage() {
         </section>
       )}
 
-      <section className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[1fr_380px]">
+      <section className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
         <div>
           <div className="mb-4 flex items-end justify-between">
             <div>

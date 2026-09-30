@@ -18,7 +18,7 @@ export function ImpactBadge({ area, className }: { area: string; className?: str
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-[4px] border border-emerald-400/15 bg-emerald-400/[0.06] px-2 py-0.5 text-[11.5px] text-emerald-300/90",
+        "inline-flex items-center gap-1.5 rounded-[4px] border border-emerald-400/15 bg-emerald-400/[0.06] px-2 py-0.5 text-[11.5px] text-emerald-300/90 light:border-emerald-600/25 light:bg-emerald-500/[0.08] light:text-emerald-800",
         className,
       )}
     >

@@ -95,7 +95,7 @@ export function ReportPreview({ report, assets }: { report: ReportContent; asset
 
       {before && after && report.comparison && (
         <Section n="04" title="Before & After">
-          <div className="grid grid-cols-1 items-center gap-4 md:grid-cols-[1fr_auto_1fr]">
+          <div className="grid grid-cols-1 items-center gap-4 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
             {[before, after].map((a, i) => (
               <Link key={a.id} href={`/media/${a.id}`} className="group block">
                 <div className="overflow-hidden rounded-md border border-line transition-colors group-hover:border-accent/60">

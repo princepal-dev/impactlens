@@ -35,7 +35,7 @@ export function BeforeAfter({ before, after, mode }: { before: MediaAsset; after
 
   if (mode === "side") {
     return (
-      <div className="grid grid-cols-1 items-center gap-4 md:grid-cols-[1fr_auto_1fr]">
+      <div className="grid grid-cols-1 items-center gap-4 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
         <div>
           <div className="overflow-hidden rounded-lg border border-line">
             <MediaThumb asset={before} w={900} h={600} className="aspect-[3/2] w-full" />

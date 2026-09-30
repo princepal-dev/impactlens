@@ -33,16 +33,16 @@ export default async function AssetPage({ params }: PageProps<"/media/[id]">) {
         <span className="truncate text-foreground">{asset.title}</span>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.25fr_1fr]">
-        <div className="space-y-6">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(400px,1fr)]">
+        <div className="min-w-0 space-y-6">
           <Panel className="overflow-hidden">
             <div className="relative bg-media">
               <MediaThumb asset={asset} full className="max-h-[560px] w-full object-contain" />
               <div className="absolute left-3 top-3"><CloudinaryLabel asset={asset} /></div>
             </div>
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-4 py-3">
-              <span className="truncate font-mono text-[11.5px] text-subtle">{asset.cloudinaryPublicId}</span>
-              <div className="flex gap-2">
+            <div className="flex items-center justify-between gap-3 border-t border-line px-4 py-3">
+              <span className="min-w-0 truncate font-mono text-[11.5px] text-subtle" title={asset.cloudinaryPublicId}>{asset.cloudinaryPublicId}</span>
+              <div className="flex shrink-0 gap-2">
                 <Button size="sm" variant="ghost" asChild>
                   <a href={asset.secureUrl} target="_blank" rel="noreferrer"><ExternalLink /> Original</a>
                 </Button>
@@ -70,7 +70,7 @@ export default async function AssetPage({ params }: PageProps<"/media/[id]">) {
           </Panel>
         </div>
 
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
           <div className="no-print">
             <AssetActions asset={asset} projects={projects} />
           </div>
@@ -97,7 +97,7 @@ export default async function AssetPage({ params }: PageProps<"/media/[id]">) {
             )}
           </Panel>
 
-          <div className="no-print grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <div className="no-print grid grid-cols-3 gap-2 [&>*]:min-w-0">
             <Button variant="secondary" asChild><Link href={`/compare?project=${project?.slug ?? ""}&after=${asset.id}`}><SplitSquareHorizontal /> Compare</Link></Button>
             <Button variant="secondary" asChild><Link href={`/search?q=${encodeURIComponent(`${asset.activity} in ${asset.location.split(",").pop()?.trim()}`)}`}><Search /> Similar</Link></Button>
             <Button variant="secondary" asChild><Link href={`/reports?project=${project?.slug ?? ""}`}><FileText /> Report</Link></Button>
@@ -106,7 +106,7 @@ export default async function AssetPage({ params }: PageProps<"/media/[id]">) {
           {related.length > 0 && (
             <div>
               <div className="label-mono mb-3">More from {project?.name}</div>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 xl:grid-cols-1 2xl:grid-cols-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 xl:grid-cols-2 2xl:grid-cols-3">
                 {related.map((a) => <MediaCard key={a.id} asset={a} />)}
               </div>
             </div>

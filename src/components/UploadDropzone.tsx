@@ -331,7 +331,7 @@ export function UploadDropzone({
 
       {jobs.map((j) => (
         <Panel key={j.key} className="page-in overflow-hidden">
-          <div className="grid grid-cols-1 lg:grid-cols-[240px_250px_1fr] 2xl:grid-cols-[320px_260px_1fr]">
+          <div className="grid grid-cols-1 lg:grid-cols-[240px_250px_minmax(0,1fr)] 2xl:grid-cols-[320px_260px_minmax(0,1fr)]">
             <div className="relative aspect-[4/3] border-b border-line bg-media lg:aspect-auto lg:min-h-[260px] lg:border-b-0 lg:border-r">
               {j.asset && j.step >= 1 ? (
                 <MediaThumb asset={j.asset} w={600} h={460} className="absolute inset-0 size-full" />

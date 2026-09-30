@@ -110,9 +110,9 @@ export function ReportsWorkspace({
 
   return (
     <div className="space-y-8">
-      <div className="no-print grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
+      <div className="no-print grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <Panel className="p-5">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-[1.3fr_1fr_1fr_1fr]">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]">
             <label className="space-y-1.5">
               <span className="label-mono">Project</span>
               <Select value={projectId} onChange={(e) => setProjectId(e.target.value)} disabled={busy}>

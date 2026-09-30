@@ -62,11 +62,11 @@ export function AIAnalysisPanel({ asset, compact }: { asset: MediaAsset; compact
         </>
       )}
 
-      <dl className={cn("mt-5 grid gap-x-6 gap-y-3.5 text-[13px]", compact ? "grid-cols-2" : "grid-cols-[repeat(auto-fill,minmax(150px,1fr))]")}>
+      <dl className={cn("mt-5 grid grid-cols-2 gap-x-6 gap-y-4 text-[13px]", !compact && "rounded-md border border-line bg-tint/[0.015] p-4")}>
         {fields.map(([k, v]) => (
           <div key={k} className="min-w-0">
             <dt className="label-mono mb-1">{k}</dt>
-            <dd className="truncate text-foreground">{v}</dd>
+            <dd className="line-clamp-2 break-words leading-snug text-foreground" title={typeof v === "string" ? v : undefined}>{v}</dd>
           </div>
         ))}
       </dl>
@@ -88,9 +88,11 @@ export function AIAnalysisPanel({ asset, compact }: { asset: MediaAsset; compact
         )}
       </div>
 
-      <div className="mt-5 flex items-center justify-between border-t border-line pt-3">
-        <span className="font-mono text-[11px] text-subtle">engine: {asset.analysisEngine || "—"}</span>
-        <button onClick={() => setRaw((r) => !r)} className="flex items-center gap-1.5 font-mono text-[11px] text-muted transition-colors hover:text-accent">
+      <div className="mt-5 flex items-center justify-between gap-4 border-t border-line pt-3">
+        <span className="min-w-0 truncate font-mono text-[11px] text-subtle" title={asset.analysisEngine || undefined}>
+          engine: {asset.analysisEngine || "—"}
+        </span>
+        <button onClick={() => setRaw((r) => !r)} className="flex shrink-0 items-center gap-1.5 font-mono text-[11px] text-muted transition-colors hover:text-accent">
           <Braces className="size-3.5" /> {raw ? "Hide" : "View"} JSON
         </button>
       </div>
