@@ -15,6 +15,8 @@ ImpactLens stores every piece of field media in Cloudinary, has a vision model d
 
 ![ImpactLens overview dashboard](docs/screenshots/overview.jpg)
 
+Created by **Team Phoenix** · Prince Pal · Vansh Singla · Dev Garg
+
 </div>
 
 ---
@@ -174,6 +176,14 @@ Deploy anywhere that runs Node 22.13+ with a **persistent, writable disk** for t
 - ImpactLens never invents beneficiary counts, litres, tonnes or kWh.
 - Reports use cautious wording (*"visual evidence suggests…"*) and include a **Needs additional verification** section for anything imagery can't prove.
 - Locations come from the uploader or visible context, not verified GPS, and reports say so.
+
+## Team
+
+Created by **Team Phoenix**:
+
+- Prince Pal
+- Vansh Singla
+- Dev Garg
 
 ## Credits
 
