@@ -76,7 +76,7 @@ export default async function AssetPage({ params }: PageProps<"/media/[id]">) {
               <div className="flex shrink-0 gap-2">
                 {asset.sourceUrl && (
                   <Button size="sm" variant="ghost" asChild>
-                    <a href={asset.sourceUrl} target="_blank" rel="noreferrer"><ExternalLink /> Unsplash</a>
+                    <a href={asset.sourceUrl} target="_blank" rel="noreferrer"><ExternalLink /> {asset.sourceUrl.includes("mixkit.co") ? "Mixkit" : "Unsplash"}</a>
                   </Button>
                 )}
                 <Button size="sm" variant="ghost" asChild>

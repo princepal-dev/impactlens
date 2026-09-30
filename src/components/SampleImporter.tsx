@@ -45,6 +45,19 @@ const COLLECTIONS: { id: SampleCollection; title: string; description: React.Rea
     title: "Field photo collection",
     description: "Water, greening and solar projects in Rajasthan, Delhi and Maharashtra.",
   },
+  {
+    id: "video",
+    title: "Field video clips",
+    description: (
+      <>
+        Beach pollution in Goa and sapling nursery work in Uttarakhand, analyzed from frames across each clip. Free clips from{" "}
+        <a href="https://mixkit.co" target="_blank" rel="noreferrer" className="text-foreground underline-offset-2 hover:underline">
+          Mixkit
+        </a>
+        .
+      </>
+    ),
+  },
 ];
 
 export function SampleImporter({ compact = false }: { compact?: boolean }) {

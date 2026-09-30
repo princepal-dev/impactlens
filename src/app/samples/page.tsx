@@ -19,12 +19,12 @@ export default async function SamplesPage() {
     <div className="page-in">
       <PageHeader
         title="Sample library"
-        subtitle="Load ready-made field photo collections to explore search, comparison and reports before uploading your own."
+        subtitle="Load ready-made field photo and video collections to explore search, comparison and reports before uploading your own."
         stats={
           <>
-            <HeaderStat icon={Images} label="Sample photos" value={SAMPLES.length} hint="Across every collection" />
+            <HeaderStat icon={Images} label="Sample media" value={SAMPLES.length} hint="Across every collection" />
             <HeaderStat icon={CheckCircle2} label="Loaded" value={indexed} hint={`${SAMPLES.length - indexed} still to load`} href="/media" />
-            <HeaderStat icon={Layers} label="Collections" value={collections} hint="Unsplash and field photos" />
+            <HeaderStat icon={Layers} label="Collections" value={collections} hint="Photos and video clips" />
             <HeaderStat icon={FolderKanban} label="Projects" value={SAMPLE_PROJECTS.length} hint="Created automatically" href="/settings#projects" />
           </>
         }

@@ -12,6 +12,14 @@ import type { AIMetadata, MediaAsset, Project } from "@/lib/types";
 
 export const maxDuration = 180;
 
+const previewUrl = (s: (typeof SAMPLES)[number]) => {
+  if (s.posterUrl) return s.posterUrl;
+  if (s.remoteUrl) return s.remoteUrl.replace(/w=\d+&q=\d+/, "w=160&q=60");
+  return `/_next/image?url=${encodeURIComponent(`/samples/${s.file}.jpg`)}&w=256&q=75`;
+};
+
+const isVideo = (s: (typeof SAMPLES)[number]) => /\.mp4(\?|$)/i.test(s.remoteUrl ?? "");
+
 /** Which bundled sample photos have already been imported into this workspace. */
 export async function GET() {
   const status = await Promise.all(
@@ -20,7 +28,7 @@ export async function GET() {
       return {
         file: s.file,
         title: sampleTitle(s.file),
-        preview: s.remoteUrl ? s.remoteUrl.replace(/w=\d+&q=\d+/, "w=160&q=60") : `/_next/image?url=${encodeURIComponent(`/samples/${s.file}.jpg`)}&w=256&q=75`,
+        preview: previewUrl(s),
         projectId: s.projectId,
         collection: s.collection,
         status: a?.status ?? null,
@@ -79,8 +87,8 @@ function fieldLogMetadata(sample: (typeof SAMPLES)[number], project: Project | n
 
 async function sampleBuffer(sample: (typeof SAMPLES)[number]) {
   if (!sample.remoteUrl) return readFile(path.join(process.cwd(), "public", "samples", `${sample.file}.jpg`));
-  const res = await fetch(sample.remoteUrl, { signal: AbortSignal.timeout(30_000) });
-  if (!res.ok) throw new Error(`Could not download the sample photo (HTTP ${res.status}).`);
+  const res = await fetch(sample.remoteUrl, { signal: AbortSignal.timeout(isVideo(sample) ? 90_000 : 30_000) });
+  if (!res.ok) throw new Error(`Could not download the sample ${isVideo(sample) ? "video" : "photo"} (HTTP ${res.status}).`);
   return Buffer.from(await res.arrayBuffer());
 }
 
@@ -91,16 +99,18 @@ async function importSample(sample: (typeof SAMPLES)[number]) {
   const def = SAMPLE_PROJECTS.find((p) => p.id === sample.projectId);
   const project = def ? ensureProject(def) : null;
   const projectSlug = project?.slug ?? "samples";
+  const filename = `${sample.file}.${isVideo(sample) ? "mp4" : "jpg"}`;
+  const sourceTag = { unsplash: ["unsplash"], video: ["mixkit"], field: [] }[sample.collection];
   try {
     const ref =
       existing ??
       (await uploadMedia({
         buffer: await sampleBuffer(sample),
-        filename: `${sample.file}.jpg`,
-        mimeType: "image/jpeg",
+        filename,
+        mimeType: isVideo(sample) ? "video/mp4" : "image/jpeg",
         folder: `${config.cloudinary.folder}/samples/${projectSlug}`,
         publicId: sample.file,
-        tags: ["impactlens-sample", projectSlug, ...(sample.collection === "unsplash" ? ["unsplash"] : [])],
+        tags: ["impactlens-sample", projectSlug, ...sourceTag],
       }));
 
     const pending: MediaAsset = {
@@ -110,7 +120,7 @@ async function importSample(sample: (typeof SAMPLES)[number]) {
       projectId: project?.id ?? null,
       status: "analyzing",
       analysisEngine: "",
-      title: `${sample.file}.jpg`,
+      title: filename,
       description: "",
       project: project?.name ?? "Unassigned",
       location: sample.location,

@@ -68,7 +68,7 @@ export const UNSPLASH_PROJECTS: Project[] = [
 
 export const SAMPLE_PROJECTS = [...STARTER_PROJECTS, ...UNSPLASH_PROJECTS];
 
-export type SampleCollection = "field" | "unsplash";
+export type SampleCollection = "field" | "unsplash" | "video";
 
 export interface SampleMedia {
   file: string;
@@ -81,6 +81,8 @@ export interface SampleMedia {
   stage?: Stage;
   /** Remote original for samples that are not bundled in public/samples. */
   remoteUrl?: string;
+  /** Still shown in the sample library for video samples. */
+  posterUrl?: string;
   /** Page crediting the photographer, shown alongside the imported asset. */
   sourceUrl?: string;
 }
@@ -175,7 +177,21 @@ const UNSPLASH_SAMPLES = (
   ] satisfies Omit<SampleMedia, "projectId" | "collection">[]
 ).map((s) => ({ ...s, collection: "unsplash" as const }));
 
-export const SAMPLES: SampleMedia[] = [...FIELD_SAMPLES, ...CLEANUP_PAIRS, ...UNSPLASH_SAMPLES].map((s) => ({
+const mixkit = (id: number, page: string, thumb: number) => ({
+  remoteUrl: `https://assets.mixkit.co/videos/${id}/${id}-720.mp4`,
+  posterUrl: `https://assets.mixkit.co/videos/${id}/${id}-thumb-720-${thumb}.jpg`,
+  sourceUrl: `https://mixkit.co/free-stock-video/${page}-${id}/`,
+});
+
+/** Free clips from Mixkit (Mixkit Stock Video Free License), fetched from the Mixkit CDN at import time. */
+const VIDEO_SAMPLES = (
+  [
+    { file: "cg-beach-pollution-video", location: "Colva, Goa", date: "2026-02-11", stage: "baseline", ...mixkit(3032, "pollution-on-the-beach", 2) },
+    { file: "uk-nursery-planting-video", location: "Dehradun, Uttarakhand", date: "2026-03-18", stage: "implementation", ...mixkit(43697, "gardener-arranging-the-soil-for-a-plant", 0) },
+  ] satisfies Omit<SampleMedia, "projectId" | "collection">[]
+).map((s) => ({ ...s, collection: "video" as const }));
+
+export const SAMPLES: SampleMedia[] = [...FIELD_SAMPLES, ...CLEANUP_PAIRS, ...UNSPLASH_SAMPLES, ...VIDEO_SAMPLES].map((s) => ({
   ...s,
   projectId: PROJECT_BY_PREFIX[s.file.split("-")[0]],
 }));
@@ -198,6 +214,6 @@ export const sampleTitle = (file: string) =>
     .replace(/\.\w+$/, "")
     .split("-")
     .slice(1)
-    .filter((w) => !/^\d+$/.test(w))
+    .filter((w) => !/^\d+$/.test(w) && w !== "video")
     .join(" ")
     .replace(/^\w/, (c) => c.toUpperCase());
