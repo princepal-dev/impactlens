@@ -117,37 +117,51 @@ export function UploadDropzone({
     [projectId, onIndexed],
   );
 
+  /** Upload straight to Cloudinary (files never pass through the app server), then register the asset. */
   const uploadFile = useCallback(
-    (key: string, file: File) =>
-      new Promise<MediaAsset | null>((resolve) => {
+    async (key: string, file: File): Promise<MediaAsset | null> => {
+      const fail = (message: string) => {
+        patch(key, { error: "upload", errorMessage: message });
+        toast.error("Upload failed", { description: message });
+        return null;
+      };
+
+      const signed = await requestJSON<{ url: string; fields: Record<string, string> }>("/api/upload/sign", { method: "POST", json: {} });
+      if (!signed.ok) return fail(signed.error);
+
+      const uploaded = await new Promise<{ ok: true; body: Record<string, unknown> } | { ok: false; message: string }>((resolve) => {
         const fd = new FormData();
+        for (const [k, v] of Object.entries(signed.data.fields)) fd.append(k, v);
         fd.append("file", file);
-        if (projectId) fd.append("projectId", projectId);
-        if (location.trim()) fd.append("location", location.trim());
         const xhr = new XMLHttpRequest();
-        const fail = (message: string) => {
-          patch(key, { error: "upload", errorMessage: message });
-          toast.error("Upload failed", { description: message });
-          resolve(null);
-        };
-        xhr.open("POST", "/api/upload");
+        xhr.open("POST", signed.data.url);
         xhr.timeout = UPLOAD_TIMEOUT_MS;
-        xhr.upload.onprogress = (e) => e.lengthComputable && patch(key, { progress: Math.round((e.loaded / e.total) * 100) });
+        xhr.upload.onprogress = (e) => e.lengthComputable && patch(key, { progress: Math.min(99, Math.round((e.loaded / e.total) * 100)) });
         xhr.onload = () => {
-          let json: { asset?: MediaAsset; error?: string } = {};
+          let body: Record<string, unknown> = {};
           try {
-            json = JSON.parse(xhr.responseText);
+            body = JSON.parse(xhr.responseText);
           } catch {}
-          if (xhr.status >= 300 || !json.asset) {
-            fail(json.error || (xhr.status === 413 ? "The file is too large." : `Upload failed (${xhr.status || "network"}).`));
+          if (xhr.status >= 300 || !body.public_id) {
+            const error = (body.error as { message?: string } | undefined)?.message;
+            resolve({ ok: false, message: error ? `Cloudinary rejected the media: ${error}` : `Upload failed (${xhr.status || "network"}).` });
             return;
           }
-          resolve(json.asset);
+          resolve({ ok: true, body });
         };
-        xhr.onerror = () => fail("Network error. Check your connection and try again.");
-        xhr.ontimeout = () => fail("The upload timed out. Please try again.");
+        xhr.onerror = () => resolve({ ok: false, message: "Network error. Check your connection and try again." });
+        xhr.ontimeout = () => resolve({ ok: false, message: "The upload timed out. Please try again." });
         xhr.send(fd);
-      }),
+      });
+      if (!uploaded.ok) return fail(uploaded.message);
+
+      const res = await requestJSON<{ asset: MediaAsset }>("/api/upload", {
+        method: "POST",
+        json: { cloudinary: uploaded.body, filename: file.name, projectId: projectId || undefined, location: location.trim() || undefined },
+        timeoutMs: 60_000,
+      });
+      return res.ok ? res.data.asset : fail(res.error);
+    },
     [projectId, location],
   );
 

@@ -7,7 +7,8 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   let database = false;
   try {
-    database = !!db().prepare("SELECT 1 AS ok").get();
+    await (await db()).$queryRaw`SELECT 1`;
+    database = true;
   } catch (e) {
     console.error("[health] database check failed", e);
   }

@@ -1,9 +1,10 @@
 import "server-only";
+import type { Prisma } from "@/generated/prisma/client";
 import { db } from "./db";
 import { DEFAULT_PAIRS, FIELD_LOG_ENGINE } from "./samples";
 import type { ActivityItem, MediaAsset, Project, ReportContent, WorkspaceSummary } from "./types";
 
-/** Data layer backed by SQLite. Every record here comes from a real upload, analysis or report. */
+/** Data layer backed by Postgres via Prisma. Every record here comes from a real upload, analysis or report. */
 
 type ProjectRow = {
   id: string;
@@ -13,8 +14,8 @@ type ProjectRow = {
   location: string;
   region: string;
   description: string;
-  status: Project["status"];
-  start_date: string;
+  status: string;
+  startDate: string;
 };
 
 const toProject = (r: ProjectRow): Project => ({
@@ -25,20 +26,25 @@ const toProject = (r: ProjectRow): Project => ({
   location: r.location,
   region: r.region,
   description: r.description,
-  status: r.status,
-  startDate: r.start_date,
+  status: r.status as Project["status"],
+  startDate: r.startDate,
 });
 
+const json = (v: unknown) => v as Prisma.InputJsonValue;
+
 // ---------- Projects ----------
-export function listProjects(): Project[] {
-  return (db().prepare("SELECT * FROM projects ORDER BY created_at, rowid").all() as ProjectRow[]).map(toProject);
+export async function listProjects(): Promise<Project[]> {
+  const rows = await (await db()).project.findMany({ orderBy: [{ createdAt: "asc" }, { id: "asc" }] });
+  return rows.map(toProject);
 }
 
-export function getProject(idOrSlugOrName: string | null | undefined): Project | null {
+export async function getProject(idOrSlugOrName: string | null | undefined): Promise<Project | null> {
   if (!idOrSlugOrName) return null;
-  const row = db()
-    .prepare("SELECT * FROM projects WHERE id = ? OR slug = ? OR lower(name) = lower(?) LIMIT 1")
-    .get(idOrSlugOrName, idOrSlugOrName, idOrSlugOrName) as ProjectRow | undefined;
+  const row = await (await db()).project.findFirst({
+    where: {
+      OR: [{ id: idOrSlugOrName }, { slug: idOrSlugOrName }, { name: { equals: idOrSlugOrName, mode: "insensitive" } }],
+    },
+  });
   return row ? toProject(row) : null;
 }
 
@@ -49,83 +55,100 @@ const slugify = (s: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
 
-export function createProject(input: Pick<Project, "name" | "category" | "location" | "region" | "description">): Project {
-  const base = slugify(input.name) || "project";
+async function freeSlug(base: string) {
   let slug = base;
-  for (let i = 2; getProject(slug); i++) slug = `${base}-${i}`;
+  for (let i = 2; await getProject(slug); i++) slug = `${base}-${i}`;
+  return slug;
+}
+
+const projectData = (p: Project) => ({
+  id: p.id,
+  slug: p.slug,
+  name: p.name,
+  category: p.category,
+  location: p.location,
+  region: p.region,
+  description: p.description,
+  status: p.status,
+  startDate: p.startDate,
+});
+
+export async function createProject(input: Pick<Project, "name" | "category" | "location" | "region" | "description">): Promise<Project> {
   const project: Project = {
     ...input,
     id: `p-${crypto.randomUUID().slice(0, 8)}`,
-    slug,
+    slug: await freeSlug(slugify(input.name) || "project"),
     status: "Active",
     startDate: new Date().toISOString().slice(0, 10),
   };
-  db()
-    .prepare(
-      "INSERT INTO projects (id, slug, name, category, location, region, description, status, start_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-    )
-    .run(project.id, project.slug, project.name, project.category, project.location, project.region, project.description, project.status, project.startDate);
+  await (await db()).project.create({ data: projectData(project) });
   return project;
 }
 
 /** Returns the project with this id, recreating it from its definition if it was deleted. */
-export function ensureProject(def: Project): Project {
-  const existing = getProject(def.id);
+export async function ensureProject(def: Project): Promise<Project> {
+  const existing = await getProject(def.id);
   if (existing) return existing;
-  let slug = def.slug;
-  for (let i = 2; getProject(slug); i++) slug = `${def.slug}-${i}`;
-  db()
-    .prepare(
-      "INSERT INTO projects (id, slug, name, category, location, region, description, status, start_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-    )
-    .run(def.id, slug, def.name, def.category, def.location, def.region, def.description, def.status, def.startDate);
-  return { ...def, slug };
+  const project = { ...def, slug: await freeSlug(def.slug) };
+  await (await db()).project.upsert({ where: { id: def.id }, create: projectData(project), update: {} });
+  return project;
 }
 
-export function updateProject(id: string, input: Partial<Pick<Project, "name" | "category" | "location" | "region" | "description" | "status">>) {
-  const current = getProject(id);
+export async function updateProject(
+  id: string,
+  input: Partial<Pick<Project, "name" | "category" | "location" | "region" | "description" | "status">>,
+) {
+  const current = await getProject(id);
   if (!current) return null;
   const next = { ...current, ...input };
-  db()
-    .prepare("UPDATE projects SET name = ?, category = ?, location = ?, region = ?, description = ?, status = ? WHERE id = ?")
-    .run(next.name, next.category, next.location, next.region, next.description, next.status, current.id);
+  const prisma = await db();
+  await prisma.project.update({
+    where: { id: current.id },
+    data: { name: next.name, category: next.category, location: next.location, region: next.region, description: next.description, status: next.status },
+  });
   if (next.name !== current.name || next.category !== current.category) {
-    const rows = db().prepare("SELECT data FROM media_assets WHERE project_id = ?").all(current.id) as { data: string }[];
-    const update = db().prepare("UPDATE media_assets SET data = ? WHERE id = ?");
-    for (const r of rows) {
-      const a = parseAsset(r);
-      update.run(JSON.stringify({ ...a, project: next.name }), a.id);
-    }
+    const rows = await prisma.mediaAsset.findMany({ where: { projectId: current.id }, select: { data: true } });
+    await prisma.$transaction(
+      rows.map((r) => {
+        const a = parseAsset(r);
+        return prisma.mediaAsset.update({ where: { id: a.id }, data: { data: json({ ...a, project: next.name }) } });
+      }),
+    );
   }
   return next;
 }
 
 /** Deletes a project. Its evidence is kept and becomes unassigned. */
-export function deleteProject(id: string) {
-  const p = getProject(id);
+export async function deleteProject(id: string) {
+  const p = await getProject(id);
   if (!p) return false;
-  const rows = db().prepare("SELECT data FROM media_assets WHERE project_id = ?").all(p.id) as { data: string }[];
-  const update = db().prepare("UPDATE media_assets SET project_id = NULL, data = ? WHERE id = ?");
-  for (const r of rows) {
-    const a = parseAsset(r);
-    update.run(JSON.stringify({ ...a, projectId: null, project: "Unassigned" }), a.id);
-  }
-  db().prepare("UPDATE reports SET project_id = NULL WHERE project_id = ?").run(p.id);
-  db().prepare("DELETE FROM projects WHERE id = ?").run(p.id);
+  const prisma = await db();
+  const rows = await prisma.mediaAsset.findMany({ where: { projectId: p.id }, select: { data: true } });
+  await prisma.$transaction([
+    ...rows.map((r) => {
+      const a = parseAsset(r);
+      return prisma.mediaAsset.update({ where: { id: a.id }, data: { projectId: null, data: json({ ...a, projectId: null, project: "Unassigned" }) } });
+    }),
+    prisma.report.updateMany({ where: { projectId: p.id }, data: { projectId: null } }),
+    prisma.project.delete({ where: { id: p.id } }),
+  ]);
   return true;
 }
 
 // ---------- Media assets ----------
 const ARRAY_FIELDS = ["tags", "impactAreas", "objects"] as const;
 
-function parseAsset(r: { data: string }): MediaAsset {
-  const a = JSON.parse(r.data) as MediaAsset;
+function parseAsset(r: { data: Prisma.JsonValue }): MediaAsset {
+  const a = (typeof r.data === "string" ? JSON.parse(r.data) : r.data) as MediaAsset;
+  if (!a || typeof a !== "object" || !a.id) throw new Error("asset record is missing its id");
   for (const k of ARRAY_FIELDS) if (!Array.isArray(a[k])) a[k] = [];
   return a;
 }
 
+const parseReport = (r: { data: Prisma.JsonValue }) => (typeof r.data === "string" ? JSON.parse(r.data) : r.data) as ReportContent;
+
 /** Parse rows, skipping (and logging) any that are corrupt instead of failing the whole page. */
-function parseRows<T>(rows: { data: string }[], parse: (r: { data: string }) => T): T[] {
+function parseRows<R, T>(rows: R[], parse: (r: R) => T): T[] {
   const out: T[] = [];
   for (const r of rows) {
     try {
@@ -137,89 +160,108 @@ function parseRows<T>(rows: { data: string }[], parse: (r: { data: string }) => 
   return out;
 }
 
+const NEWEST_FIRST = [{ captureDate: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }] satisfies Prisma.MediaAssetOrderByWithRelationInput[];
+
 export async function listAssets(): Promise<MediaAsset[]> {
-  return parseRows(db().prepare("SELECT data FROM media_assets ORDER BY capture_date DESC, created_at DESC").all() as { data: string }[], parseAsset);
+  const rows = await (await db()).mediaAsset.findMany({ select: { data: true }, orderBy: NEWEST_FIRST });
+  return parseRows(rows, parseAsset);
 }
 
 export async function getAsset(id: string): Promise<MediaAsset | null> {
-  const row = db().prepare("SELECT data FROM media_assets WHERE id = ?").get(id) as { data: string } | undefined;
+  const row = await (await db()).mediaAsset.findUnique({ where: { id }, select: { data: true } });
   return row ? (parseRows([row], parseAsset)[0] ?? null) : null;
 }
 
 export async function saveAsset(asset: MediaAsset) {
-  db()
-    .prepare(
-      `INSERT INTO media_assets (id, project_id, cloudinary_public_id, secure_url, status, capture_date, created_at, data)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-       ON CONFLICT(id) DO UPDATE SET project_id = excluded.project_id, cloudinary_public_id = excluded.cloudinary_public_id,
-         secure_url = excluded.secure_url, status = excluded.status, capture_date = excluded.capture_date, data = excluded.data`,
-    )
-    .run(
-      asset.id,
-      asset.projectId && getProject(asset.projectId) ? asset.projectId : null,
-      asset.cloudinaryPublicId,
-      asset.secureUrl,
-      asset.status,
-      asset.date || null,
-      asset.createdAt,
-      JSON.stringify(asset),
-    );
+  const prisma = await db();
+  const projectId = asset.projectId && (await prisma.project.count({ where: { id: asset.projectId } })) ? asset.projectId : null;
+  const columns = {
+    projectId,
+    cloudinaryPublicId: asset.cloudinaryPublicId,
+    secureUrl: asset.secureUrl,
+    status: asset.status,
+    captureDate: asset.date || null,
+    data: json(asset),
+  };
+  await prisma.mediaAsset.upsert({
+    where: { id: asset.id },
+    create: { id: asset.id, createdAt: asset.createdAt, ...columns },
+    update: columns,
+  });
   return asset;
 }
 
 export async function deleteAsset(id: string) {
-  return db().prepare("DELETE FROM media_assets WHERE id = ?").run(id).changes > 0;
+  const { count } = await (await db()).mediaAsset.deleteMany({ where: { id } });
+  return count > 0;
 }
 
 export async function projectAssets(projectId: string) {
-  const p = getProject(projectId);
+  const p = await getProject(projectId);
   if (!p) return [];
-  return parseRows(db().prepare("SELECT data FROM media_assets WHERE project_id = ? ORDER BY capture_date DESC").all(p.id) as { data: string }[], parseAsset);
+  const rows = await (await db()).mediaAsset.findMany({ where: { projectId: p.id }, select: { data: true }, orderBy: NEWEST_FIRST });
+  return parseRows(rows, parseAsset);
+}
+
+/** Analyses left "analyzing" this long were cut off (e.g. a serverless timeout); surface them for retry. */
+const STALE_ANALYSIS_MS = 10 * 60_000;
+
+export async function recoverStaleAnalyses() {
+  const prisma = await db();
+  const rows = await prisma.mediaAsset.findMany({
+    where: { status: "analyzing", updatedAt: { lt: new Date(Date.now() - STALE_ANALYSIS_MS) } },
+    select: { data: true },
+  });
+  for (const a of parseRows(rows, parseAsset)) {
+    const status = a.analyzedAt ? "indexed" : "analysis_failed";
+    await prisma.mediaAsset.update({ where: { id: a.id }, data: { status, data: json({ ...a, status }) } });
+  }
+  if (rows.length) console.warn(`[store] recovered ${rows.length} interrupted analyses`);
+  return rows.length;
 }
 
 // ---------- Activity ----------
 export async function addActivity(item: Omit<ActivityItem, "id" | "at">) {
-  db()
-    .prepare("INSERT INTO activity (id, type, message, href, at) VALUES (?, ?, ?, ?, ?)")
-    .run(crypto.randomUUID(), item.type, item.message, item.href ?? null, new Date().toISOString());
+  await (await db()).activity.create({
+    data: { id: crypto.randomUUID(), type: item.type, message: item.message, href: item.href ?? null },
+  });
 }
 
 export async function listActivity(limit = 7): Promise<ActivityItem[]> {
-  const rows = db().prepare("SELECT * FROM activity ORDER BY at DESC LIMIT ?").all(limit) as {
-    id: string;
-    type: ActivityItem["type"];
-    message: string;
-    href: string | null;
-    at: string;
-  }[];
-  return rows.map((r) => ({ id: r.id, type: r.type, message: r.message, at: r.at, href: r.href ?? undefined }));
+  const rows = await (await db()).activity.findMany({ orderBy: { at: "desc" }, take: limit });
+  return rows.map((r) => ({ id: r.id, type: r.type as ActivityItem["type"], message: r.message, at: r.at.toISOString(), href: r.href ?? undefined }));
 }
 
 // ---------- Reports ----------
 export async function saveReport(r: ReportContent) {
-  db()
-    .prepare("INSERT OR REPLACE INTO reports (id, project_id, created_at, data) VALUES (?, ?, ?, ?)")
-    .run(r.id, getProject(r.projectId) ? r.projectId : null, r.generatedAt, JSON.stringify(r));
+  const prisma = await db();
+  const projectId = (await prisma.project.count({ where: { id: r.projectId } })) ? r.projectId : null;
+  await prisma.report.upsert({
+    where: { id: r.id },
+    create: { id: r.id, projectId, createdAt: r.generatedAt, data: json(r) },
+    update: { projectId, createdAt: r.generatedAt, data: json(r) },
+  });
   return r;
 }
 
 export async function listReports(): Promise<ReportContent[]> {
-  return parseRows(db().prepare("SELECT data FROM reports ORDER BY created_at DESC LIMIT 50").all() as { data: string }[], (r) => JSON.parse(r.data) as ReportContent);
+  const rows = await (await db()).report.findMany({ select: { data: true }, orderBy: { createdAt: "desc" }, take: 50 });
+  return parseRows(rows, parseReport);
 }
 
 export async function getReport(id: string) {
-  const row = db().prepare("SELECT data FROM reports WHERE id = ?").get(id) as { data: string } | undefined;
-  return row ? (parseRows([row], (r) => JSON.parse(r.data) as ReportContent)[0] ?? null) : null;
+  const row = await (await db()).report.findUnique({ where: { id }, select: { data: true } });
+  return row ? (parseRows([row], parseReport)[0] ?? null) : null;
 }
 
 export async function deleteReport(id: string) {
-  return db().prepare("DELETE FROM reports WHERE id = ?").run(id).changes > 0;
+  const { count } = await (await db()).report.deleteMany({ where: { id } });
+  return count > 0;
 }
 
 // ---------- Aggregates ----------
 export async function orgStats() {
-  const assets = await listAssets();
-  const { n: reports } = db().prepare("SELECT COUNT(*) AS n FROM reports").get() as { n: number };
+  const [assets, reports] = await Promise.all([listAssets(), (await db()).report.count()]);
   const weekAgo = new Date(Date.now() - 7 * 864e5).toISOString();
   const aiIndexed = assets.filter((a) => a.status === "indexed" && a.analysisEngine !== "Manual tagging" && a.analysisEngine !== FIELD_LOG_ENGINE).length;
   const sites = new Set(assets.filter((a) => a.location && a.location !== "Unknown").map((a) => a.location.toLowerCase()));
@@ -250,8 +292,8 @@ export async function workspaceSummary(): Promise<WorkspaceSummary> {
 }
 
 export async function projectSummaries() {
-  const assets = await listAssets();
-  return listProjects().map((p) => {
+  const [assets, projects] = await Promise.all([listAssets(), listProjects()]);
+  return projects.map((p) => {
     const list = assets.filter((a) => a.projectId === p.id);
     return {
       ...p,

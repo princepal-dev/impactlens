@@ -228,7 +228,7 @@ const stageOk = (asset: Stage, wanted?: Stage) =>
 
 export async function searchEvidence(query: string): Promise<SearchResponse> {
   const t0 = Date.now();
-  const projects = listProjects();
+  const projects = await listProjects();
   const assets = (await listAssets()).filter((a) => a.status === "indexed");
   const rules = ruleInterpret(query, locationDictionary(assets, projects), projects);
   const interpreted = await aiInterpret(query, projects);

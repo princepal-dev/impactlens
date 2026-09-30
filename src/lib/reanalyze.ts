@@ -5,7 +5,7 @@ import { NotConfiguredError } from "./config";
 import { analysisFrameUrls, thumbUrl } from "./media-url";
 import { isLocked, withLock } from "./rate-limit";
 import { FIELD_LOG_ENGINE, SAMPLES } from "./samples";
-import { addActivity, getAsset, getProject, listAssets, saveAsset } from "./store";
+import { addActivity, getAsset, getProject, listAssets, recoverStaleAnalyses, saveAsset } from "./store";
 import type { MediaAsset } from "./types";
 
 const WORKER_INTERVAL_MS = 2 * 60_000;
@@ -43,6 +43,7 @@ export const needsAI = (a: MediaAsset) =>
   (a.status === "indexed" && a.analysisEngine === FIELD_LOG_ENGINE) || a.status === "analysis_failed";
 
 export async function pendingAI() {
+  await recoverStaleAnalyses();
   return (await listAssets()).filter(needsAI);
 }
 
@@ -62,7 +63,7 @@ async function reanalyzeOne(asset: MediaAsset): Promise<MediaAsset | null> {
   return saveAsset({
     ...current,
     ...metadata,
-    projectId: getProject(metadata.project)?.id ?? current.projectId,
+    projectId: (await getProject(metadata.project))?.id ?? current.projectId,
     status: "indexed",
     analysisEngine: engine,
     analyzedAt: new Date().toISOString(),
@@ -72,16 +73,18 @@ async function reanalyzeOne(asset: MediaAsset): Promise<MediaAsset | null> {
 
 /**
  * Run real AI analysis on every asset that is waiting for it, one at a time.
- * Stops early when all providers are paused; returns how many assets were analyzed.
+ * Stops early when all providers are paused or the time budget (serverless function limit) is spent;
+ * returns how many assets were analyzed.
  */
-export async function reanalyzePending(): Promise<number | null> {
+export async function reanalyzePending({ budgetMs = Infinity }: { budgetMs?: number } = {}): Promise<number | null> {
   return withLock(LOCK, async () => {
+    const deadline = Date.now() + budgetMs;
     const queue = await pendingAI();
     const progress: QueueProgress = { total: queue.length, done: 0, failed: 0, current: null, recent: [], startedAt: Date.now(), finishedAt: null };
     g.__impactlensQueue = progress;
     for (const asset of queue) {
-      while (foregroundIdleMs() < FOREGROUND_QUIET_MS) await sleep(3000);
-      if (!aiAvailable()) break;
+      while (foregroundIdleMs() < FOREGROUND_QUIET_MS && Date.now() < deadline) await sleep(3000);
+      if (!aiAvailable() || Date.now() >= deadline) break;
       progress.current = item(asset);
       try {
         const updated = await withLock(`asset:${asset.id}`, () => runInBackground(() => reanalyzeOne(asset)));
@@ -108,8 +111,12 @@ export async function reanalyzePending(): Promise<number | null> {
   });
 }
 
-/** Background loop that picks up waiting assets whenever an AI provider is available. */
+/**
+ * Background loop that picks up waiting assets whenever an AI provider is available.
+ * Long-running servers only: on Vercel the queue runs from `/api/reanalyze` and the cron route instead.
+ */
 export function startReanalyzeWorker() {
+  if (process.env.VERCEL) return;
   const g = globalThis as unknown as { __impactlensReanalyze?: NodeJS.Timeout };
   if (g.__impactlensReanalyze) return;
   const tick = () => {

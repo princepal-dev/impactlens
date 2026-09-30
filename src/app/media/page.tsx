@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export default async function MediaPage({ searchParams }: PageProps<"/media">) {
   const sp = await searchParams;
   const assets = await listAssets();
-  const projects = listProjects();
+  const projects = await listProjects();
   const indexed = assets.filter((a) => a.status === "indexed" && a.analysisEngine !== FIELD_LOG_ENGINE).length;
   const photos = assets.filter((a) => a.resourceType === "image").length;
   const sites = new Set(assets.filter((a) => a.location && a.location !== "Unknown").map((a) => a.location.toLowerCase())).size;

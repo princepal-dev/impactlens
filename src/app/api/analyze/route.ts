@@ -32,7 +32,7 @@ export async function POST(req: Request) {
         captureDate: asset.date,
       });
       if (!(await getAsset(asset.id))) return Response.json({ error: "Asset was deleted during analysis." }, { status: 410 });
-      const project = getProject(metadata.project);
+      const project = await getProject(metadata.project);
       const updated = await saveAsset({
         ...asset,
         ...metadata,

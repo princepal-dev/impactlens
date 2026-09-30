@@ -11,7 +11,8 @@ ImpactLens stores every piece of field media in Cloudinary, has a vision model d
 ![Tailwind CSS v4](https://img.shields.io/badge/Tailwind-v4-38bdf8?logo=tailwindcss)
 ![Cloudinary](https://img.shields.io/badge/Cloudinary-media-3448c5?logo=cloudinary)
 ![OpenRouter + Groq](https://img.shields.io/badge/AI-OpenRouter%20%2B%20Groq-6d28d9)
-![SQLite](https://img.shields.io/badge/SQLite-node%3Asqlite-003b57?logo=sqlite)
+![Postgres + Prisma](https://img.shields.io/badge/Postgres-Prisma-336791?logo=postgresql)
+![Vercel](https://img.shields.io/badge/Deploy-Vercel-000?logo=vercel)
 
 ![ImpactLens overview dashboard](docs/screenshots/overview.jpg)
 
@@ -56,27 +57,28 @@ flowchart LR
     A["Upload photo / video"] --> B[("Cloudinary<br/>original + transforms")]
     B --> C["Derived frames<br/>1 still, or 3 for video"]
     C --> D{"AI vision<br/>OpenRouter → Groq"}
-    D --> E[("SQLite<br/>evidence index")]
+    D --> E[("Postgres<br/>evidence index")]
     E --> F[Search]
     E --> G[Compare]
     E --> H[Reports]
     H -. every claim links back .-> B
 ```
 
-1. **Store.** The file is uploaded to Cloudinary as-is, keeping EXIF data so capture dates are read automatically.
+1. **Store.** The browser uploads the file straight to Cloudinary with a server-signed request (so large videos never pass through the app server), keeping EXIF data so capture dates are read automatically.
 2. **Analyse.** The AI never sees a re-upload, only Cloudinary-derived frames: one 1024 px JPEG for a photo, or three stills at 15%, 50% and 85% of a video, sent in time order so the model can describe how the scene changes.
-3. **Index.** The metadata is normalised to a fixed schema (title, description, activity, stage, tags, impact areas, people visible, confidence) and saved in SQLite.
+3. **Index.** The metadata is normalised to a fixed schema (title, description, activity, stage, tags, impact areas, people visible, confidence) and saved in Postgres through Prisma.
 4. **Use.** Search, compare and reports all run on that index and always link back to the Cloudinary original.
 
 ## Quick start
 
-Requires **Node.js 22.13+**, which provides the built-in `node:sqlite` module.
+Requires **Node.js 22.12+** and a Postgres database. A free [Neon](https://neon.tech) project works well.
 
 ```bash
 git clone https://github.com/princepal-dev/impactlens.git
 cd impactlens
-npm install
-cp .env.example .env.local   # add your keys, see below
+npm install                  # also generates the Prisma client
+cp .env.example .env         # add your keys, see below
+npm run db:deploy            # create the tables
 npm run dev                  # http://localhost:3000
 ```
 
@@ -86,6 +88,8 @@ Then open **Sample library** to import the demo evidence, or drag your own photo
 
 | Variable | Required | Notes |
 | --- | --- | --- |
+| `DATABASE_URL` | Yes | Postgres connection string. On Neon, use the **pooled** one (host contains `-pooler`). |
+| `DIRECT_URL` | No | Non-pooled connection string for `prisma migrate`. Falls back to `DATABASE_URL`. |
 | `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` | Yes | [Cloudinary console](https://console.cloudinary.com/), under Settings → API Keys |
 | `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | Yes* | Used for signed uploads. *Alternatively set `NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET` for unsigned uploads, which loses EXIF dates. |
 | `CLOUDINARY_FOLDER` | No | Defaults to `impactlens` |
@@ -93,7 +97,7 @@ Then open **Sample library** to import the demo evidence, or drag your own photo
 | `GROQ_API_KEY` | At least one AI key | [console.groq.com/keys](https://console.groq.com/keys). The fallback, using free-tier vision models. |
 | `OPENROUTER_MODEL`, `GROQ_MODEL` | No | Model to try first. Paid OpenRouter IDs are ignored. |
 | `AI_PROVIDERS` | No | Provider order, defaults to `openrouter,groq` |
-| `DATABASE_PATH` | No | Defaults to `.data/impactlens.db`, created automatically |
+| `CRON_SECRET` | In production | Protects `/api/cron/reanalyze`. Vercel sends it automatically to its cron jobs. |
 
 `GET /api/health` reports whether the database, storage and AI providers are reachable.
 
@@ -124,7 +128,8 @@ Every evidence page lists the public ID, the original URL and each derived URL, 
 
 | Route | Purpose |
 | --- | --- |
-| `POST /api/upload` | Multipart `file` (with optional `projectId` and `location`), or JSON `{ url }` to import. Creates a pending asset. |
+| `POST /api/upload/sign` | Signed parameters for a direct browser-to-Cloudinary upload |
+| `POST /api/upload` | JSON `{ cloudinary, filename, projectId?, location? }` registers a direct upload (verified with Cloudinary); JSON `{ url }` imports; multipart `file` for small server-side uploads. Creates a pending asset. |
 | `POST /api/analyze` | `{ assetId }` runs AI analysis; `{ assetId, metadata }` saves manual tags |
 | `GET · PATCH · DELETE /api/assets/[id]` | Read, edit or delete an asset (`GET /api/assets` lists them) |
 | `POST /api/search` | `{ query }` returns interpreted filters and ranked results |
@@ -134,11 +139,16 @@ Every evidence page lists the public ID, the original URL and each derived URL, 
 | `GET · POST /api/projects`, `PATCH · DELETE /api/projects/[id]` | Manage projects |
 | `GET · POST /api/samples` | Sample import status; import one sample |
 | `GET · POST /api/reanalyze` | Background analysis queue status; start processing |
+| `GET /api/cron/reanalyze` | Scheduled catch-up of pending analyses (Vercel cron, `Bearer $CRON_SECRET`) |
 | `GET /api/stats`, `GET /api/health` | Dashboard numbers; service health |
 
 ## Project structure
 
 ```
+prisma/
+├── schema.prisma        # projects, media_assets, reports, activity
+└── migrations/
+scripts/import-sqlite.ts # one-off import from the old SQLite file
 src/
 ├── app/                 # Next.js App Router pages + API routes
 │   ├── api/             # upload, analyze, search, compare, report, assistant, …
@@ -157,7 +167,7 @@ src/
     ├── cloudinary.ts    # uploads
     ├── media-url.ts     # transformation URLs
     ├── samples.ts       # sample library manifest
-    └── store.ts, db.ts  # SQLite persistence
+    └── store.ts, db.ts  # Prisma persistence (Postgres)
 ```
 
 ## Scripts
@@ -167,8 +177,24 @@ src/
 | `npm run dev` | Start the dev server on port 3000 |
 | `npm run build` then `npm start` | Production build and server |
 | `npm run lint` | ESLint |
+| `npm run db:deploy` | Apply pending Prisma migrations |
+| `npm run db:migrate` | Create a new migration after editing `schema.prisma` (development) |
+| `npm run db:studio` | Browse the database in Prisma Studio |
+| `npm run db:import-sqlite [path]` | Copy data from an old `.data/impactlens.db` into Postgres (idempotent) |
 
-Deploy anywhere that runs Node 22.13+ with a **persistent, writable disk** for the SQLite file, such as a VM, or a container with a mounted volume on Railway or Fly.io. Point `DATABASE_PATH` at that volume. Serverless platforms like Vercel don't keep files between requests, so the evidence index wouldn't persist there.
+## Deploy on Vercel
+
+1. Import the repository in Vercel. The framework is detected as Next.js.
+2. Add the environment variables: `DATABASE_URL` (pooled), `DIRECT_URL` (direct), `CRON_SECRET`, the Cloudinary keys and at least one AI key. The [Neon integration](https://vercel.com/integrations/neon) can fill in the database variables for you.
+3. Deploy. The `vercel-build` script runs `prisma generate`, then `prisma migrate deploy`, then `next build`, so the schema is always up to date.
+
+Built for serverless:
+
+- **Uploads** go straight from the browser to Cloudinary, so Vercel's 4.5 MB request limit doesn't apply and 100 MB videos work.
+- **Background analysis** runs after the response via `after()`, and a daily cron (`vercel.json`) picks up anything left pending. Analyses interrupted mid-way are retried automatically after 10 minutes.
+- **Sample files** in `public/samples` are bundled with the samples function.
+
+Rate limits and AI provider cooldowns are kept in memory, so on Vercel they apply per function instance.
 
 ## Responsible AI
 

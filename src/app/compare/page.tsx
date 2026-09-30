@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 export default async function ComparePage({ searchParams }: PageProps<"/compare">) {
   const sp = await searchParams;
-  const projects = listProjects();
+  const projects = await listProjects();
   const assets = (await listAssets()).filter((a) => a.status === "indexed");
   return (
     <div className="page-in">

@@ -4,7 +4,7 @@ import { addActivity, createProject, getProject, listProjects } from "@/lib/stor
 const CATEGORIES = ["Water & Sanitation", "Environment", "Renewable Energy", "Infrastructure", "Community", "Other"];
 
 export async function GET() {
-  return Response.json(listProjects());
+  return Response.json(await listProjects());
 }
 
 export async function POST(req: Request) {
@@ -12,11 +12,11 @@ export async function POST(req: Request) {
   const name = body.name?.trim();
   const location = body.location?.trim();
   if (!name || !location) return Response.json({ error: "Project name and location are required." }, { status: 400 });
-  if (getProject(name)) return Response.json({ error: "A project with this name already exists." }, { status: 409 });
+  if (await getProject(name)) return Response.json({ error: "A project with this name already exists." }, { status: 409 });
   const category = CATEGORIES.includes(body.category ?? "") ? body.category! : "Other";
   const state = location.split(",").at(-1)?.trim() ?? location;
   try {
-    const project = createProject({
+    const project = await createProject({
       name: name.slice(0, 80),
       category,
       location: location.slice(0, 80),

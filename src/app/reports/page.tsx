@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 export default async function ReportsPage() {
   const [assets, history] = await Promise.all([listAssets(), listReports()]);
-  const projects = listProjects();
+  const projects = await listProjects();
   const indexed = assets.filter((a) => a.status === "indexed").length;
   return (
     <div className="page-in">

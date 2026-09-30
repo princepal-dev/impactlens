@@ -34,7 +34,7 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/assets/[id]">)
         ? (body[k] as string).split(",").map((x) => x.trim().slice(0, 60)).filter(Boolean).slice(0, 12)
         : undefined;
 
-  const project = body.projectId !== undefined ? getProject(typeof body.projectId === "string" ? body.projectId : null) : undefined;
+  const project = body.projectId !== undefined ? await getProject(typeof body.projectId === "string" ? body.projectId : null) : undefined;
   const title = str("title", 90);
   const date = str("date", 10);
   const stage = str("stage") as Stage | undefined;

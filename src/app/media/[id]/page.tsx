@@ -34,10 +34,10 @@ export default async function AssetPage({ params }: PageProps<"/media/[id]">) {
   const { id } = await params;
   const asset = await getAsset(id);
   if (!asset) notFound();
-  const project = asset.projectId ? getProject(asset.projectId) : null;
+  const project = asset.projectId ? await getProject(asset.projectId) : null;
   const related = project ? (await projectAssets(project.id)).filter((a) => a.id !== asset.id).slice(0, 3) : [];
   const needsTags = asset.status !== "indexed";
-  const projects = listProjects();
+  const projects = await listProjects();
 
   return (
     <div className="page-in">

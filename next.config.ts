@@ -10,6 +10,10 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // Sample photos are read from disk and uploaded to Cloudinary; serverless bundles only include traced files.
+  outputFileTracingIncludes: {
+    "/api/samples": ["./public/samples/**/*"],
+  },
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },

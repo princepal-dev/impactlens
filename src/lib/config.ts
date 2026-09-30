@@ -1,5 +1,4 @@
 import "server-only";
-import path from "path";
 
 const env = (k: string) => (process.env[k] ?? "").trim();
 
@@ -29,7 +28,8 @@ export const config = {
     .split(",")
     .map((p) => p.trim().toLowerCase())
     .filter(Boolean),
-  databasePath: path.resolve(/*turbopackIgnore: true*/ process.cwd(), env("DATABASE_PATH") || ".data/impactlens.db"),
+  /** Postgres connection string (Neon pooled URL on Vercel). */
+  databaseUrl: env("DATABASE_URL"),
 };
 
 /** Raised when a backing service is unavailable; `message` is logged, `publicMessage` is shown to users. */

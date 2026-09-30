@@ -7,14 +7,14 @@ const STATUSES: Project["status"][] = ["Active", "Completed", "Monitoring"];
 
 export async function PATCH(req: Request, ctx: RouteContext<"/api/projects/[id]">) {
   const { id } = await ctx.params;
-  if (!getProject(id)) return Response.json({ error: "Not found" }, { status: 404 });
+  if (!await getProject(id)) return Response.json({ error: "Not found" }, { status: 404 });
   const body = await readStrings(req);
   const name = body.name?.trim();
   if (name) {
-    const clash = getProject(name);
+    const clash = await getProject(name);
     if (clash && clash.id !== id) return Response.json({ error: "A project with this name already exists." }, { status: 409 });
   }
-  const project = updateProject(id, {
+  const project = await updateProject(id, {
     ...(name ? { name: name.slice(0, 80) } : {}),
     ...(body.category && CATEGORIES.includes(body.category) ? { category: body.category } : {}),
     ...(body.location?.trim() ? { location: body.location.trim().slice(0, 80) } : {}),
@@ -27,9 +27,9 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/projects/[id]"
 
 export async function DELETE(_req: Request, ctx: RouteContext<"/api/projects/[id]">) {
   const { id } = await ctx.params;
-  const project = getProject(id);
+  const project = await getProject(id);
   if (!project) return Response.json({ error: "Not found" }, { status: 404 });
-  deleteProject(project.id);
+  await deleteProject(project.id);
   await addActivity({ type: "project", message: `Project "${project.name}" deleted`, href: "/settings" });
   return Response.json({ ok: true });
 }

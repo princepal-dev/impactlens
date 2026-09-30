@@ -97,7 +97,7 @@ async function importSample(sample: (typeof SAMPLES)[number]) {
   if (existing?.status === "indexed") return Response.json({ asset: existing, skipped: true });
 
   const def = SAMPLE_PROJECTS.find((p) => p.id === sample.projectId);
-  const project = def ? ensureProject(def) : null;
+  const project = def ? await ensureProject(def) : null;
   const projectSlug = project?.slug ?? "samples";
   const filename = `${sample.file}.${isVideo(sample) ? "mp4" : "jpg"}`;
   const sourceTag = { unsplash: ["unsplash"], video: ["mixkit"], field: [] }[sample.collection];

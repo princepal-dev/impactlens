@@ -23,7 +23,7 @@ const top = (m: Record<string, number>, n: number) =>
     .map(([k]) => k);
 
 export async function buildReport(opts: { projectId: string; from: string; to: string }): Promise<ReportContent> {
-  const project = getProject(opts.projectId);
+  const project = await getProject(opts.projectId);
   if (!project) throw new UserError("Project not found.", 404);
 
   const all = await projectAssets(project.id);

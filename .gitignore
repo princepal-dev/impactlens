@@ -37,6 +37,9 @@ yarn-error.log*
 # local demo storage (uploads, generated reports)
 /.data
 
+# generated Prisma client (`prisma generate` runs on install and build)
+/src/generated
+
 # vercel
 .vercel
 

@@ -1,5 +1,6 @@
 import "server-only";
 import { v2 as cloudinary, type UploadApiOptions, type UploadApiResponse } from "cloudinary";
+import { UserError } from "./api";
 import { cloudinaryUploadMode, config, requireCloudinary } from "./config";
 import type { CloudinaryRef } from "./types";
 
@@ -94,6 +95,69 @@ export async function uploadMedia(opts: {
 
   const blob = new Blob([new Uint8Array(opts.buffer)], { type: opts.mimeType });
   return toRef(await unsignedUpload(blob, opts.filename, folder), opts.filename);
+}
+
+const DIRECT_FORMATS = "jpg,jpeg,png,webp,mp4,mov";
+
+/**
+ * Parameters for a browser upload straight to Cloudinary. Serverless request bodies are capped
+ * (4.5 MB on Vercel), so files never pass through the app server.
+ */
+export function directUploadParams() {
+  const mode = requireCloudinary();
+  const url = `https://api.cloudinary.com/v1_1/${config.cloudinary.cloudName}/auto/upload`;
+  const folder = `${config.cloudinary.folder}/uploads`;
+  const tags = "impactlens,field-media";
+  if (mode === "unsigned") return { url, fields: { upload_preset: config.cloudinary.uploadPreset, folder, tags } };
+  const params = { allowed_formats: DIRECT_FORMATS, folder, image_metadata: "true", tags, timestamp: String(Math.round(Date.now() / 1000)) };
+  const signature = sdk().utils.api_sign_request(params, config.cloudinary.apiSecret);
+  return { url, fields: { ...params, api_key: config.cloudinary.apiKey, signature } };
+}
+
+export type DirectUpload = {
+  public_id?: unknown;
+  resource_type?: unknown;
+  secure_url?: unknown;
+  format?: unknown;
+  width?: unknown;
+  height?: unknown;
+  bytes?: unknown;
+  created_at?: unknown;
+};
+
+/** Turn a finished browser upload into a trusted reference, re-reading the asset from Cloudinary when possible. */
+export async function refFromDirectUpload(upload: DirectUpload, filename: string | null): Promise<CloudinaryRef> {
+  const mode = requireCloudinary();
+  const publicId = typeof upload.public_id === "string" ? upload.public_id : "";
+  const type = upload.resource_type === "video" ? "video" : upload.resource_type === "image" ? "image" : null;
+  if (!publicId || !type) throw new UserError("Upload could not be verified. Please try again.");
+
+  if (mode === "signed") {
+    const res = await sdk()
+      .api.resource(publicId, { resource_type: type, image_metadata: true })
+      .catch(() => null);
+    if (!res) throw new UserError("Upload could not be verified. Please try again.");
+    return toRef(res, filename ?? undefined);
+  }
+
+  const secureUrl = typeof upload.secure_url === "string" ? upload.secure_url : "";
+  if (!secureUrl.startsWith(`https://res.cloudinary.com/${config.cloudinary.cloudName}/`)) {
+    throw new UserError("Upload could not be verified. Please try again.");
+  }
+  const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : 0);
+  return toRef(
+    {
+      public_id: publicId,
+      resource_type: type,
+      secure_url: secureUrl,
+      format: typeof upload.format === "string" ? upload.format : "",
+      width: num(upload.width),
+      height: num(upload.height),
+      bytes: num(upload.bytes),
+      created_at: typeof upload.created_at === "string" ? upload.created_at : undefined,
+    },
+    filename ?? undefined,
+  );
 }
 
 /** Remove an asset from Cloudinary when it belongs to this account (imports from other clouds are left untouched). */

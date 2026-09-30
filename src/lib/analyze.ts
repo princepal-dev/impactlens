@@ -58,9 +58,9 @@ const slug = (s: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
 
-export function normalizeMetadata(raw: Partial<AIMetadata>, ctx: AnalyzeContext): AIMetadata {
-  const assigned = getProject(ctx.projectHint);
-  const matched = assigned ?? getProject(raw.project ? String(raw.project) : null);
+export async function normalizeMetadata(raw: Partial<AIMetadata>, ctx: AnalyzeContext): Promise<AIMetadata> {
+  const assigned = await getProject(ctx.projectHint);
+  const matched = assigned ?? await getProject(raw.project ? String(raw.project) : null);
   const arr = (v: unknown) => (Array.isArray(v) ? v.map((x) => String(x)).filter(Boolean) : []);
   const confidence = Math.max(0, Math.min(1, Number(raw.confidence ?? 0.7)));
   const location = raw.location && raw.location !== "Unknown" ? String(raw.location) : ctx.locationHint || matched?.location || "Unknown";
@@ -96,8 +96,8 @@ export function normalizeMetadata(raw: Partial<AIMetadata>, ctx: AnalyzeContext)
 export async function analyzeMedia(frameUrls: string[], ctx: AnalyzeContext) {
   const images = await Promise.all(frameUrls.map(loadImage));
   const video = images.length > 1;
-  const assigned = getProject(ctx.projectHint);
-  const projects = listProjects();
+  const assigned = await getProject(ctx.projectHint);
+  const projects = await listProjects();
   const prompt = `Schema:
 ${SCHEMA}
 
@@ -120,5 +120,5 @@ ${
     images,
     budgetMs: 150_000,
   });
-  return { metadata: normalizeMetadata(data, ctx), engine };
+  return { metadata: await normalizeMetadata(data, ctx), engine };
 }

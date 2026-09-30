@@ -1,5 +1,5 @@
 import { errorResponse, readBody } from "@/lib/api";
-import { importFromUrl, uploadMedia } from "@/lib/cloudinary";
+import { type DirectUpload, importFromUrl, refFromDirectUpload, uploadMedia } from "@/lib/cloudinary";
 import { requireCloudinary } from "@/lib/config";
 import { rateLimit } from "@/lib/rate-limit";
 import { addActivity, getProject, saveAsset } from "@/lib/store";
@@ -21,8 +21,8 @@ function sniff(head: Uint8Array): string | null {
   return null;
 }
 
-function pendingAsset(id: string, ref: CloudinaryRef, projectId: string | null, location: string | null): MediaAsset {
-  const project = getProject(projectId);
+async function pendingAsset(id: string, ref: CloudinaryRef, projectId: string | null, location: string | null): Promise<MediaAsset> {
+  const project = await getProject(projectId);
   return {
     ...ref,
     id,
@@ -48,7 +48,10 @@ function pendingAsset(id: string, ref: CloudinaryRef, projectId: string | null, 
 
 const clean = (v: unknown, max: number) => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null);
 
-/** Receives media (multipart `file`) or a URL (JSON `{ url }`), stores it in Cloudinary and returns the pending asset. */
+/**
+ * Registers media as a pending asset. Accepts a finished browser upload (JSON `{ cloudinary }`),
+ * a URL to import (JSON `{ url }`) or, for small files, the file itself (multipart `file`).
+ */
 export async function POST(req: Request) {
   const limited = rateLimit(req, "upload", 60);
   if (limited) return limited;
@@ -61,15 +64,21 @@ export async function POST(req: Request) {
     let location: string | null;
 
     if (req.headers.get("content-type")?.includes("application/json")) {
-      const body = await readBody<{ url: string; projectId: string; location: string }>(req);
+      const body = await readBody<{ url: string; cloudinary: DirectUpload; filename: string; projectId: string; location: string }>(req);
+      projectId = clean(body.projectId, 80);
+      location = clean(body.location, 80);
+      if (body.cloudinary && typeof body.cloudinary === "object") {
+        ref = await refFromDirectUpload(body.cloudinary, clean(body.filename, 200)?.replace(/[\\/]/g, "_") ?? null);
+        const asset = await saveAsset(await pendingAsset(id, ref, projectId, location));
+        await addActivity({ type: "upload", message: `Uploaded ${asset.title} to Cloudinary`, href: `/media/${id}` });
+        return Response.json({ asset });
+      }
       const url = clean(body.url, 2048);
       let valid = false;
       try {
         valid = !!url && ["http:", "https:"].includes(new URL(url).protocol);
       } catch {}
       if (!valid) return Response.json({ error: "Provide a valid Cloudinary or public media URL." }, { status: 400 });
-      projectId = clean(body.projectId, 80);
-      location = clean(body.location, 80);
       ref = await importFromUrl(url!);
     } else {
       const form = await req.formData().catch(() => null);
@@ -86,7 +95,7 @@ export async function POST(req: Request) {
       ref = await uploadMedia({ buffer, filename, mimeType });
     }
 
-    const asset = await saveAsset(pendingAsset(id, ref, projectId, location));
+    const asset = await saveAsset(await pendingAsset(id, ref, projectId, location));
     await addActivity({ type: "upload", message: `Uploaded ${asset.title} to Cloudinary`, href: `/media/${id}` });
     return Response.json({ asset });
   } catch (e) {
