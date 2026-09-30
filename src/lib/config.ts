@@ -3,6 +3,8 @@ import path from "path";
 
 const env = (k: string) => (process.env[k] ?? "").trim();
 
+export const DEFAULT_GEMINI_MODEL = "gemini-3.8-flash";
+
 export const config = {
   cloudinary: {
     cloudName: env("NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME"),
@@ -13,7 +15,7 @@ export const config = {
   },
   gemini: {
     apiKey: env("GEMINI_API_KEY") || env("GOOGLE_API_KEY"),
-    model: env("GEMINI_MODEL") || "gemini-2.5-flash",
+    model: env("GEMINI_MODEL") || DEFAULT_GEMINI_MODEL,
   },
   openai: {
     apiKey: env("OPENAI_API_KEY"),

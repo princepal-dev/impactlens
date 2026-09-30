@@ -1,5 +1,5 @@
 import "server-only";
-import { config, requireAI } from "./config";
+import { config, DEFAULT_GEMINI_MODEL, requireAI } from "./config";
 
 export interface InlineImage {
   mimeType: string;
@@ -61,8 +61,20 @@ class RetryableError extends Error {
 }
 
 
-async function callGemini(opts: { system: string; prompt: string; images: InlineImage[]; signal: AbortSignal }) {
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${config.gemini.model}:generateContent`, {
+/** Gemini 3+ controls reasoning with `thinkingLevel`; 2.x Flash accepts a zero thinking budget. */
+function thinkingConfig(model: string) {
+  const major = Number(model.match(/gemini-(\d+)/)?.[1] ?? 0);
+  if (major >= 3) return { thinkingLevel: "low" };
+  if (/flash/.test(model)) return { thinkingBudget: 0 };
+  return undefined;
+}
+
+let geminiModel = config.gemini.model;
+
+async function callGemini(opts: { system: string; prompt: string; images: InlineImage[]; signal: AbortSignal }): Promise<string> {
+  const model = geminiModel;
+  const thinking = thinkingConfig(model);
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
     method: "POST",
     signal: opts.signal,
     headers: { "Content-Type": "application/json", "x-goog-api-key": config.gemini.apiKey },
@@ -77,7 +89,7 @@ async function callGemini(opts: { system: string; prompt: string; images: Inline
       generationConfig: {
         responseMimeType: "application/json",
         temperature: 0.2,
-        ...(/flash/.test(config.gemini.model) ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
+        ...(thinking ? { thinkingConfig: thinking } : {}),
       },
     }),
   });
@@ -86,7 +98,16 @@ async function callGemini(opts: { system: string; prompt: string; images: Inline
     const delay = json?.error?.details?.find((d: { retryDelay?: string }) => d.retryDelay)?.retryDelay;
     throw new RetryableError(json?.error?.message ?? `Gemini error ${res.status}`, delay ? parseFloat(delay) * 1000 : 0);
   }
-  if (!res.ok) throw new Error(json?.error?.message ?? `Gemini error ${res.status}`);
+  if (!res.ok) {
+    const message: string = json?.error?.message ?? `Gemini error ${res.status}`;
+    // Retired or unknown model: switch to the current default instead of failing every request.
+    if (model !== DEFAULT_GEMINI_MODEL && (res.status === 404 || /no longer available|not found|not supported/i.test(message))) {
+      console.warn(`[ai] Gemini model "${model}" unavailable (${message}); falling back to ${DEFAULT_GEMINI_MODEL}`);
+      geminiModel = DEFAULT_GEMINI_MODEL;
+      return callGemini(opts);
+    }
+    throw new Error(message);
+  }
   const blocked = json?.promptFeedback?.blockReason;
   if (blocked) throw new Error(`Content blocked by the AI provider (${blocked})`);
   const candidate = json?.candidates?.[0];
