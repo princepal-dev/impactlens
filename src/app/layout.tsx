@@ -4,7 +4,6 @@ import { MobileNav, Sidebar } from "@/components/Sidebar";
 import { GlowPointer } from "@/components/aceternity/glow-pointer";
 import { ThemedToaster } from "@/components/ThemeToggle";
 import { VoiceAgent } from "@/components/VoiceAgent";
-import { serviceStatus } from "@/lib/config";
 import { listProjects, orgStats } from "@/lib/store";
 import { THEME_INIT_SCRIPT } from "@/lib/theme-script";
 import "./globals.css";
@@ -25,7 +24,6 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
-  const s = serviceStatus();
   const stats = await orgStats().catch(() => null);
   const counts = { assets: stats?.totalAssets ?? 0, reports: stats?.reports ?? 0, projects: stats ? listProjects().length : 0 };
   return (
@@ -35,7 +33,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="min-h-full">
         <div className="relative flex min-h-screen">
-          <Sidebar online={s.storage.connected && s.ai.connected} counts={counts} />
+          <Sidebar counts={counts} />
           <div className="min-w-0 flex-1">
             <MobileNav />
             <main className="print-root w-full px-6 pb-20 pt-8 lg:px-10 lg:pt-10 2xl:px-12">{children}</main>
