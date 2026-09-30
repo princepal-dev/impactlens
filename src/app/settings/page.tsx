@@ -31,7 +31,7 @@ export default async function SettingsPage() {
 
   return (
     <div className="page-in max-w-4xl">
-      <TopBar eyebrow="Settings" title="Workspace" subtitle="Manage projects, connected services, appearance and workspace data." />
+      <TopBar title="Settings" subtitle="Manage projects, connected services, appearance and workspace data." />
       <div className="space-y-6">
         <ProjectManager projects={projects} />
 
@@ -49,7 +49,7 @@ export default async function SettingsPage() {
                     <div className="truncate text-[12px] text-subtle">{detail}</div>
                   </div>
                 </div>
-                <span className="flex shrink-0 items-center gap-1.5 font-mono text-[11px] text-positive">
+                <span className="flex shrink-0 items-center gap-1.5 text-[12px] font-medium text-positive">
                   <span className="size-1.5 rounded-full bg-positive" /> Connected
                 </span>
               </li>

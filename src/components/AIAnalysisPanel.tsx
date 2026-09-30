@@ -45,12 +45,12 @@ export function AIAnalysisPanel({ asset, compact }: { asset: MediaAsset; compact
           <span className="whitespace-nowrap text-[13px] font-medium">AI-generated evidence metadata</span>
         </div>
         <div className="flex items-center gap-3">
-          <span className="font-mono text-[11px] text-subtle">confidence</span>
+          <span className="text-[12px] text-subtle">Confidence</span>
           <div className="flex items-center gap-2">
             <div className="h-1 w-16 overflow-hidden rounded-full bg-tint/[0.08]">
               <div className="h-full bg-accent" style={{ width: pct(asset.confidence) }} />
             </div>
-            <span className="font-mono text-[12px] text-accent">{pct(asset.confidence)}</span>
+            <span className="text-[12.5px] font-semibold tabular-nums text-accent">{pct(asset.confidence)}</span>
           </div>
         </div>
       </div>
@@ -89,10 +89,10 @@ export function AIAnalysisPanel({ asset, compact }: { asset: MediaAsset; compact
       </div>
 
       <div className="mt-5 flex items-center justify-between gap-4 border-t border-line pt-3">
-        <span className="min-w-0 truncate font-mono text-[11px] text-subtle" title={asset.analysisEngine || undefined}>
-          engine: {asset.analysisEngine || "—"}
+        <span className="min-w-0 truncate text-[12px] text-subtle" title={asset.analysisEngine || undefined}>
+          Analyzed by {asset.analysisEngine || "—"}
         </span>
-        <button onClick={() => setRaw((r) => !r)} className="flex shrink-0 items-center gap-1.5 font-mono text-[11px] text-muted transition-colors hover:text-accent">
+        <button onClick={() => setRaw((r) => !r)} className="flex shrink-0 items-center gap-1.5 text-[12px] font-medium text-muted transition-colors hover:text-accent">
           <Braces className="size-3.5" /> {raw ? "Hide" : "View"} JSON
         </button>
       </div>

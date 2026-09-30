@@ -20,7 +20,7 @@ export function SearchResultCard({ result, rank }: { result: SearchResult; rank:
         <MediaThumb asset={asset} w={640} h={400} className="size-full transition-transform duration-500 group-hover:scale-[1.03]" />
         <div className="absolute inset-x-0 top-0 flex items-start justify-between p-2.5">
           <CloudinaryLabel asset={asset} />
-          <span className="rounded-[4px] bg-accent px-1.5 py-0.5 font-mono text-[11px] font-semibold text-accent-foreground">{pct(relevance)} relevant</span>
+          <span className="rounded-[4px] bg-accent px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-accent-foreground">{pct(relevance)} relevant</span>
         </div>
         <div className="absolute inset-x-0 bottom-0 h-1 bg-black/40">
           <div className="h-full bg-accent/80" style={{ width: pct(relevance) }} />

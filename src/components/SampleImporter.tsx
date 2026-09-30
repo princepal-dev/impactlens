@@ -105,7 +105,7 @@ export function SampleImporter({ compact = false }: { compact?: boolean }) {
 
       {samples && (done > 0 || running) && (
         <div className="mt-5">
-          <div className="flex justify-between font-mono text-[11px] text-subtle">
+          <div className="flex justify-between text-[12px] tabular-nums text-subtle">
             <span>
               {done}/{total} indexed
             </span>
@@ -115,7 +115,7 @@ export function SampleImporter({ compact = false }: { compact?: boolean }) {
             <div className="h-full rounded-full bg-accent transition-all duration-500" style={{ width: `${pct}%` }} />
           </div>
           {running && current.length > 0 && (
-            <div className="mt-2.5 flex items-center gap-2 font-mono text-[11px] text-muted">
+            <div className="mt-2.5 flex items-center gap-2 text-[12px] text-muted">
               <Loader2 className="size-3 animate-spin text-accent" /> Processing {current.join(", ")}
             </div>
           )}
@@ -123,7 +123,7 @@ export function SampleImporter({ compact = false }: { compact?: boolean }) {
       )}
 
       {errors.length > 0 && (
-        <ul className="mt-4 space-y-1 rounded-md border border-danger/25 bg-danger/[0.05] p-3 font-mono text-[11px] text-danger">
+        <ul className="mt-4 space-y-1 rounded-md border border-danger/25 bg-danger/[0.05] p-3 text-[12px] text-danger">
           {errors.slice(0, 5).map((e) => (
             <li key={e.file}>
               {e.file}: {e.error}

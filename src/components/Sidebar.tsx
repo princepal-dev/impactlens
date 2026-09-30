@@ -6,8 +6,6 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { ThemeCycleButton, ThemeToggle } from "./ThemeToggle";
 
-const AI_NAMES: Record<string, string> = { gemini: "Gemini", openai: "OpenAI", openrouter: "OpenRouter" };
-
 const NAV = [
   { href: "/", label: "Overview", icon: LayoutGrid },
   { href: "/media", label: "Media Library", icon: Images },
@@ -28,21 +26,19 @@ export function Logo({ className }: { className?: string }) {
   );
 }
 
-export function Sidebar({ services }: { services: { storage: boolean; ai: string | null } }) {
+export function Sidebar({ online }: { online: boolean }) {
   const pathname = usePathname();
   const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
-  const live = services.storage && !!services.ai;
 
   return (
     <aside className="no-print sticky top-0 z-30 flex h-screen w-[232px] shrink-0 flex-col border-r border-line bg-chrome max-lg:hidden">
-      <div className="px-5 pb-6 pt-5">
+      <div className="flex h-14 items-center border-b border-line px-5">
         <Link href="/" className="block">
           <Logo />
         </Link>
-        <p className="mt-2 text-[11px] leading-4 text-subtle">Impact &amp; sustainability media intelligence</p>
       </div>
 
-      <div className="label-mono px-5 pb-2">Workspace</div>
+      <div className="label-mono px-5 pb-2 pt-5">Workspace</div>
       <nav className="flex flex-col gap-0.5 px-3">
         {NAV.map(({ href, label, icon: Icon }) => (
           <Link
@@ -60,17 +56,17 @@ export function Sidebar({ services }: { services: { storage: boolean; ai: string
         ))}
       </nav>
 
-      {live && (
-        <div className="mx-5 mt-8 rounded-md border border-line p-3">
-          <div className="flex items-center gap-2">
-            <span className="size-1.5 rounded-full bg-positive" />
-            <span className="font-mono text-[10.5px] uppercase tracking-wider text-muted">Live pipeline</span>
-          </div>
-          <div className="mt-2 space-y-1 text-[11px] text-subtle">
-            <div className="flex justify-between"><span>Storage</span><span className="text-muted">Cloudinary</span></div>
-            <div className="flex justify-between"><span>AI</span><span className="text-muted">{AI_NAMES[services.ai!] ?? services.ai}</span></div>
-          </div>
-        </div>
+      {online && (
+        <Link
+          href="/settings"
+          className="mx-3 mt-6 flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[12.5px] text-muted transition-colors hover:bg-tint/[0.03] hover:text-foreground"
+        >
+          <span className="relative flex size-2">
+            <span className="absolute inline-flex size-full animate-ping rounded-full bg-positive opacity-40" />
+            <span className="relative inline-flex size-2 rounded-full bg-positive" />
+          </span>
+          All systems operational
+        </Link>
       )}
 
       <div className="mt-auto border-t border-line p-3">

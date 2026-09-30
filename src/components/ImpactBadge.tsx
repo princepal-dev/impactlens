@@ -18,19 +18,19 @@ export function ImpactBadge({ area, className }: { area: string; className?: str
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-[4px] border border-emerald-400/15 bg-emerald-400/[0.06] px-2 py-0.5 text-[11.5px] text-emerald-300/90 light:border-emerald-600/25 light:bg-emerald-500/[0.08] light:text-emerald-800",
+        "inline-flex max-w-full items-center gap-1.5 whitespace-nowrap rounded-[4px] border border-emerald-400/15 bg-emerald-400/[0.06] px-2 py-0.5 text-[11.5px] text-emerald-300/90 light:border-emerald-600/25 light:bg-emerald-500/[0.08] light:text-emerald-800",
         className,
       )}
     >
-      <Icon className="size-3" />
-      {area}
+      <Icon className="size-3 shrink-0" />
+      <span className="truncate">{area}</span>
     </span>
   );
 }
 
 export function StageBadge({ stage }: { stage: string }) {
   return (
-    <span className={cn("inline-flex items-center rounded-[4px] border px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider", STAGE_STYLES[stage])}>
+    <span className={cn("inline-flex shrink-0 items-center whitespace-nowrap rounded-[4px] border px-1.5 py-0.5 text-[10.5px] font-semibold uppercase tracking-wide", STAGE_STYLES[stage])}>
       {stage}
     </span>
   );

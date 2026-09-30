@@ -59,7 +59,7 @@ export default async function AssetPage({ params }: PageProps<"/media/[id]">) {
               <div className="mb-5 grid grid-cols-2 gap-2 md:grid-cols-4">
                 {["AI insight", "Evidence record", "Cloudinary asset", "Original media"].map((s, i) => (
                   <div key={s} className="relative rounded-md border border-line bg-tint/[0.02] px-3 py-2.5">
-                    <div className="font-mono text-[10px] text-accent">0{i + 1}</div>
+                    <div className="text-[11px] font-semibold tabular-nums text-accent">0{i + 1}</div>
                     <div className="mt-0.5 text-[12.5px]">{s}</div>
                     {i < 3 && <ChevronRight className="absolute -right-3 top-1/2 z-10 hidden size-4 -translate-y-1/2 text-subtle md:block" />}
                   </div>
@@ -89,7 +89,7 @@ export default async function AssetPage({ params }: PageProps<"/media/[id]">) {
               <>
                 <AIAnalysisPanel asset={asset} />
                 {asset.editedAt && (
-                  <p className="mt-4 border-t border-line pt-3 font-mono text-[11px] text-subtle">
+                  <p className="mt-4 border-t border-line pt-3 text-[12px] text-subtle">
                     Edited by your team · {fmtDate(asset.editedAt)}
                   </p>
                 )}

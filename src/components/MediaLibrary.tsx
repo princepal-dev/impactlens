@@ -51,7 +51,7 @@ export function MediaLibrary({
   };
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-8">
       <UploadDropzone
         projects={projects}
         autoFocus={autoUpload}
@@ -59,12 +59,11 @@ export function MediaLibrary({
       />
 
       <section>
-        <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <div className="label-mono">Evidence library</div>
-            <h2 className="mt-1 text-lg font-medium">
+            <h2 className="text-[15px] font-semibold tracking-tight">
               {project === "all" ? "All field media" : projects.find((p) => p.id === project)?.name}
-              <span className="ml-2 font-mono text-[13px] font-normal text-subtle">{filtered.length}</span>
+              <span className="ml-2 text-[13px] font-normal tabular-nums text-subtle">{filtered.length}</span>
             </h2>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -82,7 +81,7 @@ export function MediaLibrary({
           </div>
         </div>
 
-        <div className="mb-5 flex flex-wrap gap-1.5">
+        <div className={cn("mb-5 flex flex-wrap gap-1.5", !projects.length && "hidden")}>
           {[{ id: "all", name: "All projects" }, ...projects].map((p) => (
             <button
               key={p.id}
@@ -93,7 +92,7 @@ export function MediaLibrary({
               )}
             >
               {p.name}
-              <span className="ml-1.5 font-mono text-[11px] opacity-60">
+              <span className="ml-1.5 text-[11px] tabular-nums opacity-60">
                 {p.id === "all" ? assets.length : assets.filter((a) => a.projectId === p.id).length}
               </span>
             </button>
@@ -108,7 +107,7 @@ export function MediaLibrary({
         {filtered.length > visible ? (
           <div className="mt-6 flex justify-center">
             <Button size="sm" variant="secondary" onClick={() => setPage({ key: filterKey, n: visible + PAGE_SIZE })}>
-              Load more <span className="font-mono text-subtle">{filtered.length - visible}</span>
+              Load more <span className="tabular-nums text-subtle">{filtered.length - visible}</span>
             </Button>
           </div>
         ) : null}

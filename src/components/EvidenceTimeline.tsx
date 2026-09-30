@@ -9,7 +9,7 @@ export function EvidenceTimeline({ timeline, assets }: { timeline: ReportContent
         <li key={t.month} className="relative">
           <span className="absolute -left-[29px] top-1 size-[9px] rounded-full border-2 border-accent bg-background" />
           <div className="flex flex-wrap items-baseline gap-x-3">
-            <span className="print-accent font-mono text-[12px] uppercase tracking-wider text-accent">{t.label}</span>
+            <span className="print-accent text-[12px] font-semibold uppercase tracking-wider text-accent">{t.label}</span>
             <span className="text-[12px] text-subtle">{t.count} asset{t.count > 1 ? "s" : ""}</span>
           </div>
           <div className="mt-1 text-[13.5px]">{t.highlight}</div>

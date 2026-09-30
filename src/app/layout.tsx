@@ -29,10 +29,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
       <body className="min-h-full">
-        <div className="no-print pointer-events-none fixed inset-0 bg-grid" />
-        <div className="no-print pointer-events-none fixed inset-0 glow-bottom" />
         <div className="relative flex min-h-screen">
-          <Sidebar services={{ storage: s.storage.connected, ai: s.ai.connected ? s.ai.provider : null }} />
+          <Sidebar online={s.storage.connected && s.ai.connected} />
           <div className="min-w-0 flex-1">
             <MobileNav />
             <main className="print-root mx-auto w-full max-w-[1280px] px-6 pb-20 pt-8 lg:px-10 lg:pt-10">{children}</main>

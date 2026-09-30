@@ -145,7 +145,7 @@ export function EvidenceSearch() {
               </div>
               <button
                 onClick={() => setInspector((v) => !v)}
-                className="flex w-full items-center gap-2 border-t border-line px-5 py-2.5 font-mono text-[11px] text-subtle transition-colors hover:text-muted"
+                className="flex w-full items-center gap-2 border-t border-line px-5 py-2.5 text-[12px] text-subtle transition-colors hover:text-muted"
               >
                 <Cpu className="size-3.5" /> Query inspector
                 <span className="ml-auto">{data.diagnostics.ms} ms · {data.diagnostics.scanned} assets scanned</span>
@@ -183,7 +183,7 @@ export function EvidenceSearch() {
               ["Always traceable", "Every result links back to the original Cloudinary asset."],
             ].map(([t, d], i) => (
               <Panel key={t} className="p-4">
-                <div className="font-mono text-[11px] text-accent">0{i + 1}</div>
+                <div className="text-[12px] font-semibold tabular-nums text-accent">0{i + 1}</div>
                 <div className="mt-2 text-[13.5px] font-medium">{t}</div>
                 <div className="mt-1 text-[12.5px] leading-relaxed text-muted">{d}</div>
               </Panel>

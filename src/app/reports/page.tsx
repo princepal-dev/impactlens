@@ -14,9 +14,8 @@ export default async function ReportsPage() {
   return (
     <div className="page-in">
       <TopBar
-        eyebrow="Impact Reports"
-        title="Turn evidence into impact stories."
-        subtitle="Generate a traceable impact evidence report from project media — every claim linked back to its original source asset."
+        title="Impact Reports"
+        subtitle="Generate traceable evidence reports from project media, with every claim linked to its source asset."
       />
       {projects.length ? (
         <Suspense>

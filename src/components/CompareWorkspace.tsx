@@ -126,7 +126,7 @@ export function CompareWorkspace({
           <PanelHeader
             eyebrow="Based on uploaded media"
             title={<span className="flex items-center gap-2"><Sparkles className="size-4 text-accent" /> Comparison insights</span>}
-            action={result && !loading && <span className="font-mono text-[11px] text-subtle">{result.engine}</span>}
+            action={result && !loading && <span className="max-w-[50%] truncate text-[12px] text-subtle" title={result.engine}>{result.engine}</span>}
           />
           <div className="p-5">
             {loading && (

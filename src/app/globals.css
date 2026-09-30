@@ -26,8 +26,6 @@
   --positive: #4ade80;
   --warning: #fb923c;
   --danger: #f87171;
-  --grid-line: rgba(255, 255, 255, 0.035);
-  --glow: rgba(45, 212, 191, 0.08);
   --skeleton: rgba(255, 255, 255, 0.04);
   --skeleton-shine: rgba(255, 255, 255, 0.05);
   --panel-shadow: 0 0 #0000;
@@ -35,7 +33,7 @@
 }
 
 :root.light {
-  --background: #f6f6f4;
+  --background: #f7f7f6;
   --foreground: #18181b;
   --soft: #3f3f46;
   --surface: #ffffff;
@@ -57,11 +55,9 @@
   --positive: #16a34a;
   --warning: #c2410c;
   --danger: #dc2626;
-  --grid-line: rgba(24, 24, 27, 0.05);
-  --glow: rgba(13, 148, 136, 0.07);
   --skeleton: rgba(24, 24, 27, 0.06);
   --skeleton-shine: rgba(255, 255, 255, 0.6);
-  --panel-shadow: 0 1px 2px rgba(24, 24, 27, 0.04), 0 1px 1px rgba(24, 24, 27, 0.02);
+  --panel-shadow: 0 1px 2px rgba(24, 24, 27, 0.05), 0 1px 3px rgba(24, 24, 27, 0.03);
   color-scheme: light;
 }
 
@@ -113,30 +109,19 @@ body {
   background: rgba(45, 212, 191, 0.3);
 }
 
-.bg-grid {
-  background-image:
-    linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
-  background-size: 56px 56px;
-  mask-image: radial-gradient(ellipse at 50% 0%, black 30%, transparent 75%);
-}
-
-.glow-bottom {
-  background: radial-gradient(ellipse at 20% 110%, var(--glow), transparent 55%);
-}
-
 .eyebrow {
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
-  font-size: 11px;
-  letter-spacing: 0.22em;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--accent);
 }
 
 .label-mono {
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
-  font-size: 10.5px;
-  letter-spacing: 0.14em;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  line-height: 1.3;
   text-transform: uppercase;
   color: var(--subtle);
 }

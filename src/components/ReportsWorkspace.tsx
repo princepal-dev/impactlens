@@ -178,7 +178,7 @@ export function ReportsWorkspace({
                     )}
                   >
                     <div className="truncate text-[13px]">{r.project}</div>
-                    <div className="font-mono text-[11px] text-subtle">#{r.id} · {timeAgo(r.generatedAt)}</div>
+                    <div className="text-[12px] tabular-nums text-subtle">#{r.id} · {timeAgo(r.generatedAt)}</div>
                   </button>
                   <button
                     onClick={() => removeReport(r.id)}

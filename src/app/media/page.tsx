@@ -10,9 +10,8 @@ export default async function MediaPage({ searchParams }: PageProps<"/media">) {
   return (
     <div className="page-in">
       <TopBar
-        eyebrow="Media Library"
-        title="Turn raw media into structured evidence."
-        subtitle="Every upload is stored as an original Cloudinary asset, analyzed by AI and indexed by project, location and timeline."
+        title="Media Library"
+        subtitle="Original field media stored in Cloudinary, analyzed by AI and indexed by project, location and stage."
       />
       <MediaLibrary
         initial={assets}

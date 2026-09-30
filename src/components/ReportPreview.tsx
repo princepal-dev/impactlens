@@ -42,7 +42,6 @@ export function ReportPreview({ report, assets }: { report: ReportContent; asset
   return (
     <article className="report-doc overflow-hidden rounded-lg border border-line-strong bg-surface">
       <header className="relative overflow-hidden px-8 pb-10 pt-8 md:px-12">
-        <div className="bg-grid pointer-events-none absolute inset-0 opacity-60" />
         <div className="relative">
           <div className="flex items-center justify-between">
             <Logo />

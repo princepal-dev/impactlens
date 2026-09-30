@@ -89,8 +89,8 @@ export function BeforeAfter({ before, after, mode }: { before: MediaAsset; after
             <ChevronsLeftRight className="size-4 text-white" />
           </div>
         </div>
-        <span className="absolute left-3 top-3 rounded-[3px] bg-black/60 px-2 py-1 font-mono text-[10.5px] uppercase tracking-widest text-white/85">Before</span>
-        <span className="absolute right-3 top-3 rounded-[3px] bg-accent px-2 py-1 font-mono text-[10.5px] uppercase tracking-widest text-accent-foreground">After</span>
+        <span className="absolute left-3 top-3 rounded-[3px] bg-black/60 px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-white/90">Before</span>
+        <span className="absolute right-3 top-3 rounded-[3px] bg-accent px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-accent-foreground">After</span>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <Caption label="Before" asset={before} />

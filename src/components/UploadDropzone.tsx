@@ -278,49 +278,52 @@ export function UploadDropzone({
           addFiles(e.dataTransfer.files);
         }}
         className={cn(
-          "relative overflow-hidden rounded-lg border border-dashed px-6 py-12 text-center outline-none transition-all duration-200 focus-visible:border-accent/70",
+          "relative rounded-lg border border-dashed p-5 outline-none transition-all duration-200 focus-visible:border-accent/70 sm:p-6",
           drag ? "border-accent bg-accent/[0.06]" : "border-line-strong bg-panel hover:border-tint/25",
         )}
       >
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(45,212,191,0.06),transparent_60%)]" />
-        <div className="relative">
-          <div className="mx-auto grid size-12 place-items-center rounded-lg border border-accent/30 bg-accent/10">
-            <UploadCloud className="size-5 text-accent" />
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-start gap-4">
+            <div className="grid size-11 shrink-0 place-items-center rounded-lg border border-accent/25 bg-accent/10">
+              <UploadCloud className="size-5 text-accent" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-[15px] font-semibold tracking-tight">Upload field media</h2>
+              <p className="mt-1 max-w-lg text-[13px] leading-relaxed text-muted">
+                Drag and drop photos or videos here. Each upload is stored in Cloudinary, analyzed by AI and indexed automatically.
+              </p>
+              <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                {FORMATS.map((f) => (
+                  <span key={f} className="rounded-[3px] border border-line px-1.5 py-0.5 text-[10.5px] font-medium text-subtle">{f}</span>
+                ))}
+              </div>
+            </div>
           </div>
-          <h2 className="mt-5 text-[20px] font-medium tracking-tight">Upload field media</h2>
-          <p className="mx-auto mt-2 max-w-md text-[13.5px] leading-relaxed text-muted">
-            Drop photos or videos here. ImpactLens will automatically analyze and organize them.
-          </p>
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-2.5">
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <Button variant="secondary" onClick={() => setImportOpen(true)}>
+              <Link2 /> Import from Cloudinary
+            </Button>
             <Button variant="primary" onClick={() => input.current?.click()}>
               <CloudUpload /> Select files
             </Button>
-            <Button variant="secondary" onClick={() => setImportOpen(true)}>
-              <Link2 /> Upload from Cloudinary
-            </Button>
           </div>
-          <div className="mx-auto mt-6 flex max-w-xl flex-col items-center gap-3 sm:flex-row sm:justify-center">
-            <span className="label-mono whitespace-nowrap">Assign to</span>
-            <Select value={projectId} onChange={(e) => setProjectId(e.target.value)} className="h-8 w-56 text-[12.5px]" onClick={(e) => e.stopPropagation()}>
-              <option value="">Auto-detect project with AI</option>
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </Select>
-            <Input
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              onClick={(e) => e.stopPropagation()}
-              onKeyDown={(e) => e.stopPropagation()}
-              placeholder="Site, e.g. Osian, Rajasthan (optional)"
-              className="h-8 w-60 text-[12.5px]"
-            />
-          </div>
-          <div className="mt-5 flex items-center justify-center gap-1.5">
-            {FORMATS.map((f) => (
-              <span key={f} className="rounded-[3px] border border-line px-1.5 py-0.5 font-mono text-[10px] text-subtle">{f}</span>
+        </div>
+        <div className="mt-5 flex flex-col gap-2.5 border-t border-line pt-4 sm:flex-row sm:items-center">
+          <span className="text-[12.5px] font-medium text-muted sm:mr-1">Assign to</span>
+          <Select value={projectId} onChange={(e) => setProjectId(e.target.value)} className="h-9 w-full text-[13px] sm:w-60" onClick={(e) => e.stopPropagation()}>
+            <option value="">Auto-detect project with AI</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
             ))}
-          </div>
+          </Select>
+          <Input
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+            placeholder="Site, e.g. Osian, Rajasthan (optional)"
+            className="h-9 w-full text-[13px] sm:w-72"
+          />
         </div>
         <input ref={input} type="file" multiple accept={ACCEPT} className="hidden" onChange={(e) => {
             if (e.target.files) addFiles(e.target.files);
@@ -351,7 +354,7 @@ export function UploadDropzone({
                   <div className="absolute inset-0 border-2 border-accent/40" />
                 </div>
               )}
-              <div className="absolute left-2.5 top-2.5 max-w-[85%] truncate rounded-[3px] bg-black/60 px-1.5 py-0.5 font-mono text-[10.5px] text-white/80 backdrop-blur">{j.name}</div>
+              <div className="absolute left-2.5 top-2.5 max-w-[85%] truncate rounded-[3px] bg-black/60 px-1.5 py-0.5 text-[11px] text-white/85 backdrop-blur">{j.name}</div>
               <button
                 onClick={() => dismiss(j)}
                 className="absolute right-2 top-2 rounded bg-black/60 p-1 text-white/70 hover:text-white"

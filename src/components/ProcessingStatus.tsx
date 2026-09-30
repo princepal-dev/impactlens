@@ -33,7 +33,7 @@ export function ProcessingStatus({
           </span>
           <div className="min-w-0 flex-1">
             <div className={cn("text-[13.5px] transition-colors", s.state === "pending" ? "text-subtle" : "text-foreground")}>{s.label}</div>
-            {s.detail && <div className="mt-0.5 truncate font-mono text-[11px] text-subtle">{s.detail}</div>}
+            {s.detail && <div className="mt-0.5 truncate text-[12px] text-subtle">{s.detail}</div>}
             {s.state === "active" && i === 0 && progress !== undefined && (
               <div className="mt-2 h-1 w-full max-w-xs overflow-hidden rounded-full bg-tint/[0.06]">
                 <div className="h-full rounded-full bg-accent transition-[width] duration-200" style={{ width: `${progress}%` }} />

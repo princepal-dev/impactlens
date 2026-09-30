@@ -13,7 +13,7 @@ export default async function ComparePage({ searchParams }: PageProps<"/compare"
   const projects = listProjects();
   return (
     <div className="page-in">
-      <TopBar eyebrow="Compare" title="Before & After Evidence" subtitle="Compare field evidence across project stages." />
+      <TopBar title="Compare" subtitle="Pair baseline and later evidence to see what changed across project stages." />
       {projects.length ? (
         <CompareWorkspace
           projects={projects}
