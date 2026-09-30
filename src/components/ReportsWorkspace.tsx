@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Download, FileText, Link as LinkIcon, Loader2, RotateCcw, Trash2 } from "lucide-react";
+import { AlertTriangle, Clock, Download, FileText, FolderKanban, Link as LinkIcon, Loader2, RotateCcw, ShieldCheck, Trash2 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -9,6 +9,7 @@ import { requestJSON } from "@/lib/http";
 import type { MediaAsset, Project, ReportContent } from "@/lib/types";
 import { cn, timeAgo } from "@/lib/utils";
 import { EmptyState } from "./EmptyState";
+import { HeaderStat, PageHeader } from "./PageHeader";
 import { ProcessingStatus, type StepState } from "./ProcessingStatus";
 import { Button } from "./ui/button";
 import { Panel, Select } from "./ui/panel";
@@ -35,14 +36,49 @@ function monthRange(dates: string[]) {
 const monthLabel = (m: string) => new Date(`${m}-01T00:00:00Z`).toLocaleString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
 const lastDay = (m: string) => new Date(Date.UTC(+m.slice(0, 4), +m.slice(5, 7), 0)).toISOString().slice(0, 10);
 
+export function ReportsHeader({ history, projects, indexed }: { history: ReportContent[]; projects: number; indexed: number }) {
+  const last = history[0];
+  const covered = new Set(history.map((r) => r.projectId)).size;
+  return (
+    <PageHeader
+      title="Impact Reports"
+      subtitle="Traceable evidence reports built from project media, with every claim linked to its source asset."
+      stats={
+        <>
+          <HeaderStat
+            icon={FileText}
+            label="Reports generated"
+            value={history.length}
+            hint={history.length ? `Across ${covered} project${covered === 1 ? "" : "s"}` : "Generated from evidence"}
+          />
+          <HeaderStat icon={FolderKanban} label="Projects" value={projects} hint="Ready to report on" href="/settings#projects" />
+          <HeaderStat icon={ShieldCheck} label="Traceable evidence" value={indexed} hint="Indexed assets to cite" href="/media" />
+          <HeaderStat icon={Clock} label="Last report" value={last ? timeAgo(last.generatedAt) : "—"} hint={last?.project ?? "No reports yet"} />
+        </>
+      }
+    />
+  );
+}
+
+function initialReport(history: ReportContent[], projects: Project[], params: URLSearchParams) {
+  const id = params.get("id");
+  const byId = id ? history.find((r) => r.id === id) : undefined;
+  if (byId) return byId;
+  if (params.get("auto") === "1") return null;
+  const projectId = projects.find((p) => p.slug === params.get("project"))?.id;
+  return (projectId && history.find((r) => r.projectId === projectId)) || history[0] || null;
+}
+
 export function ReportsWorkspace({
   projects,
   assets,
   history: initialHistory,
+  indexed,
 }: {
   projects: Project[];
   assets: Record<string, MediaAsset>;
   history: ReportContent[];
+  indexed: number;
 }) {
   const router = useRouter();
   const params = useSearchParams();
@@ -51,7 +87,7 @@ export function ReportsWorkspace({
   const [from, setFrom] = useState(months[0]);
   const [to, setTo] = useState(months[months.length - 1]);
   const [step, setStep] = useState(-1);
-  const [report, setReport] = useState<ReportContent | null>(() => initialHistory.find((r) => r.id === params.get("id")) ?? null);
+  const [report, setReport] = useState<ReportContent | null>(() => initialReport(initialHistory, projects, new URLSearchParams(params.toString())));
   const [history, setHistory] = useState(initialHistory);
   const [error, setError] = useState<string | null>(null);
   const autoRan = useRef(false);
@@ -77,7 +113,7 @@ export function ReportsWorkspace({
       await new Promise((done) => setTimeout(done, 400));
       setStep(STEPS.length);
       setReport(r);
-      setHistory((h) => [r, ...h]);
+      setHistory((h) => [r, ...h.filter((x) => x.id !== r.id)]);
       router.replace(`/reports?id=${r.id}`, { scroll: false });
       toast.success("Impact report generated", { description: r.project });
       setTimeout(() => document.getElementById("report-top")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
@@ -99,10 +135,12 @@ export function ReportsWorkspace({
   async function removeReport(id: string) {
     const res = await requestJSON(`/api/report?id=${encodeURIComponent(id)}`, { method: "DELETE" });
     if (!res.ok) return toast.error("Could not delete report", { description: res.error });
-    setHistory((h) => h.filter((r) => r.id !== id));
+    const remaining = history.filter((r) => r.id !== id);
+    setHistory(remaining);
     if (report?.id === id) {
-      setReport(null);
-      router.replace("/reports", { scroll: false });
+      const next = remaining[0] ?? null;
+      setReport(next);
+      router.replace(next ? `/reports?id=${next.id}` : "/reports", { scroll: false });
     }
     toast.success("Report deleted");
   }
@@ -113,6 +151,8 @@ export function ReportsWorkspace({
   }));
 
   return (
+    <>
+    <ReportsHeader history={history} projects={projects.length} indexed={indexed} />
     <div className="space-y-8">
       <div className="no-print grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <Panel className="p-5">
@@ -236,12 +276,17 @@ export function ReportsWorkspace({
             <EmptyState
               className="no-print"
               icon={FileText}
-              title="No report generated yet"
-              description="Select a project and reporting period, then generate a traceable impact evidence report in one click."
+              title={history.length ? "Choose a report to view" : "No report generated yet"}
+              description={
+                history.length
+                  ? "Pick one from Recent reports, or generate a new one for any project and period."
+                  : "Select a project and reporting period, then generate a traceable impact evidence report in one click."
+              }
             />
           )
         )}
       </div>
     </div>
+    </>
   );
 }

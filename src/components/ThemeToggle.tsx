@@ -2,7 +2,7 @@
 
 import { Monitor, Moon, Sun } from "lucide-react";
 import { Toaster } from "sonner";
-import { useTheme, type Theme } from "@/lib/theme";
+import { originFrom, useTheme, type Theme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
 const OPTIONS: { value: Theme; label: string; icon: typeof Sun }[] = [
@@ -24,7 +24,7 @@ export function ThemeToggle({ className, showLabels = false }: { className?: str
           aria-checked={theme === value}
           aria-label={label}
           title={label}
-          onClick={() => setTheme(value)}
+          onClick={(e) => setTheme(value, originFrom(e.currentTarget))}
           className={cn(
             "flex h-8 flex-1 items-center justify-center gap-1.5 rounded-full px-3 text-[12.5px] font-medium transition-colors duration-200",
             theme === value ? "bg-ink text-ink-foreground" : "text-muted hover:text-foreground",
@@ -46,7 +46,7 @@ export function ThemeCycleButton({ className }: { className?: string }) {
   return (
     <button
       type="button"
-      onClick={() => setTheme(next)}
+      onClick={(e) => setTheme(next, originFrom(e.currentTarget))}
       aria-label={`Switch to ${next} mode`}
       title={`Switch to ${next} mode`}
       className={cn("grid size-8 shrink-0 place-items-center rounded-full text-muted transition-colors hover:bg-tint/[0.06] hover:text-foreground", className)}

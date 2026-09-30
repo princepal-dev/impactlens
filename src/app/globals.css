@@ -124,6 +124,27 @@ body {
   transition: none !important;
 }
 
+.theme-fade,
+.theme-fade *,
+.theme-fade *::before,
+.theme-fade *::after {
+  transition:
+    background-color 0.35s var(--ease-out-soft),
+    border-color 0.35s var(--ease-out-soft),
+    color 0.35s var(--ease-out-soft),
+    fill 0.35s var(--ease-out-soft),
+    box-shadow 0.35s var(--ease-out-soft) !important;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-new(root) {
+  z-index: 2;
+}
+
 ::selection {
   background: rgba(212, 242, 90, 0.45);
   color: #10120a;

@@ -18,7 +18,6 @@ import { MediaThumb } from "@/components/MediaThumb";
 import { NewProjectDialog } from "@/components/NewProjectDialog";
 import { HeaderStat, PageHeader } from "@/components/PageHeader";
 import { SampleImporter } from "@/components/SampleImporter";
-import { SampleReel } from "@/components/SampleReel";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
 import { listActivity, listAssets, orgStats, projectSummaries } from "@/lib/store";
@@ -148,11 +147,6 @@ export default async function OverviewPage() {
 
       <section className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_340px] 2xl:grid-cols-[minmax(0,1fr)_400px]">
         <div className="min-w-0 space-y-6">
-          <div>
-            <SectionHeader title="Sample evidence" href="/samples" linkLabel="Sample library" />
-            <SampleReel assets={assets} />
-          </div>
-
           {recent.length > 0 && (
             <div>
               <SectionHeader title="Recent evidence" href="/media" linkLabel="Media library" />

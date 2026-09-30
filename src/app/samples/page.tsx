@@ -1,6 +1,9 @@
-import { CheckCircle2, FolderKanban, Images, Layers } from "lucide-react";
+import { ArrowUpRight, CheckCircle2, FolderKanban, Images, Layers } from "lucide-react";
+import Link from "next/link";
 import { HeaderStat, PageHeader } from "@/components/PageHeader";
 import { SampleImporter } from "@/components/SampleImporter";
+import { SampleReel } from "@/components/SampleReel";
+import type { MediaAsset } from "@/lib/types";
 import { SAMPLE_PROJECTS, SAMPLES } from "@/lib/samples";
 import { getAsset } from "@/lib/store";
 
@@ -25,6 +28,18 @@ export default async function SamplesPage() {
           </>
         }
       />
+      <section className="mb-6">
+        <div className="mb-3 flex items-center justify-between px-1">
+          <h2 className="text-[17px] font-semibold tracking-tight">Sample evidence</h2>
+          <Link href="/media" className="group flex items-center gap-2 text-[13px] font-medium text-muted transition-colors hover:text-foreground">
+            Media library
+            <span className="arrow-chip size-7">
+              <ArrowUpRight className="size-3.5" />
+            </span>
+          </Link>
+        </div>
+        <SampleReel assets={status.filter((a): a is MediaAsset => a !== null)} />
+      </section>
       <SampleImporter />
     </div>
   );
