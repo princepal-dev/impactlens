@@ -1,5 +1,6 @@
-import { errorResponse } from "@/lib/api";
+import { errorResponse, readBody } from "@/lib/api";
 import { destroyMedia } from "@/lib/cloudinary";
+import { isLocked } from "@/lib/rate-limit";
 import { addActivity, deleteAsset, getAsset, getProject, saveAsset } from "@/lib/store";
 import type { MediaAsset, Stage } from "@/lib/types";
 
@@ -11,6 +12,8 @@ const slug = (s: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
 
+const busy = () => Response.json({ error: "This asset is being analyzed. Try again in a moment." }, { status: 409 });
+
 export async function GET(_req: Request, ctx: RouteContext<"/api/assets/[id]">) {
   const asset = await getAsset((await ctx.params).id);
   return asset ? Response.json(asset) : Response.json({ error: "Not found" }, { status: 404 });
@@ -20,17 +23,18 @@ export async function GET(_req: Request, ctx: RouteContext<"/api/assets/[id]">) 
 export async function PATCH(req: Request, ctx: RouteContext<"/api/assets/[id]">) {
   const asset = await getAsset((await ctx.params).id);
   if (!asset) return Response.json({ error: "Not found" }, { status: 404 });
-  const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+  if (isLocked(`asset:${asset.id}`)) return busy();
+  const body = await readBody<Record<string, unknown>>(req);
 
   const str = (k: string, max = 300) => (typeof body[k] === "string" ? (body[k] as string).trim().slice(0, max) : undefined);
   const list = (k: string) =>
     Array.isArray(body[k])
-      ? (body[k] as unknown[]).map((x) => String(x).trim()).filter(Boolean).slice(0, 12)
+      ? (body[k] as unknown[]).filter((x) => typeof x === "string").map((x) => (x as string).trim().slice(0, 60)).filter(Boolean).slice(0, 12)
       : typeof body[k] === "string"
-        ? (body[k] as string).split(",").map((x) => x.trim()).filter(Boolean).slice(0, 12)
+        ? (body[k] as string).split(",").map((x) => x.trim().slice(0, 60)).filter(Boolean).slice(0, 12)
         : undefined;
 
-  const project = body.projectId !== undefined ? getProject(String(body.projectId)) : undefined;
+  const project = body.projectId !== undefined ? getProject(typeof body.projectId === "string" ? body.projectId : null) : undefined;
   const title = str("title", 90);
   const date = str("date", 10);
   const stage = str("stage") as Stage | undefined;
@@ -73,6 +77,7 @@ export async function PATCH(req: Request, ctx: RouteContext<"/api/assets/[id]">)
 export async function DELETE(_req: Request, ctx: RouteContext<"/api/assets/[id]">) {
   const asset = await getAsset((await ctx.params).id);
   if (!asset) return Response.json({ error: "Not found" }, { status: 404 });
+  if (isLocked(`asset:${asset.id}`)) return busy();
   try {
     await destroyMedia(asset).catch((e) => console.warn("[assets] Cloudinary destroy failed", e));
     await deleteAsset(asset.id);

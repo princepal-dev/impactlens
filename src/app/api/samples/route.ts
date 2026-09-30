@@ -1,15 +1,16 @@
 import { readFile } from "fs/promises";
 import path from "path";
 import { analyzeMedia } from "@/lib/analyze";
-import { errorResponse } from "@/lib/api";
+import { errorResponse, readBody } from "@/lib/api";
 import { uploadMedia } from "@/lib/cloudinary";
 import { config, requireAI, requireCloudinary } from "@/lib/config";
 import { analysisFrameUrl } from "@/lib/media-url";
+import { rateLimit, withLock } from "@/lib/rate-limit";
 import { SAMPLES } from "@/lib/samples";
 import { addActivity, getAsset, getProject, saveAsset } from "@/lib/store";
 import type { MediaAsset } from "@/lib/types";
 
-export const maxDuration = 120;
+export const maxDuration = 180;
 
 /** Which bundled sample photos have already been imported into this workspace. */
 export async function GET() {
@@ -24,9 +25,12 @@ export async function GET() {
 
 /** Import one sample: upload the original to Cloudinary, then run real AI analysis on the derived frame. */
 export async function POST(req: Request) {
-  const { file } = (await req.json().catch(() => ({}))) as { file?: string };
+  const { file } = await readBody<{ file: string }>(req);
   const sample = SAMPLES.find((s) => s.file === file);
   if (!sample) return Response.json({ error: "Unknown sample" }, { status: 404 });
+
+  const limited = rateLimit(req, "samples", 90);
+  if (limited) return limited;
 
   try {
     requireCloudinary();
@@ -35,6 +39,11 @@ export async function POST(req: Request) {
     return errorResponse("samples", e, "Not configured");
   }
 
+  const result = await withLock(`asset:${sample.file}`, () => importSample(sample));
+  return result ?? Response.json({ error: "This sample is already being imported." }, { status: 409 });
+}
+
+async function importSample(sample: (typeof SAMPLES)[number]) {
   const existing = await getAsset(sample.file);
   if (existing?.status === "indexed") return Response.json({ asset: existing, skipped: true });
 
@@ -102,8 +111,8 @@ export async function POST(req: Request) {
 
 /** Record a single activity entry once a batch import finishes. */
 export async function PATCH(req: Request) {
-  const { imported } = (await req.json().catch(() => ({}))) as { imported?: number };
-  if (imported) {
+  const { imported } = await readBody<{ imported: number }>(req);
+  if (typeof imported === "number" && imported > 0 && imported <= SAMPLES.length) {
     await addActivity({ type: "analysis", message: `Imported and AI-analyzed ${imported} sample field photos`, href: "/media" });
   }
   return Response.json({ ok: true });

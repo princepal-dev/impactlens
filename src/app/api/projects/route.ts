@@ -1,4 +1,4 @@
-import { errorResponse } from "@/lib/api";
+import { errorResponse, readStrings } from "@/lib/api";
 import { addActivity, createProject, getProject, listProjects } from "@/lib/store";
 
 const CATEGORIES = ["Water & Sanitation", "Environment", "Renewable Energy", "Infrastructure", "Community", "Other"];
@@ -8,7 +8,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const body = (await req.json().catch(() => ({}))) as Record<string, string | undefined>;
+  const body = await readStrings(req);
   const name = body.name?.trim();
   const location = body.location?.trim();
   if (!name || !location) return Response.json({ error: "Project name and location are required." }, { status: 400 });

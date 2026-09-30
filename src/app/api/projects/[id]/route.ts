@@ -1,3 +1,4 @@
+import { readStrings } from "@/lib/api";
 import { addActivity, deleteProject, getProject, updateProject } from "@/lib/store";
 import type { Project } from "@/lib/types";
 
@@ -7,7 +8,7 @@ const STATUSES: Project["status"][] = ["Active", "Completed", "Monitoring"];
 export async function PATCH(req: Request, ctx: RouteContext<"/api/projects/[id]">) {
   const { id } = await ctx.params;
   if (!getProject(id)) return Response.json({ error: "Not found" }, { status: 404 });
-  const body = (await req.json().catch(() => ({}))) as Record<string, string | undefined>;
+  const body = await readStrings(req);
   const name = body.name?.trim();
   if (name) {
     const clash = getProject(name);
