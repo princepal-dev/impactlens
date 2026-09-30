@@ -66,6 +66,9 @@ class RetryableError extends Error {
 /** Credentials rejected or project blocked; the provider is skipped for a while instead of retried. */
 class ProviderAuthError extends Error {}
 
+/** No model on this provider can serve the request (e.g. no vision model enabled); other requests still can. */
+class ModelUnavailableError extends Error {}
+
 /** Daily quota used up; the provider is skipped until the quota resets. */
 class QuotaExhaustedError extends Error {
   constructor(
@@ -89,10 +92,12 @@ function chatMessages(opts: CallOptions) {
     { role: "system", content: opts.system },
     {
       role: "user",
-      content: [
-        { type: "text", text: opts.prompt },
-        ...opts.images.map((i) => ({ type: "image_url", image_url: { url: `data:${i.mimeType};base64,${i.base64}` } })),
-      ],
+      content: opts.images.length
+        ? [
+            { type: "text", text: opts.prompt },
+            ...opts.images.map((i) => ({ type: "image_url", image_url: { url: `data:${i.mimeType};base64,${i.base64}` } })),
+          ]
+        : opts.prompt,
     },
   ];
 }
@@ -101,29 +106,35 @@ function chatMessages(opts: CallOptions) {
 
 /** Vision-capable Groq models, best first. */
 const GROQ_VISION_MODELS = ["qwen/qwen3.8-27b", "meta-llama/llama-4-scout-17b-16e-instruct", "qwen/qwen3.6-27b"];
-let groqModels: { ids: string[]; at: number } | null = null;
+/** Text-only Groq models for prompts without images. */
+const GROQ_TEXT_MODELS = ["openai/gpt-oss-120b", "openai/gpt-oss-20b"];
+const MODEL_BLOCK_MS = 10 * 60_000;
+let groqActive: { ids: Set<string> | null; at: number } | null = null;
+const groqBlocked = new Map<string, number>();
 
-async function groqModelOrder(): Promise<string[]> {
-  const preferred = [...new Set([config.groq.model, ...GROQ_VISION_MODELS].filter(Boolean))];
-  if (groqModels && Date.now() - groqModels.at < MODELS_TTL_MS) return groqModels.ids;
-  try {
-    const res = await fetch("https://api.groq.com/openai/v1/models", {
-      headers: { Authorization: `Bearer ${config.groq.apiKey}` },
-      signal: AbortSignal.timeout(10000),
-    });
-    if (!res.ok) throw new Error(`models ${res.status}`);
-    const active = new Set((((await res.json())?.data ?? []) as { id: string }[]).map((m) => m.id));
-    const ids = preferred.filter((m) => active.has(m));
-    groqModels = { ids: ids.length ? ids : preferred, at: Date.now() };
-  } catch {
-    groqModels = { ids: preferred, at: Date.now() - MODELS_TTL_MS + 5 * 60_000 };
+async function groqModelOrder(vision: boolean): Promise<string[]> {
+  const base = vision ? GROQ_VISION_MODELS : [...GROQ_TEXT_MODELS, ...GROQ_VISION_MODELS];
+  const preferred = [...new Set([config.groq.model, ...base].filter(Boolean))];
+  if (!groqActive || Date.now() - groqActive.at > MODELS_TTL_MS) {
+    try {
+      const res = await fetch("https://api.groq.com/openai/v1/models", {
+        headers: { Authorization: `Bearer ${config.groq.apiKey}` },
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!res.ok) throw new Error(`models ${res.status}`);
+      groqActive = { ids: new Set((((await res.json())?.data ?? []) as { id: string }[]).map((m) => m.id)), at: Date.now() };
+    } catch {
+      groqActive = { ids: null, at: Date.now() - MODELS_TTL_MS + 5 * 60_000 };
+    }
   }
-  return groqModels.ids;
+  const now = Date.now();
+  return preferred.filter((m) => (!groqActive?.ids || groqActive.ids.has(m)) && (groqBlocked.get(m) ?? 0) < now);
 }
 
 async function callGroq(opts: CallOptions): Promise<CallResult> {
-  const models = await groqModelOrder();
-  let lastError: Error | null = null;
+  const vision = opts.images.length > 0;
+  const models = await groqModelOrder(vision);
+  let lastMessage = vision ? "No Groq vision model is enabled for this key" : "No Groq model is available";
   for (const model of models.slice(0, 2)) {
     const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
@@ -133,27 +144,31 @@ async function callGroq(opts: CallOptions): Promise<CallResult> {
         model,
         temperature: 0.2,
         response_format: { type: "json_object" },
+        ...(model.startsWith("openai/gpt-oss") ? { reasoning_effort: "low" } : {}),
         messages: chatMessages({ ...opts, system: `${opts.system}\nRespond with a single valid JSON object and nothing else.` }),
       }),
     });
     const json = await res.json().catch(() => ({}));
     const message: string = json?.error?.message ?? `Groq error ${res.status}`;
+    const code: string = json?.error?.code ?? "";
+    if (/model_permission_blocked|model_not_found|model_decommissioned/.test(code) || res.status === 404) {
+      groqBlocked.set(model, Date.now() + MODEL_BLOCK_MS);
+      console.warn(`[ai] Groq model ${model} unavailable: ${message}`);
+      lastMessage = message;
+      continue;
+    }
     if (res.status === 401 || res.status === 403) throw new ProviderAuthError(message);
     if (res.status === 429 && /per day|\(RPD\)|\(TPD\)/i.test(message)) throw new QuotaExhaustedError(message, nextUtcMidnight());
     if (res.status === 429 || res.status >= 500) {
       const retryAfter = Number(res.headers.get("retry-after"));
       throw new RetryableError(message, retryAfter > 0 ? retryAfter * 1000 : 0);
     }
-    if (res.status === 404 || /decommissioned|does not exist|not support/i.test(message)) {
-      lastError = new Error(message);
-      continue;
-    }
     if (!res.ok) throw new RetryableError(message);
     const text = String(json.choices?.[0]?.message?.content ?? "").replace(/<think>[\s\S]*?<\/think>/g, "");
     if (!text.trim()) throw new RetryableError("Groq returned no content");
     return { text, engine: `Groq · ${model}` };
   }
-  throw new ProviderAuthError(lastError?.message ?? "No Groq vision model available");
+  throw new ModelUnavailableError(lastMessage);
 }
 
 // ---------- OpenRouter (free models) ----------
@@ -330,7 +345,7 @@ export async function generateJSON<T>(opts: {
       }
     }
   }
-  if (lastError instanceof QuotaExhaustedError || lastError instanceof ProviderAuthError) {
+  if (lastError instanceof QuotaExhaustedError || lastError instanceof ProviderAuthError || lastError instanceof ModelUnavailableError) {
     throw new NotConfiguredError(lastError.message, "AI analysis is temporarily unavailable. Please try again later.");
   }
   throw lastError instanceof Error ? lastError : new Error(String(lastError));
