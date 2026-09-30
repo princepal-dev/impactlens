@@ -3,8 +3,6 @@ import path from "path";
 
 const env = (k: string) => (process.env[k] ?? "").trim();
 
-export const DEFAULT_GEMINI_MODEL = "gemini-3.8-flash";
-
 export const config = {
   cloudinary: {
     cloudName: env("NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME"),
@@ -12,14 +10,6 @@ export const config = {
     apiSecret: env("CLOUDINARY_API_SECRET"),
     uploadPreset: env("NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET"),
     folder: env("CLOUDINARY_FOLDER") || "impactlens",
-  },
-  gemini: {
-    apiKey: env("GEMINI_API_KEY") || env("GOOGLE_API_KEY"),
-    model: env("GEMINI_MODEL") || DEFAULT_GEMINI_MODEL,
-  },
-  openai: {
-    apiKey: env("OPENAI_API_KEY"),
-    model: env("OPENAI_MODEL") || "gpt-4o-mini",
   },
   groq: {
     apiKey: env("GROQ_API_KEY"),
@@ -34,7 +24,7 @@ export const config = {
       .map((m) => m.trim())
       .filter((m) => m.endsWith(":free") || m === "openrouter/free"),
   },
-  /** Optional comma-separated provider order, e.g. "groq,openrouter,gemini". Defaults to Groq, then OpenRouter free models. */
+  /** Optional comma-separated provider order, e.g. "openrouter,groq". Defaults to Groq, then OpenRouter free models. */
   providers: env("AI_PROVIDERS")
     .split(",")
     .map((p) => p.trim().toLowerCase())
@@ -61,13 +51,11 @@ export const cloudinaryUploadMode = (): "signed" | "unsigned" | null => {
   return null;
 };
 
-export type AIProvider = "gemini" | "openai" | "groq" | "openrouter";
+export type AIProvider = "groq" | "openrouter";
 
-export const PROVIDER_NAMES: Record<AIProvider, string> = { gemini: "Google Gemini", openai: "OpenAI", groq: "Groq", openrouter: "OpenRouter" };
+export const PROVIDER_NAMES: Record<AIProvider, string> = { groq: "Groq", openrouter: "OpenRouter" };
 
 const hasKey: Record<AIProvider, () => boolean> = {
-  gemini: () => !!config.gemini.apiKey,
-  openai: () => !!config.openai.apiKey,
   groq: () => !!config.groq.apiKey,
   openrouter: () => !!config.openrouter.apiKey,
 };
@@ -75,16 +63,13 @@ const hasKey: Record<AIProvider, () => boolean> = {
 /** Configured AI providers in priority order; later ones take over when earlier ones fail. */
 export const aiProviders = (): AIProvider[] => {
   const requested = config.providers.filter((p): p is AIProvider => p in hasKey);
-  const free: AIProvider[] = ["groq", "openrouter"];
-  const order = requested.length ? requested : free.some((p) => hasKey[p]()) ? free : (["gemini", "openai"] as AIProvider[]);
+  const order: AIProvider[] = requested.length ? requested : ["groq", "openrouter"];
   return [...new Set(order)].filter((p) => hasKey[p]());
 };
 
 export const aiProvider = (): AIProvider | null => aiProviders()[0] ?? null;
 
 export const aiEngineLabel = (provider: AIProvider | null = aiProvider()) => {
-  if (provider === "gemini") return `Gemini · ${config.gemini.model}`;
-  if (provider === "openai") return `OpenAI · ${config.openai.model}`;
   if (provider === "groq") return `Groq · ${config.groq.model || "vision models"}`;
   if (provider === "openrouter") return "OpenRouter · free models";
   return "Not configured";
@@ -122,7 +107,7 @@ export function requireAI() {
   const provider = aiProvider();
   if (!provider) {
     throw new NotConfiguredError(
-      "AI credentials missing (GROQ_API_KEY, OPENROUTER_API_KEY, GEMINI_API_KEY or OPENAI_API_KEY)",
+      "AI credentials missing (GROQ_API_KEY or OPENROUTER_API_KEY)",
       "AI analysis is unavailable right now. Please try again shortly.",
     );
   }

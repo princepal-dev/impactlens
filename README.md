@@ -19,7 +19,7 @@ npm run dev                  # http://localhost:3000
 | `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | [Cloudinary console](https://console.cloudinary.com/) → Settings → API Keys |
 | `GROQ_API_KEY` | [Groq](https://console.groq.com/keys) — main AI provider, free tier vision models (Qwen 3.8 27B, Llama 4 Scout) |
 | `OPENROUTER_API_KEY` | [OpenRouter](https://openrouter.ai/keys) — free models, used when Groq is unavailable (50 requests/day, 1000/day after adding 10 credits) |
-| `AI_PROVIDERS` (optional) | Provider order, e.g. `openrouter,gemini` to add `GEMINI_API_KEY` / `OPENAI_API_KEY` as fallbacks |
+| `AI_PROVIDERS` (optional) | Provider order, defaults to `groq,openrouter` |
 | `DATABASE_PATH` (optional) | Defaults to `.data/impactlens.db` |
 
 Groq is tried first, then OpenRouter free models, discovered from the live catalogue with `openrouter/free` as the last resort. Providers listed in `AI_PROVIDERS` are tried in order with retries per provider; a provider whose key is rejected is skipped for 10 minutes. Without storage or any AI key, upload/analysis endpoints return `503` with a neutral message and the missing variables are logged server-side. `GET /api/health` reports database, storage and AI status.
@@ -67,6 +67,6 @@ The analysis prompt only describes what is visible. ImpactLens never invents ben
 
 ## Stack
 
-Next.js 16 (App Router) · TypeScript · Tailwind CSS v4 · Radix UI · Lucide · Cloudinary · Groq / OpenRouter free models (optional Gemini / OpenAI) · SQLite (`node:sqlite`)
+Next.js 16 (App Router) · TypeScript · Tailwind CSS v4 · Radix UI · Lucide · Cloudinary · Groq / OpenRouter free models · SQLite (`node:sqlite`)
 
 Sample images: Wikimedia Commons contributors.

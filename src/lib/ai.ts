@@ -1,5 +1,5 @@
 import "server-only";
-import { aiProviders, config, DEFAULT_GEMINI_MODEL, NotConfiguredError, PROVIDER_NAMES, type AIProvider } from "./config";
+import { aiProviders, config, NotConfiguredError, PROVIDER_NAMES, type AIProvider } from "./config";
 
 export interface InlineImage {
   mimeType: string;
@@ -83,93 +83,6 @@ const nextUtcMidnight = () => {
 
 type CallOptions = { system: string; prompt: string; images: InlineImage[]; signal: AbortSignal };
 type CallResult = { text: string; engine: string };
-
-
-/** Gemini 3+ controls reasoning with `thinkingLevel`; 2.x Flash accepts a zero thinking budget. */
-function thinkingConfig(model: string) {
-  const major = Number(model.match(/gemini-(\d+)/)?.[1] ?? 0);
-  if (major >= 3) return { thinkingLevel: "low" };
-  if (/flash/.test(model)) return { thinkingBudget: 0 };
-  return undefined;
-}
-
-let geminiModel = config.gemini.model;
-
-async function callGemini(opts: CallOptions): Promise<CallResult> {
-  const model = geminiModel;
-  const thinking = thinkingConfig(model);
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-    method: "POST",
-    signal: opts.signal,
-    headers: { "Content-Type": "application/json", "x-goog-api-key": config.gemini.apiKey },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: opts.system }] },
-      contents: [
-        {
-          role: "user",
-          parts: [...opts.images.map((i) => ({ inline_data: { mime_type: i.mimeType, data: i.base64 } })), { text: opts.prompt }],
-        },
-      ],
-      generationConfig: {
-        responseMimeType: "application/json",
-        temperature: 0.2,
-        ...(thinking ? { thinkingConfig: thinking } : {}),
-      },
-    }),
-  });
-  const json = await res.json().catch(() => ({}));
-  if (res.status === 429 && /per ?day|daily/i.test(JSON.stringify(json?.error ?? {}))) {
-    throw new QuotaExhaustedError(json?.error?.message ?? "Gemini daily quota exceeded", nextUtcMidnight());
-  }
-  if (res.status === 429 || res.status >= 500) {
-    const delay = json?.error?.details?.find((d: { retryDelay?: string }) => d.retryDelay)?.retryDelay;
-    throw new RetryableError(json?.error?.message ?? `Gemini error ${res.status}`, delay ? parseFloat(delay) * 1000 : 0);
-  }
-  if (!res.ok) {
-    const message: string = json?.error?.message ?? `Gemini error ${res.status}`;
-    // Retired or unknown model: switch to the current default instead of failing every request.
-    if (model !== DEFAULT_GEMINI_MODEL && (res.status === 404 || /no longer available|not found|not supported/i.test(message))) {
-      console.warn(`[ai] Gemini model "${model}" unavailable (${message}); falling back to ${DEFAULT_GEMINI_MODEL}`);
-      geminiModel = DEFAULT_GEMINI_MODEL;
-      return callGemini(opts);
-    }
-    if (res.status === 401 || res.status === 403 || /denied access|api key not valid|permission/i.test(message)) throw new ProviderAuthError(message);
-    if (res.status === 404) throw new ProviderAuthError(`Gemini model "${model}" is not available to this API key`);
-    throw new Error(message);
-  }
-  const blocked = json?.promptFeedback?.blockReason;
-  if (blocked) throw new Error(`Content blocked by the AI provider (${blocked})`);
-  const candidate = json?.candidates?.[0];
-  const text = candidate?.content?.parts?.map((p: { text?: string }) => p.text ?? "").join("") ?? "";
-  if (!text) {
-    const reason = candidate?.finishReason ?? "unknown";
-    if (["SAFETY", "PROHIBITED_CONTENT", "BLOCKLIST", "SPII", "RECITATION"].includes(reason)) {
-      throw new Error(`Content blocked by the AI provider (${reason})`);
-    }
-    throw new RetryableError(`Gemini returned no content (${reason})`);
-  }
-  return { text, engine: `Gemini · ${model}` };
-}
-
-async function callOpenAI(opts: CallOptions): Promise<CallResult> {
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    signal: opts.signal,
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.openai.apiKey}` },
-    body: JSON.stringify({
-      model: config.openai.model,
-      temperature: 0.2,
-      response_format: { type: "json_object" },
-      messages: chatMessages(opts),
-    }),
-  });
-  const json = await res.json().catch(() => ({}));
-  const message = json?.error?.message ?? `OpenAI error ${res.status}`;
-  if (res.status === 429 || res.status >= 500) throw new RetryableError(message);
-  if (res.status === 401 || res.status === 403) throw new ProviderAuthError(message);
-  if (!res.ok) throw new Error(message);
-  return { text: json.choices?.[0]?.message?.content ?? "", engine: `OpenAI · ${config.openai.model}` };
-}
 
 function chatMessages(opts: CallOptions) {
   return [
@@ -327,8 +240,6 @@ async function callOpenRouter(opts: CallOptions): Promise<CallResult> {
 // ---------- Provider chain ----------
 
 const CALLERS: Record<AIProvider, (o: CallOptions) => Promise<CallResult>> = {
-  gemini: callGemini,
-  openai: callOpenAI,
   groq: callGroq,
   openrouter: callOpenRouter,
 };
