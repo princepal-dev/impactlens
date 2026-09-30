@@ -1,7 +1,7 @@
 import { analyzeMedia } from "@/lib/analyze";
 import { errorResponse, readBody } from "@/lib/api";
 import { requireAI } from "@/lib/config";
-import { analysisFrameUrl } from "@/lib/media-url";
+import { analysisFrameUrls } from "@/lib/media-url";
 import { rateLimit, withLock } from "@/lib/rate-limit";
 import { addActivity, getAsset, getProject, saveAsset } from "@/lib/store";
 
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
   const result = await withLock(`asset:${asset.id}`, async () => {
     await saveAsset({ ...asset, status: "analyzing" });
     try {
-      const { metadata, engine } = await analyzeMedia(analysisFrameUrl(asset), {
+      const { metadata, engine } = await analyzeMedia(analysisFrameUrls(asset), {
         filename: asset.originalFilename,
         projectHint: typeof projectId === "string" ? projectId : asset.projectId,
         locationHint: asset.location !== "Unknown" ? asset.location : null,

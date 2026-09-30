@@ -2,7 +2,7 @@ import "server-only";
 import { aiAvailable, foregroundIdleMs, runInBackground } from "./ai";
 import { analyzeMedia } from "./analyze";
 import { NotConfiguredError } from "./config";
-import { analysisFrameUrl, thumbUrl } from "./media-url";
+import { analysisFrameUrls, thumbUrl } from "./media-url";
 import { isLocked, withLock } from "./rate-limit";
 import { FIELD_LOG_ENGINE, SAMPLES } from "./samples";
 import { addActivity, getAsset, getProject, listAssets, saveAsset } from "./store";
@@ -50,7 +50,7 @@ export const reanalyzeRunning = () => isLocked(LOCK);
 
 async function reanalyzeOne(asset: MediaAsset): Promise<MediaAsset | null> {
   const sample = SAMPLES.find((s) => s.file === asset.id);
-  const { metadata, engine } = await analyzeMedia(analysisFrameUrl(asset), {
+  const { metadata, engine } = await analyzeMedia(analysisFrameUrls(asset), {
     filename: asset.originalFilename,
     projectHint: asset.projectId,
     locationHint: asset.location !== "Unknown" ? asset.location : null,

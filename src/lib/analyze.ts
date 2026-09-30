@@ -5,7 +5,7 @@ import type { AIMetadata, Stage } from "./types";
 
 export const ANALYSIS_SYSTEM_PROMPT = `You are an impact and sustainability media analyst.
 
-Analyze this field photo/video frame.
+Analyze this field photo, or these frames from a field video.
 
 Identify:
 - What is happening?
@@ -89,9 +89,13 @@ export function normalizeMetadata(raw: Partial<AIMetadata>, ctx: AnalyzeContext)
   };
 }
 
-/** Run vision analysis on a Cloudinary-derived frame and return schema-conformant metadata. */
-export async function analyzeMedia(frameUrl: string, ctx: AnalyzeContext) {
-  const image = await loadImage(frameUrl);
+/**
+ * Run vision analysis on Cloudinary-derived frames (one for a photo, several in time order for a
+ * video) and return schema-conformant metadata.
+ */
+export async function analyzeMedia(frameUrls: string[], ctx: AnalyzeContext) {
+  const images = await Promise.all(frameUrls.map(loadImage));
+  const video = images.length > 1;
   const assigned = getProject(ctx.projectHint);
   const projects = listProjects();
   const prompt = `Schema:
@@ -105,11 +109,15 @@ Supplied metadata:
 - Stage recorded in field log: ${ctx.stageHint ?? "not specified"}
 - Known projects: ${projects.map((p) => `${p.name} — ${p.category}, ${p.region}`).join("; ")}
 
-Describe what is actually visible in the image. Return the JSON object only.`;
+${
+  video
+    ? `The ${images.length} images are frames from one video, in time order (start, middle, end). Describe what happens across the clip, including any change between frames, and count people from the frame where they are clearest.`
+    : "Describe what is actually visible in the image."
+} Return the JSON object only.`;
   const { data, engine } = await generateJSON<Partial<AIMetadata>>({
     system: ANALYSIS_SYSTEM_PROMPT,
     prompt,
-    images: [image],
+    images,
     budgetMs: 150_000,
   });
   return { metadata: normalizeMetadata(data, ctx), engine };

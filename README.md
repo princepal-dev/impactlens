@@ -38,7 +38,7 @@ If analysis fails (rate limit, network), the asset stays in Cloudinary and can b
 - Originals are uploaded untouched (signed `upload_stream` with `image_metadata`, or unsigned preset).
 - Thumbnails: `c_fill,g_auto,w_640,h_420,f_auto,q_auto` (smart crop keeps the subject).
 - Display: `c_limit,w_1600,f_auto,q_auto`; videos get a generated poster frame (`so_1`) and `q_auto,f_auto:video` delivery.
-- AI analysis receives a Cloudinary-derived frame (`c_limit,w_1024,f_jpg`, or `so_2` for video) — never a re-upload.
+- AI analysis receives Cloudinary-derived frames — never a re-upload: one `c_limit,w_1024,f_jpg` still for photos; for videos, three stills at 15%, 50% and 85% of the clip (`so_15p`/`so_50p`/`so_85p`) sent in time order, so the model can describe what changes during the clip. Native video input on OpenRouter needs an account balance of at least $1, so frames are used instead.
 - Every evidence record lists its public ID, original URL and derived transformations for traceability.
 
 ## API

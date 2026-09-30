@@ -4,7 +4,7 @@ import { analyzeMedia } from "@/lib/analyze";
 import { errorResponse, readBody } from "@/lib/api";
 import { uploadMedia } from "@/lib/cloudinary";
 import { config, requireCloudinary } from "@/lib/config";
-import { analysisFrameUrl } from "@/lib/media-url";
+import { analysisFrameUrls } from "@/lib/media-url";
 import { rateLimit, withLock } from "@/lib/rate-limit";
 import { FIELD_LOG_ENGINE, SAMPLE_PROJECTS, SAMPLES, sampleTitle } from "@/lib/samples";
 import { addActivity, ensureProject, getAsset, saveAsset } from "@/lib/store";
@@ -128,7 +128,7 @@ async function importSample(sample: (typeof SAMPLES)[number]) {
     await saveAsset(pending);
 
     try {
-      const { metadata, engine } = await analyzeMedia(analysisFrameUrl(pending), {
+      const { metadata, engine } = await analyzeMedia(analysisFrameUrls(pending), {
         filename: pending.originalFilename,
         projectHint: pending.projectId,
         locationHint: sample.location,

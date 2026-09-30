@@ -41,13 +41,27 @@ export function analysisFrameUrl(a: Ref) {
   return withTransform(a.secureUrl, TRANSFORMS.analysisImage);
 }
 
+/** Points in a video sampled for AI analysis, so the model sees how the scene changes over the clip. */
+const VIDEO_FRAME_OFFSETS = ["15p", "50p", "85p"];
+const videoFrameTransform = (offset: string) => TRANSFORMS.analysisVideo.replace("so_50p", `so_${offset}`);
+
+/** Frames sent to the AI: one still for images, start/middle/end stills for videos. */
+export function analysisFrameUrls(a: Ref) {
+  if (a.resourceType !== "video") return [analysisFrameUrl(a)];
+  return VIDEO_FRAME_OFFSETS.map((o) => withTransform(a.secureUrl, videoFrameTransform(o), "jpg"));
+}
+
 export function derivedAssets(a: Ref) {
   const list = [{ label: "Original", transformation: "none", url: a.secureUrl }];
   if (a.resourceType === "video") {
     list.push(
       { label: "Optimized playback", transformation: TRANSFORMS.video, url: displayUrl(a) },
       { label: "Poster frame", transformation: TRANSFORMS.poster(640, 420), url: thumbUrl(a) },
-      { label: "AI analysis frame", transformation: TRANSFORMS.analysisVideo, url: analysisFrameUrl(a) },
+      ...VIDEO_FRAME_OFFSETS.map((o, i) => ({
+        label: `AI analysis frame ${i + 1} of ${VIDEO_FRAME_OFFSETS.length}`,
+        transformation: videoFrameTransform(o),
+        url: withTransform(a.secureUrl, videoFrameTransform(o), "jpg"),
+      })),
     );
   } else {
     list.push(
