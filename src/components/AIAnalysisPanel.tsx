@@ -62,7 +62,7 @@ export function AIAnalysisPanel({ asset, compact }: { asset: MediaAsset; compact
         </>
       )}
 
-      <dl className={cn("mt-5 grid grid-cols-2 gap-x-6 gap-y-4 text-[13px]", !compact && "rounded-md border border-line bg-tint/[0.015] p-4")}>
+      <dl className={cn("mt-5 grid grid-cols-2 gap-x-6 gap-y-4 text-[13px]", !compact && "rounded-xl border border-line bg-tint/[0.015] p-4")}>
         {fields.map(([k, v]) => (
           <div key={k} className="min-w-0">
             <dt className="label-mono mb-1">{k}</dt>
@@ -97,7 +97,7 @@ export function AIAnalysisPanel({ asset, compact }: { asset: MediaAsset; compact
         </button>
       </div>
       {raw && (
-        <pre className="scrollbar-thin mt-3 max-h-72 overflow-auto rounded-md border border-line bg-inset p-3 font-mono text-[11.5px] leading-relaxed text-soft">
+        <pre className="scrollbar-thin mt-3 max-h-72 overflow-auto rounded-xl border border-line bg-inset p-3 font-mono text-[11.5px] leading-relaxed text-soft">
           {JSON.stringify(json, null, 2)}
         </pre>
       )}

@@ -15,7 +15,7 @@ const OPTIONS: { value: Theme; label: string; icon: typeof Sun }[] = [
 export function ThemeToggle({ className, showLabels = false }: { className?: string; showLabels?: boolean }) {
   const { theme, setTheme } = useTheme();
   return (
-    <div role="radiogroup" aria-label="Theme" className={cn("inline-flex rounded-md border border-line bg-tint/[0.03] p-0.5", className)}>
+    <div role="radiogroup" aria-label="Theme" className={cn("inline-flex rounded-full border border-line bg-tint/[0.03] p-1", className)}>
       {OPTIONS.map(({ value, label, icon: Icon }) => (
         <button
           key={value}
@@ -26,8 +26,8 @@ export function ThemeToggle({ className, showLabels = false }: { className?: str
           title={label}
           onClick={() => setTheme(value)}
           className={cn(
-            "flex h-7 flex-1 items-center justify-center gap-1.5 rounded-[5px] px-2 text-[12px] transition-colors",
-            theme === value ? "bg-surface text-foreground shadow-sm ring-1 ring-line" : "text-subtle hover:text-foreground",
+            "flex h-8 flex-1 items-center justify-center gap-1.5 rounded-full px-3 text-[12.5px] font-medium transition-colors duration-200",
+            theme === value ? "bg-ink text-ink-foreground" : "text-muted hover:text-foreground",
           )}
         >
           <Icon className="size-3.5" />
@@ -49,7 +49,7 @@ export function ThemeCycleButton({ className }: { className?: string }) {
       onClick={() => setTheme(next)}
       aria-label={`Switch to ${next} mode`}
       title={`Switch to ${next} mode`}
-      className={cn("grid size-8 shrink-0 place-items-center rounded-md text-muted transition-colors hover:bg-tint/[0.05] hover:text-foreground", className)}
+      className={cn("grid size-8 shrink-0 place-items-center rounded-full text-muted transition-colors hover:bg-tint/[0.06] hover:text-foreground", className)}
     >
       <Icon className="size-4" />
     </button>
@@ -63,7 +63,7 @@ export function ThemedToaster() {
       theme={resolved}
       position="bottom-right"
       toastOptions={{
-        style: { background: "var(--surface)", border: "1px solid var(--line-strong)", color: "var(--foreground)", borderRadius: 8 },
+        style: { background: "var(--surface)", border: "1px solid var(--line-strong)", color: "var(--foreground)", borderRadius: 14 },
       }}
     />
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, ChevronDown, Cpu, Loader2, SearchX } from "lucide-react";
+import { AlertTriangle, ArrowUpRight, CalendarRange, ChevronDown, Cpu, Loader2, MapPin, SearchX, Sprout } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState, useRef } from "react";
 import { requestJSON } from "@/lib/http";
@@ -22,6 +22,12 @@ const SUGGESTIONS = [
   "Evidence of tree plantation",
   "Renewable energy projects",
   "Completed projects in 2026",
+];
+
+const TIPS = [
+  { icon: MapPin, title: "Search by place", example: "Beach cleanup in Goa" },
+  { icon: Sprout, title: "Search by stage", example: "Completed tree plantation" },
+  { icon: CalendarRange, title: "Search by date", example: "Forest restoration after January 2026" },
 ];
 
 export function EvidenceSearch() {
@@ -81,14 +87,14 @@ export function EvidenceSearch() {
         <div className="max-w-4xl">
           <SearchBar value={q} onChange={setQ} onSubmit={run} loading={loading} />
           <div className="mt-3 flex flex-wrap items-center gap-1.5">
-            <span className="mr-1 text-[12.5px] text-subtle">Try</span>
+            <span className="mr-1 text-[12.5px] text-white/50">Try</span>
             {SUGGESTIONS.map((s) => (
               <button
                 key={s}
                 onClick={() => run(s)}
                 className={cn(
-                  "rounded-md border px-2.5 py-1 text-[12.5px] transition-colors",
-                  q === s ? "border-line-strong bg-tint/[0.06] text-foreground" : "border-line text-muted hover:border-line-strong hover:text-foreground",
+                  "rounded-full border px-3 py-1 text-[12.5px] transition-colors duration-200",
+                  q === s ? "border-lime bg-lime text-lime-foreground" : "border-white/12 text-white/70 hover:border-white hover:bg-white hover:text-[#10120a]",
                 )}
               >
                 {s}
@@ -127,13 +133,13 @@ export function EvidenceSearch() {
                 <div className="shrink-0 text-[13px] text-muted lg:w-32">Interpreted as</div>
                 <div className="flex flex-1 flex-wrap gap-1.5">
                   {chips.filter(([, v]) => v).map(([k, v]) => (
-                    <span key={k} className="inline-flex items-center gap-1.5 rounded-md border border-line px-2 py-1 text-[12.5px]">
+                    <span key={k} className="inline-flex items-center gap-1.5 rounded-full border border-line px-2.5 py-1 text-[12.5px]">
                       <span className="text-subtle">{k}</span>
                       <span className="font-medium capitalize text-foreground">{v}</span>
                     </span>
                   ))}
                   {it?.keywords.map((kw) => (
-                    <span key={kw} className="inline-flex items-center rounded-md bg-tint/[0.05] px-2 py-1 text-[12.5px] text-soft">{kw}</span>
+                    <span key={kw} className="inline-flex items-center rounded-full bg-lime/15 px-2.5 py-1 text-[12.5px] text-soft">{kw}</span>
                   ))}
                   {!chips.some(([, v]) => v) && !it?.keywords.length && <span className="text-[13px] text-muted">A broad search across all evidence.</span>}
                 </div>
@@ -174,9 +180,29 @@ export function EvidenceSearch() {
         )}
 
         {!loading && !data && !error && (
-          <div className="max-w-4xl space-y-2 text-[13px] leading-relaxed text-muted">
-            <p>Search understands project type, place, stage and dates — for example “tree plantation in Delhi after March 2026”.</p>
-            <p>Every result links back to its original Cloudinary asset and the AI analysis behind the match.</p>
+          <div>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              {TIPS.map(({ icon: Icon, title, example }) => (
+                <button
+                  key={title}
+                  type="button"
+                  onClick={() => run(example)}
+                  className="lift group flex flex-col items-start rounded-2xl border border-line bg-panel p-5 text-left shadow-[var(--panel-shadow)]"
+                >
+                  <div className="flex w-full items-center justify-between">
+                    <span className="grid size-10 place-items-center rounded-full bg-tint/[0.05] text-soft transition-colors duration-200 group-hover:bg-lime group-hover:text-lime-foreground">
+                      <Icon className="size-[18px]" />
+                    </span>
+                    <span className="arrow-chip size-8 text-muted">
+                      <ArrowUpRight className="size-4" />
+                    </span>
+                  </div>
+                  <div className="mt-4 text-[14.5px] font-semibold tracking-tight">{title}</div>
+                  <div className="mt-1 text-[13px] text-muted">“{example}”</div>
+                </button>
+              ))}
+            </div>
+            <p className="mt-4 px-1 text-[12.5px] text-subtle">Every result links back to its original Cloudinary asset and the AI analysis behind the match.</p>
           </div>
         )}
       </div>

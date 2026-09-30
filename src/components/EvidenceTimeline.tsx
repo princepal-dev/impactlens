@@ -10,7 +10,7 @@ export function EvidenceTimeline({ timeline, assets }: { timeline: ReportContent
           <span className="absolute -left-8 top-4 grid size-[23px] place-items-center rounded-full border border-line-strong bg-surface">
             <span className="size-1.5 rounded-full bg-muted" />
           </span>
-          <div className="rounded-lg border border-line p-4">
+          <div className="rounded-2xl border border-line p-4">
             <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
               <span className="text-[13px] font-medium">{t.label}</span>
               <span className="text-[12px] tabular-nums text-subtle">
@@ -22,7 +22,7 @@ export function EvidenceTimeline({ timeline, assets }: { timeline: ReportContent
               <div className="mt-3 flex flex-wrap gap-2">
                 {t.assetIds.map((id) =>
                   assets[id] ? (
-                    <Link key={id} href={`/media/${id}`} className="group block overflow-hidden rounded-lg border border-line transition-colors hover:border-accent/60" title={assets[id].title}>
+                    <Link key={id} href={`/media/${id}`} className="group block overflow-hidden rounded-xl border border-line transition-colors hover:border-ink" title={assets[id].title}>
                       <MediaThumb asset={assets[id]} w={240} h={160} className="h-[76px] w-[114px]" />
                     </Link>
                   ) : null,

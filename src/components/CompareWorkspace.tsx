@@ -93,7 +93,7 @@ export function CompareWorkspace({
 
   return (
     <div className="space-y-6">
-      <Panel className="p-4">
+      <Panel className="p-4 pl-5">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end [&_.label-mono]:flex [&_.label-mono]:items-center [&_.label-mono]:gap-1.5">
           <label className="space-y-1.5">
             <span className="label-mono">Project</span>
@@ -103,25 +103,25 @@ export function CompareWorkspace({
             </Select>
           </label>
           <label className="space-y-1.5">
-            <span className="label-mono"><span className="size-1.5 rounded-full bg-subtle" /> Before</span>
+            <span className="label-mono"><span className="size-2 rounded-full bg-ink" /> Before</span>
             <Select value={beforeId} onChange={(e) => setPair([e.target.value, afterId])}>
               {list.map((a) => <option key={a.id} value={a.id} disabled={a.id === afterId}>{fmtDate(a.date)} — {a.title}</option>)}
             </Select>
           </label>
           <label className="space-y-1.5">
-            <span className="label-mono"><span className="size-1.5 rounded-full bg-accent" /> After</span>
+            <span className="label-mono"><span className="size-2 rounded-full bg-lime" /> After</span>
             <Select value={afterId} onChange={(e) => setPair([beforeId, e.target.value])}>
               {list.map((a) => <option key={a.id} value={a.id} disabled={a.id === beforeId}>{fmtDate(a.date)} — {a.title}</option>)}
             </Select>
           </label>
-          <div className="flex rounded-lg border border-line bg-inset p-0.5">
+          <div className="flex rounded-full border border-line bg-inset p-1">
             {([["side", Columns2, "Side by side"], ["slider", SplitSquareHorizontal, "Slider"]] as const).map(([m, Icon, label]) => (
               <button
                 key={m}
                 onClick={() => setMode(m)}
                 className={cn(
-                  "flex h-9 items-center gap-1.5 rounded-md px-3 text-[12.5px] font-medium transition-all",
-                  mode === m ? "bg-surface text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.12)]" : "text-muted hover:text-foreground",
+                  "flex h-8 items-center gap-1.5 rounded-full px-3.5 text-[12.5px] font-medium transition-colors duration-200",
+                  mode === m ? "bg-ink text-ink-foreground" : "text-muted hover:text-foreground",
                 )}
               >
                 <Icon className="size-3.5" /> {label}
@@ -189,7 +189,7 @@ export function CompareWorkspace({
                   <ul className="space-y-2">
                     {result.observations.map((o) => (
                       <li key={o} className="flex gap-2.5 text-[13.5px] leading-relaxed">
-                        <span className="mt-[9px] size-1 shrink-0 rounded-full bg-subtle" />
+                        <span className="mt-[7px] size-2 shrink-0 rounded-full bg-lime" />
                         <span className="text-foreground/90">{o}</span>
                       </li>
                     ))}
@@ -204,15 +204,15 @@ export function CompareWorkspace({
               <div className="label-mono">Potential impact areas</div>
               <div className="mt-3 flex flex-wrap gap-1.5">
                 {(result?.impactAreas ?? []).map((a) => <ImpactBadge key={a} area={a} />)}
-                {!result && <div className="skeleton h-6 w-40 rounded" />}
+                {!result && <div className="skeleton h-6 w-40 rounded-full" />}
               </div>
               <div className="mt-6 border-t border-line pt-5">
                 <div className="flex items-baseline justify-between">
                   <div className="label-mono">Comparison confidence</div>
                   <div className="text-[20px] font-semibold tabular-nums">{result ? pct(result.confidence) : "—"}</div>
                 </div>
-                <div className="mt-2 h-1 overflow-hidden rounded-full bg-tint/[0.08]">
-                  <div className="h-full rounded-full bg-accent transition-[width] duration-500" style={{ width: result ? pct(result.confidence) : "0%" }} />
+                <div className="mt-3 h-2 overflow-hidden rounded-full bg-tint/[0.08]">
+                  <div className="h-full rounded-full bg-lime transition-[width] duration-500" style={{ width: result ? pct(result.confidence) : "0%" }} />
                 </div>
               </div>
             </Panel>

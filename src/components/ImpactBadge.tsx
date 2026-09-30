@@ -18,7 +18,7 @@ export function ImpactBadge({ area, className }: { area: string; className?: str
   return (
     <span
       className={cn(
-        "inline-flex max-w-full items-center gap-1.5 whitespace-nowrap rounded-[4px] border border-emerald-400/15 bg-emerald-400/[0.06] px-2 py-0.5 text-[11.5px] text-emerald-300/90 light:border-emerald-600/25 light:bg-emerald-500/[0.08] light:text-emerald-800",
+        "inline-flex max-w-full items-center gap-1.5 whitespace-nowrap rounded-full bg-lime/[0.12] px-2.5 py-0.5 text-[11.5px] font-medium text-lime light:bg-lime/40 light:text-[#3d5c04]",
         className,
       )}
     >
@@ -30,7 +30,7 @@ export function ImpactBadge({ area, className }: { area: string; className?: str
 
 export function StageBadge({ stage }: { stage: string }) {
   return (
-    <span className={cn("inline-flex shrink-0 items-center whitespace-nowrap rounded-[4px] border px-1.5 py-0.5 text-[10.5px] font-semibold uppercase tracking-wide", STAGE_STYLES[stage])}>
+    <span className={cn("inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-medium capitalize", STAGE_STYLES[stage])}>
       {stage}
     </span>
   );

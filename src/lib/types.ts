@@ -60,6 +60,21 @@ export interface Project {
   startDate: string;
 }
 
+/** Workspace totals and project list shown in the app shell. */
+export interface WorkspaceSummary {
+  assets: number;
+  reports: number;
+  projects: number;
+  projectList: {
+    id: string;
+    slug: string;
+    name: string;
+    category: string;
+    count: number;
+    cover: Pick<CloudinaryRef, "secureUrl" | "resourceType"> | null;
+  }[];
+}
+
 export interface ActivityItem {
   id: string;
   type: "analysis" | "project" | "comparison" | "report" | "tags" | "upload";

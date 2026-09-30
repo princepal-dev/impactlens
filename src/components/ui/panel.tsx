@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 export function Panel({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn("rounded-xl border border-line bg-panel shadow-[var(--panel-shadow)]", className)}
+      className={cn("rounded-2xl border border-line bg-panel shadow-[var(--panel-shadow)] transition-colors duration-200", className)}
       {...props}
     />
   );
@@ -22,29 +22,26 @@ export function PanelHeader({
   className?: string;
 }) {
   return (
-    <div className={cn("flex items-center justify-between gap-4 border-b border-line px-5 py-3.5", className)}>
-      <div>
+    <div className={cn("flex items-center justify-between gap-4 px-5 pb-2 pt-5", className)}>
+      <div className="min-w-0">
         {eyebrow && <div className="label-mono mb-1">{eyebrow}</div>}
-        <h3 className="text-[14px] font-medium text-foreground">{title}</h3>
+        <h3 className="text-[16px] font-semibold tracking-tight text-foreground">{title}</h3>
       </div>
       {action}
     </div>
   );
 }
 
+const field =
+  "h-10 w-full rounded-full border border-line-strong bg-surface text-sm text-foreground outline-none transition-[border-color,box-shadow] duration-200 hover:border-tint/30 focus-visible:border-ink focus-visible:ring-4 focus-visible:ring-tint/[0.06]";
+
 export function Select({ className, children, ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) {
   return (
     <div className="relative">
-      <select
-        className={cn(
-          "h-10 w-full cursor-pointer appearance-none rounded-md border border-line-strong bg-surface pl-3 pr-9 text-sm text-foreground outline-none transition-colors hover:border-tint/25 focus-visible:border-accent/60",
-          className,
-        )}
-        {...props}
-      >
+      <select className={cn(field, "cursor-pointer appearance-none pl-4 pr-10", className)} {...props}>
         {children}
       </select>
-      <svg className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <svg className="pointer-events-none absolute right-3.5 top-1/2 size-4 -translate-y-1/2 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path d="m6 9 6 6 6-6" />
       </svg>
     </div>
@@ -52,13 +49,5 @@ export function Select({ className, children, ...props }: React.SelectHTMLAttrib
 }
 
 export function Input({ className, ...props }: React.InputHTMLAttributes<HTMLInputElement>) {
-  return (
-    <input
-      className={cn(
-        "h-10 w-full rounded-md border border-line-strong bg-surface px-3 text-sm text-foreground outline-none placeholder:text-subtle transition-colors focus-visible:border-accent/60",
-        className,
-      )}
-      {...props}
-    />
-  );
+  return <input className={cn(field, "px-4 placeholder:text-subtle", className)} {...props} />;
 }

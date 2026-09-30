@@ -101,7 +101,7 @@ export default async function AssetPage({ params }: PageProps<"/media/[id]">) {
                 ] as const).map(([Icon, s], i) => (
                   <li key={s} className="flex items-center gap-2">
                     {i > 0 && <ChevronRight className="size-3.5 text-subtle" />}
-                    <span className="flex items-center gap-1.5 rounded-md border border-line px-2 py-1 text-soft">
+                    <span className="flex items-center gap-1.5 rounded-full border border-line px-2.5 py-1 text-soft">
                       <Icon className="size-3.5 text-subtle" /> {s}
                     </span>
                   </li>

@@ -1,7 +1,7 @@
 import "server-only";
 import { db } from "./db";
 import { DEFAULT_PAIRS } from "./samples";
-import type { ActivityItem, MediaAsset, Project, ReportContent } from "./types";
+import type { ActivityItem, MediaAsset, Project, ReportContent, WorkspaceSummary } from "./types";
 
 /** Data layer backed by SQLite. Every record here comes from a real upload, analysis or report. */
 
@@ -229,6 +229,23 @@ export async function orgStats() {
     fieldSites: sites.size,
     reports,
     aiCoverage: assets.length ? aiIndexed / assets.length : 0,
+  };
+}
+
+export async function workspaceSummary(): Promise<WorkspaceSummary> {
+  const [s, projects] = await Promise.all([orgStats(), projectSummaries()]);
+  return {
+    assets: s.totalAssets,
+    reports: s.reports,
+    projects: projects.length,
+    projectList: projects.map((p) => ({
+      id: p.id,
+      slug: p.slug,
+      name: p.name,
+      category: p.category,
+      count: p.totalAssets,
+      cover: p.cover ? { secureUrl: p.cover.secureUrl, resourceType: p.cover.resourceType } : null,
+    })),
   };
 }
 

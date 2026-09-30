@@ -38,14 +38,18 @@ export default async function SettingsPage() {
       <PageHeader title="Settings" subtitle="Projects, connected services, appearance and workspace data." />
 
       <div className="space-y-6">
-        <ProjectManager projects={projects} />
+        <div id="projects" className="scroll-mt-24">
+          <ProjectManager projects={projects} />
+        </div>
 
         <Panel>
           <PanelHeader title="Connected services" />
           <ul className="divide-y divide-line">
             {services.map(({ icon: Icon, title, role, detail }) => (
               <li key={title} className="flex items-center gap-4 px-5 py-3.5">
-                <Icon className="size-4 shrink-0 text-subtle" />
+                <span className="grid size-9 shrink-0 place-items-center rounded-full bg-tint/[0.05] text-soft">
+                  <Icon className="size-4" />
+                </span>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline gap-2">
                     <span className="text-[13.5px] font-medium">{title}</span>

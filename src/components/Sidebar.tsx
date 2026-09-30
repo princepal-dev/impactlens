@@ -1,184 +1,171 @@
 "use client";
 
-import { FileText, Images, LayoutGrid, type LucideIcon, Mic, Search, Settings, SplitSquareHorizontal } from "lucide-react";
+import {
+  ArrowUpRight,
+  AudioLines,
+  CloudUpload,
+  Database,
+  FilePlus2,
+  LayoutDashboard,
+  type LucideIcon,
+  Plus,
+  Settings2,
+} from "lucide-react";
 import { motion } from "motion/react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { thumbUrl } from "@/lib/media-url";
+import type { WorkspaceSummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { ThemeCycleButton } from "./ThemeToggle";
+import { Button } from "./ui/button";
 import { openVoiceAgent } from "./VoiceAgent";
 
-export type SidebarCounts = { assets: number; reports: number; projects: number };
+export { Logo } from "./Logo";
 
-type NavItem = { href: string; label: string; icon: LucideIcon; count?: keyof SidebarCounts };
+type NavItem = { label: string; icon: LucideIcon; href?: string; onClick?: () => void; kbd?: string; active?: (p: string) => boolean };
 
-const SECTIONS: { title?: string; items: NavItem[] }[] = [
-  {
-    items: [
-      { href: "/", label: "Overview", icon: LayoutGrid },
-      { href: "/media", label: "Media Library", icon: Images, count: "assets" },
-    ],
-  },
-  {
-    title: "Analyze",
-    items: [
-      { href: "/search", label: "Evidence Search", icon: Search },
-      { href: "/compare", label: "Compare", icon: SplitSquareHorizontal },
-      { href: "/reports", label: "Impact Reports", icon: FileText, count: "reports" },
-    ],
-  },
+const NAV: NavItem[] = [
+  { label: "Dashboard", icon: LayoutDashboard, href: "/", active: (p) => p === "/" },
+  { label: "Upload media", icon: CloudUpload, href: "/media?upload=1" },
+  { label: "Ask ImpactLens", icon: AudioLines, onClick: () => openVoiceAgent(true), kbd: "⌘J" },
+  { label: "Sample library", icon: Database, href: "/settings#samples" },
+  { label: "Settings", icon: Settings2, href: "/settings", active: (p) => p.startsWith("/settings") },
 ];
 
-const ALL_ITEMS = [...SECTIONS.flatMap((s) => s.items), { href: "/settings", label: "Settings", icon: Settings }];
-
-const activeFor = (pathname: string, href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
-
-export function Logo({ className }: { className?: string }) {
-  return (
-    <div className={cn("flex items-center gap-2", className)}>
-      <div className="relative grid size-6 place-items-center rounded-md bg-accent">
-        <div className="size-2 rotate-45 border-[1.5px] border-accent-foreground" />
-      </div>
-      <span className="text-[14.5px] font-semibold tracking-tight">ImpactLens</span>
-    </div>
-  );
-}
-
-/** Live counts that follow navigation, so uploads and new reports show up without a reload. */
-function useCounts(initial: SidebarCounts) {
+/** Live workspace data that follows navigation, so uploads and new projects show up without a reload. */
+function useSummary(initial: WorkspaceSummary) {
   const pathname = usePathname();
-  const [counts, setCounts] = useState(initial);
+  const [summary, setSummary] = useState(initial);
   useEffect(() => {
     const controller = new AbortController();
     fetch("/api/stats", { signal: controller.signal, cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
-      .then((d: SidebarCounts | null) => d && setCounts(d))
+      .then((d: WorkspaceSummary | null) => d && setSummary(d))
       .catch(() => {});
     return () => controller.abort();
   }, [pathname]);
-  return counts;
+  return summary;
 }
 
-export function Sidebar({ counts: initialCounts }: { counts: SidebarCounts }) {
+export function Sidebar({ initial }: { initial: WorkspaceSummary }) {
   const pathname = usePathname();
-  const counts = useCounts(initialCounts);
+  const params = useSearchParams();
+  const summary = useSummary(initial);
+  const activeProject = params.get("project");
 
   return (
-    <aside className="no-print sticky top-0 z-30 flex h-screen w-[240px] shrink-0 flex-col border-r border-line bg-chrome max-lg:hidden">
-      <div className="flex h-14 shrink-0 items-center px-4">
-        <Link href="/" className="rounded-md px-1 py-1">
-          <Logo />
-        </Link>
-      </div>
-
-      <div className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-y-auto px-3">
-        <Link
-          href="/search"
-          className="flex h-8 items-center gap-2 rounded-md border border-line bg-surface px-2.5 text-[13px] text-subtle transition-colors hover:border-line-strong hover:text-muted"
-        >
-          <Search className="size-3.5" />
-          <span className="flex-1">Search</span>
-          <kbd className="font-mono text-[11px] text-subtle">/</kbd>
-        </Link>
-
-        {SECTIONS.map((section, i) => (
-          <nav key={i} className="mt-5 flex flex-col gap-px">
-            {section.title && <div className="mb-1 px-2 text-[12px] font-medium text-subtle">{section.title}</div>}
-            {section.items.map((item) => (
-              <NavLink key={item.href} item={item} active={activeFor(pathname, item.href)} count={item.count ? counts[item.count] : undefined} />
-            ))}
-          </nav>
+    <aside className="no-print sticky top-[88px] flex h-[calc(100vh-108px)] w-[248px] shrink-0 flex-col rounded-2xl border border-line bg-panel p-3 shadow-[var(--panel-shadow)] max-lg:hidden">
+      <nav className="flex flex-col gap-0.5">
+        {NAV.map((item) => (
+          <SideLink key={item.label} item={item} active={item.active?.(pathname) ?? false} />
         ))}
+      </nav>
 
-        <div className="mt-auto flex flex-col gap-px pb-2 pt-6">
-          <button
-            onClick={() => openVoiceAgent(true)}
-            className="flex items-center gap-2.5 rounded-md px-2 py-1.5 text-[13.5px] text-muted transition-colors hover:bg-tint/[0.05] hover:text-foreground"
-          >
-            <Mic className="size-4 text-subtle" />
-            <span className="flex-1 text-left">Ask ImpactLens</span>
-            <kbd className="font-mono text-[11px] text-subtle">⌘J</kbd>
-          </button>
-          <NavLink item={{ href: "/settings", label: "Settings", icon: Settings }} active={pathname.startsWith("/settings")} />
-        </div>
+      <div className="mx-2 my-4 h-px bg-line" />
+
+      <div className="flex items-center justify-between px-2">
+        <span className="text-[14px] font-semibold tracking-tight">Projects</span>
+        <Link
+          href="/settings#projects"
+          aria-label="Manage projects"
+          title="Manage projects"
+          className="grid size-7 place-items-center rounded-full border border-line-strong text-muted transition-colors hover:border-ink hover:bg-ink hover:text-ink-foreground"
+        >
+          <Plus className="size-3.5" />
+        </Link>
       </div>
 
-      <div className="flex shrink-0 items-center gap-2.5 border-t border-line px-4 py-3">
-        <div className="grid size-7 shrink-0 place-items-center rounded-md bg-tint/10 text-[11px] font-semibold text-soft">MO</div>
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-[13px] font-medium leading-tight">My Organization</div>
-          <div className="truncate text-[11.5px] text-subtle">
-            {counts.projects} project{counts.projects === 1 ? "" : "s"} · {counts.assets} asset{counts.assets === 1 ? "" : "s"}
-          </div>
-        </div>
-        <ThemeCycleButton className="size-7" />
+      <div className="scrollbar-thin -mx-1 mt-2 flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-1">
+        {summary.projectList.length === 0 ? (
+          <p className="px-2 py-3 text-[12.5px] leading-relaxed text-subtle">
+            Group field media by programme to compare progress and build reports.
+          </p>
+        ) : (
+          summary.projectList.map((p) => {
+            const active = activeProject === p.slug;
+            return (
+              <Link
+                key={p.id}
+                href={`/media?project=${p.slug}`}
+                className={cn(
+                  "group flex items-center gap-3 rounded-xl px-2 py-2 transition-colors duration-200",
+                  active ? "bg-tint/[0.07]" : "hover:bg-tint/[0.04]",
+                )}
+              >
+                <ProjectAvatar name={p.name} cover={p.cover} />
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-[13px] font-medium leading-tight">{p.name}</div>
+                  <div className="mt-0.5 text-[11.5px] text-subtle">
+                    {p.count} asset{p.count === 1 ? "" : "s"}
+                  </div>
+                </div>
+                <span className="arrow-chip size-7 text-muted">
+                  <ArrowUpRight className="size-3.5" />
+                </span>
+              </Link>
+            );
+          })
+        )}
       </div>
+
+      <Button asChild variant="primary" size="lg" className="mt-3 w-full">
+        <Link href="/reports">
+          <FilePlus2 />
+          Generate report
+        </Link>
+      </Button>
     </aside>
   );
 }
 
-function NavLink({ item, active, count }: { item: NavItem; active: boolean; count?: number }) {
-  const { href, label, icon: Icon } = item;
-  return (
-    <Link
-      href={href}
-      className={cn(
-        "relative flex items-center gap-2.5 rounded-md px-2 py-1.5 text-[13.5px] transition-colors",
-        active ? "text-foreground" : "text-muted hover:bg-tint/[0.05] hover:text-foreground",
-      )}
-    >
+function ProjectAvatar({ name, cover }: { name: string; cover: WorkspaceSummary["projectList"][number]["cover"] }) {
+  const usable = cover && (cover.resourceType === "image" || cover.secureUrl.includes("/upload/"));
+  if (usable) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={thumbUrl(cover, 96, 96)} alt="" className="size-9 shrink-0 rounded-full bg-media object-cover" loading="lazy" />
+    );
+  }
+  const initials = name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
+  return <div className="grid size-9 shrink-0 place-items-center rounded-full bg-lime text-[11.5px] font-semibold text-lime-foreground">{initials}</div>;
+}
+
+function SideLink({ item, active }: { item: NavItem; active: boolean }) {
+  const { label, icon: Icon, href, onClick, kbd } = item;
+  const className = cn(
+    "relative flex h-11 w-full items-center gap-3 rounded-full px-4 text-[13.5px] font-medium transition-colors duration-200",
+    active ? "text-ink-foreground" : "text-muted hover:bg-tint/[0.05] hover:text-foreground",
+  );
+  const body = (
+    <>
       {active && (
         <motion.span
           layoutId="sidebar-active"
-          transition={{ type: "spring", stiffness: 500, damping: 40 }}
-          className="absolute inset-0 rounded-md bg-tint/[0.08]"
+          transition={{ type: "spring", stiffness: 450, damping: 38 }}
+          className="absolute inset-0 rounded-full bg-ink"
         />
       )}
-      <Icon className={cn("relative size-4 shrink-0", active ? "text-foreground" : "text-subtle")} />
-      <span className="relative flex-1 truncate">{label}</span>
-      {count !== undefined && count > 0 && (
-        <span className="relative text-[12px] tabular-nums text-subtle">{count.toLocaleString("en-IN")}</span>
-      )}
-    </Link>
+      <Icon className="relative size-[18px] shrink-0" />
+      <span className="relative flex-1 truncate text-left">{label}</span>
+      {kbd && <kbd className="relative font-mono text-[11px] text-subtle">{kbd}</kbd>}
+    </>
   );
-}
-
-export function MobileNav() {
-  const pathname = usePathname();
+  if (href) {
+    return (
+      <Link href={href} className={className}>
+        {body}
+      </Link>
+    );
+  }
   return (
-    <div className="no-print sticky top-0 z-30 border-b border-line bg-chrome backdrop-blur-xl lg:hidden">
-      <div className="flex h-14 items-center justify-between px-4">
-        <Link href="/"><Logo /></Link>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => openVoiceAgent(true)}
-            aria-label="Ask ImpactLens by voice"
-            className="grid size-8 place-items-center rounded-md text-muted hover:bg-tint/[0.05] hover:text-foreground"
-          >
-            <Mic className="size-4" />
-          </button>
-          <ThemeCycleButton />
-        </div>
-      </div>
-      <nav className="scrollbar-thin flex gap-1 overflow-x-auto px-3 pb-2">
-        {ALL_ITEMS.map(({ href, label, icon: Icon }) => {
-          const active = activeFor(pathname, href);
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                "flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-2.5 py-1.5 text-[13px] transition-colors",
-                active ? "bg-tint/[0.08] text-foreground" : "text-muted hover:text-foreground",
-              )}
-            >
-              <Icon className="size-3.5" />
-              {label}
-            </Link>
-          );
-        })}
-      </nav>
-    </div>
+    <button type="button" onClick={onClick} className={className}>
+      {body}
+    </button>
   );
 }

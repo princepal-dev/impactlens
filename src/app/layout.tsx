@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { MobileNav, Sidebar } from "@/components/Sidebar";
+import { Suspense } from "react";
+import { AppHeader } from "@/components/AppHeader";
+import { Sidebar } from "@/components/Sidebar";
 import { ThemedToaster } from "@/components/ThemeToggle";
 import { VoiceAgent } from "@/components/VoiceAgent";
-import { listProjects, orgStats } from "@/lib/store";
+import { workspaceSummary } from "@/lib/store";
 import { THEME_INIT_SCRIPT } from "@/lib/theme-script";
+import type { WorkspaceSummary } from "@/lib/types";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -22,21 +25,22 @@ export const metadata: Metadata = {
   description: "From field media to measurable impact. AI-powered media intelligence for organizations building a more sustainable world.",
 };
 
+const EMPTY: WorkspaceSummary = { assets: 0, reports: 0, projects: 0, projectList: [] };
+
 export default async function RootLayout({ children }: LayoutProps<"/">) {
-  const stats = await orgStats().catch(() => null);
-  const counts = { assets: stats?.totalAssets ?? 0, reports: stats?.reports ?? 0, projects: stats ? listProjects().length : 0 };
+  const summary = await workspaceSummary().catch(() => EMPTY);
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
       <body className="min-h-full">
-        <div className="relative flex min-h-screen">
-          <Sidebar counts={counts} />
-          <div className="min-w-0 flex-1">
-            <MobileNav />
-            <main className="print-root w-full px-6 pb-20 pt-8 lg:px-10 lg:pt-10 2xl:px-12">{children}</main>
-          </div>
+        <AppHeader />
+        <div className="flex items-start gap-5 px-4 pb-20 pt-5 lg:px-6">
+          <Suspense fallback={<div className="w-[248px] shrink-0 max-lg:hidden" />}>
+            <Sidebar initial={summary} />
+          </Suspense>
+          <main className="print-root min-w-0 flex-1">{children}</main>
         </div>
         <VoiceAgent />
         <ThemedToaster />

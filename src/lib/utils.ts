@@ -29,12 +29,8 @@ export function timeAgo(iso: string) {
 }
 
 export const STAGE_STYLES: Record<string, string> = {
-  baseline:
-    "text-amber-300/90 border-amber-300/20 bg-amber-300/5 light:text-amber-800 light:border-amber-600/30 light:bg-amber-500/10",
-  implementation:
-    "text-sky-300/90 border-sky-300/20 bg-sky-300/5 light:text-sky-800 light:border-sky-600/30 light:bg-sky-500/10",
-  completed:
-    "text-emerald-300/90 border-emerald-300/20 bg-emerald-300/5 light:text-emerald-800 light:border-emerald-600/30 light:bg-emerald-500/10",
-  monitoring:
-    "text-teal-300/90 border-teal-300/20 bg-teal-300/5 light:text-teal-800 light:border-teal-600/30 light:bg-teal-500/10",
+  baseline: "bg-ink text-ink-foreground",
+  implementation: "bg-[#cfe2fb] text-[#0f2a4d]",
+  completed: "bg-lime text-lime-foreground",
+  monitoring: "bg-[#e3dcfb] text-[#2a1a5e]",
 };

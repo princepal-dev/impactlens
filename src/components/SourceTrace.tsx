@@ -36,7 +36,7 @@ export function SourceTrace({ asset }: { asset: MediaAsset }) {
   ];
   return (
     <div className="space-y-5">
-      <dl className="divide-y divide-line rounded-md border border-line text-[12.5px]">
+      <dl className="divide-y divide-line rounded-xl border border-line text-[12.5px]">
         {rows.map(([k, v, copyable]) => (
           <div key={k} className="flex items-center gap-3 px-3 py-2">
             <dt className="w-32 shrink-0 text-subtle">{k}</dt>
@@ -49,7 +49,7 @@ export function SourceTrace({ asset }: { asset: MediaAsset }) {
         <div className="label-mono mb-2">Derived transformations</div>
         <ul className="space-y-1.5">
           {derivedAssets(asset).map((d) => (
-            <li key={d.label} className="flex items-center gap-3 rounded-md border border-line px-3 py-2">
+            <li key={d.label} className="flex items-center gap-3 rounded-xl border border-line px-3 py-2">
               <span className={cn("size-1.5 shrink-0 rounded-full", d.transformation === "none" ? "bg-positive" : "bg-accent")} />
               <span className="w-32 shrink-0 text-[12.5px]">{d.label}</span>
               <code className="min-w-0 flex-1 truncate font-mono text-[11px] text-subtle">{d.transformation}</code>

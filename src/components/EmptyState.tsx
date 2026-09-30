@@ -20,13 +20,13 @@ export function EmptyState({
   className?: string;
 }) {
   return (
-    <div className={cn("flex flex-col items-center justify-center rounded-xl border border-dashed border-line-strong px-6 py-14 text-center", className)}>
+    <div className={cn("flex flex-col items-center justify-center rounded-2xl border border-dashed border-line-strong bg-panel/50 px-6 py-14 text-center", className)}>
       {illustration ?? (
-        <div className={cn("grid size-10 place-items-center rounded-lg border", tone === "error" ? "border-warning/30 text-warning" : "border-line text-subtle")}>
+        <div className={cn("grid size-12 place-items-center rounded-full", tone === "error" ? "bg-warning/10 text-warning" : "bg-lime text-lime-foreground")}>
           <Icon className="size-[18px]" />
         </div>
       )}
-      <h3 className="mt-4 text-[15px] font-medium">{title}</h3>
+      <h3 className="mt-4 text-[16px] font-semibold tracking-tight">{title}</h3>
       <p className="mt-1 max-w-md text-[13px] leading-relaxed text-muted">{description}</p>
       {action && <div className="mt-5 flex flex-wrap items-center justify-center gap-2">{action}</div>}
     </div>

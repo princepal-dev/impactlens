@@ -1,4 +1,4 @@
-import { CalendarDays, MapPin } from "lucide-react";
+import { ArrowUpRight, CalendarDays, MapPin } from "lucide-react";
 import Link from "next/link";
 import type { SearchResult } from "@/lib/types";
 import { fmtDate, pct } from "@/lib/utils";
@@ -13,22 +13,22 @@ export function SearchResultCard({ result, rank }: { result: SearchResult; rank:
   return (
     <Link
       href={`/media/${asset.id}`}
-      className="page-in group flex flex-col overflow-hidden rounded-xl border border-line bg-panel shadow-[var(--panel-shadow)] transition-all duration-200 hover:-translate-y-0.5 hover:border-line-strong"
+      className="page-in lift group flex flex-col overflow-hidden rounded-2xl border border-line bg-panel p-2 shadow-[var(--panel-shadow)]"
       style={{ animationDelay: `${Math.min(rank, 8) * 40}ms` }}
     >
-      <div className="relative aspect-[16/10] overflow-hidden">
-        <MediaThumb asset={asset} w={640} h={400} className="size-full transition-transform duration-500 group-hover:scale-[1.03]" />
+      <div className="relative aspect-[16/10] overflow-hidden rounded-xl bg-media">
+        <MediaThumb asset={asset} w={640} h={400} className="size-full transition-transform duration-700 ease-[var(--ease-out-soft)] group-hover:scale-[1.05]" />
         <div className="absolute inset-x-0 top-0 flex items-start justify-between p-2.5">
           <CloudinaryLabel asset={asset} />
-          <span className="rounded-[4px] bg-black/65 px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-white backdrop-blur">{pct(relevance)} match</span>
+          <span className="rounded-full bg-lime px-2 py-0.5 text-[11px] font-semibold tabular-nums text-lime-foreground">{pct(relevance)} match</span>
         </div>
-        <div className="absolute inset-x-0 bottom-0 h-1 bg-black/40">
-          <div className="h-full bg-accent/80" style={{ width: pct(relevance) }} />
-        </div>
+        <span className="absolute bottom-2.5 right-2.5 grid size-8 translate-y-1 place-items-center rounded-full bg-white text-[#10120a] opacity-0 shadow-lg transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
+          <ArrowUpRight className="size-4" />
+        </span>
       </div>
-      <div className="flex flex-1 flex-col p-4">
+      <div className="flex flex-1 flex-col px-2.5 pb-2 pt-3.5">
         <div className="flex items-start justify-between gap-2">
-          <h3 className="line-clamp-1 text-[14px] font-medium">{asset.title}</h3>
+          <h3 className="line-clamp-1 text-[14.5px] font-semibold tracking-tight">{asset.title}</h3>
           <StageBadge stage={asset.stage} />
         </div>
         <div className="mt-1 text-[12.5px] text-muted">{asset.project}</div>

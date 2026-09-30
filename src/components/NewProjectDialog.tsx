@@ -4,14 +4,14 @@ import { FolderPlus, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button, type ButtonProps } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Input, Select } from "@/components/ui/panel";
 import { requestJSON } from "@/lib/http";
 
 const CATEGORIES = ["Water & Sanitation", "Environment", "Renewable Energy", "Infrastructure", "Community", "Other"];
 
-export function NewProjectDialog() {
+export function NewProjectDialog({ variant = "secondary" }: { variant?: ButtonProps["variant"] }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -31,7 +31,7 @@ export function NewProjectDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="secondary">
+        <Button variant={variant}>
           <FolderPlus /> New Project
         </Button>
       </DialogTrigger>
@@ -62,7 +62,7 @@ export function NewProjectDialog() {
               rows={3}
               maxLength={400}
               placeholder="What the project delivers and where."
-              className="mt-1.5 w-full rounded-md border border-line-strong bg-surface px-3 py-2 text-sm text-foreground outline-none placeholder:text-subtle focus-visible:border-accent/60"
+              className="mt-1.5 w-full rounded-xl border border-line-strong bg-surface px-3.5 py-2.5 text-sm text-foreground outline-none placeholder:text-subtle focus-visible:border-ink"
             />
           </label>
           <div className="flex justify-end gap-2 pt-1">

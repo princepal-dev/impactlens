@@ -10,7 +10,7 @@ import { Button } from "./ui/button";
 import { Input, Select } from "./ui/panel";
 
 const textarea =
-  "w-full rounded-md border border-line-strong bg-surface px-3 py-2 text-sm text-foreground outline-none placeholder:text-subtle focus-visible:border-accent/60";
+  "w-full rounded-xl border border-line-strong bg-surface px-3.5 py-2.5 text-sm text-foreground outline-none placeholder:text-subtle focus-visible:border-ink";
 
 /** Edit (or manually create) an asset's evidence metadata. */
 export function ManualTagForm({ asset, projects, onSaved }: { asset: MediaAsset; projects: Project[]; onSaved?: () => void }) {

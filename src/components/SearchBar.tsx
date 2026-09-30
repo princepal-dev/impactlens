@@ -47,9 +47,9 @@ export function SearchBar({
         e.preventDefault();
         if (value.trim()) onSubmit(value.trim());
       }}
-      className="group relative flex items-center gap-2 rounded-lg border border-line-strong bg-surface p-2 shadow-[0_1px_2px_rgba(0,0,0,0.05)] transition-colors focus-within:border-accent/50"
+      className="group relative flex items-center gap-2 rounded-full border border-line-strong bg-surface p-1.5 shadow-[0_10px_30px_-18px_rgba(0,0,0,0.6)] ring-1 ring-white/5 transition-[border-color,box-shadow] duration-200 focus-within:border-lime/70 focus-within:ring-4 focus-within:ring-lime/20"
     >
-      <Search className="ml-3 size-5 shrink-0 text-subtle transition-colors group-focus-within:text-accent" />
+      <Search className="ml-4 size-5 shrink-0 text-subtle transition-colors group-focus-within:text-foreground" />
       <input
         ref={ref}
         autoFocus
@@ -65,7 +65,7 @@ export function SearchBar({
           onClick={speech.listening ? speech.stop : speech.start}
           className={cn(
             "relative grid size-10 shrink-0 place-items-center rounded-full transition-colors",
-            speech.listening ? "bg-danger text-white" : "text-subtle hover:bg-tint/5 hover:text-accent",
+            speech.listening ? "bg-danger text-white" : "text-subtle hover:bg-tint/[0.06] hover:text-foreground",
           )}
           aria-label={speech.listening ? "Stop voice search" : "Search by voice"}
           title="Search by voice"
@@ -74,8 +74,8 @@ export function SearchBar({
           {speech.listening ? <Square className="relative size-3.5 fill-current" /> : <Mic className="size-[18px]" />}
         </button>
       )}
-      <kbd className="hidden rounded border border-line px-1.5 py-0.5 font-mono text-[10.5px] text-subtle md:block">/</kbd>
-      <Button type="submit" variant="primary" size="lg" disabled={loading || !value.trim()} className="shrink-0">
+      <kbd className="hidden rounded-md border border-line px-1.5 py-0.5 font-mono text-[10.5px] text-subtle md:block">/</kbd>
+      <Button type="submit" variant="lime" size="lg" disabled={loading || !value.trim()} className="shrink-0">
         {loading ? <Loader2 className="animate-spin" /> : <ArrowRight />}
         <span className="max-sm:hidden">Search Evidence</span>
       </Button>

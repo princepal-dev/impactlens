@@ -152,7 +152,7 @@ export function ReportsWorkspace({
             </div>
           )}
           {error && (
-            <div className="mt-6 flex items-center justify-between gap-3 rounded-md border border-warning/30 bg-warning/5 px-4 py-3 text-[13px]">
+            <div className="mt-6 flex items-center justify-between gap-3 rounded-xl border border-warning/30 bg-warning/5 px-4 py-3 text-[13px]">
               <span className="flex items-center gap-2 text-warning"><AlertTriangle className="size-4" /> {error}</span>
               <Button size="sm" onClick={generate}><RotateCcw /> Try again</Button>
             </div>
@@ -175,7 +175,7 @@ export function ReportsWorkspace({
                       router.replace(`/reports?id=${r.id}`, { scroll: false });
                     }}
                     className={cn(
-                      "flex w-full items-center gap-2.5 rounded-md px-2 py-2 pr-9 text-left transition-colors hover:bg-tint/[0.04]",
+                      "flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 pr-9 text-left transition-colors hover:bg-tint/[0.04]",
                       report?.id === r.id && "bg-tint/[0.07]",
                     )}
                   >

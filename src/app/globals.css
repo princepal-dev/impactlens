@@ -4,60 +4,72 @@
 @custom-variant light (&:where(.light, .light *));
 
 :root {
-  --background: #0a0a0a;
-  --foreground: #f5f5f4;
-  --soft: #d4d4d8;
-  --surface: #111111;
-  --surface-raised: #0f0f0f;
-  --chrome: rgba(11, 11, 11, 0.95);
-  --panel: rgba(255, 255, 255, 0.025);
-  --panel-strong: rgba(255, 255, 255, 0.045);
-  --line: rgba(255, 255, 255, 0.08);
-  --line-strong: rgba(255, 255, 255, 0.14);
+  --background: #0b0c0a;
+  --foreground: #f2f3ee;
+  --soft: #d3d5cc;
+  --surface: #141512;
+  --surface-raised: #1b1c19;
+  --chrome: rgba(17, 18, 16, 0.88);
+  --panel: #141512;
+  --panel-strong: #1b1c19;
+  --line: rgba(255, 255, 255, 0.07);
+  --line-strong: rgba(255, 255, 255, 0.13);
   --tint: #ffffff;
-  --inset: rgba(0, 0, 0, 0.4);
+  --inset: rgba(0, 0, 0, 0.3);
   --media: #000000;
   --overlay: rgba(0, 0, 0, 0.7);
-  --muted: #8a8f98;
-  --subtle: #5d626b;
-  --accent: #2dd4bf;
-  --accent-foreground: #000000;
-  --accent-dim: rgba(45, 212, 191, 0.12);
-  --positive: #4ade80;
+  --muted: #9b9e94;
+  --subtle: #6d7067;
+  --accent: #d4f25a;
+  --accent-foreground: #10120a;
+  --accent-dim: rgba(212, 242, 90, 0.12);
+  --lime: #d4f25a;
+  --lime-foreground: #10120a;
+  --ink: #f2f3ee;
+  --ink-foreground: #0b0c0a;
+  --hero: #121410;
+  --positive: #86e07a;
   --warning: #fb923c;
   --danger: #f87171;
-  --skeleton: rgba(255, 255, 255, 0.04);
-  --skeleton-shine: rgba(255, 255, 255, 0.05);
+  --skeleton: rgba(255, 255, 255, 0.05);
+  --skeleton-shine: rgba(255, 255, 255, 0.06);
   --panel-shadow: 0 0 #0000;
+  --lift-shadow: 0 18px 40px -20px rgba(0, 0, 0, 0.8);
   color-scheme: dark;
 }
 
 :root.light {
-  --background: #f7f7f6;
-  --foreground: #18181b;
-  --soft: #3f3f46;
+  --background: #f1f2ee;
+  --foreground: #0f100d;
+  --soft: #34362f;
   --surface: #ffffff;
   --surface-raised: #ffffff;
-  --chrome: rgba(255, 255, 255, 0.92);
+  --chrome: rgba(255, 255, 255, 0.88);
   --panel: #ffffff;
-  --panel-strong: #fbfbfa;
-  --line: rgba(24, 24, 27, 0.09);
-  --line-strong: rgba(24, 24, 27, 0.16);
-  --tint: #18181b;
-  --inset: rgba(24, 24, 27, 0.04);
-  --media: #e7e5e4;
-  --overlay: rgba(24, 24, 27, 0.35);
-  --muted: #5b616b;
-  --subtle: #858a93;
-  --accent: #0d9488;
+  --panel-strong: #fafaf7;
+  --line: #e6e7e1;
+  --line-strong: #d5d7cf;
+  --tint: #0f100d;
+  --inset: #f5f6f2;
+  --media: #e8e9e4;
+  --overlay: rgba(15, 16, 13, 0.4);
+  --muted: #62655c;
+  --subtle: #8f9288;
+  --accent: #4f7a06;
   --accent-foreground: #ffffff;
-  --accent-dim: rgba(13, 148, 136, 0.1);
-  --positive: #16a34a;
+  --accent-dim: rgba(101, 163, 13, 0.12);
+  --lime: #d4f25a;
+  --lime-foreground: #10120a;
+  --ink: #111210;
+  --ink-foreground: #ffffff;
+  --hero: #111310;
+  --positive: #15803d;
   --warning: #c2410c;
   --danger: #dc2626;
-  --skeleton: rgba(24, 24, 27, 0.06);
-  --skeleton-shine: rgba(255, 255, 255, 0.6);
-  --panel-shadow: 0 1px 2px rgba(24, 24, 27, 0.05), 0 1px 3px rgba(24, 24, 27, 0.03);
+  --skeleton: rgba(15, 16, 13, 0.06);
+  --skeleton-shine: rgba(255, 255, 255, 0.7);
+  --panel-shadow: 0 1px 2px rgba(15, 16, 13, 0.04);
+  --lift-shadow: 0 20px 40px -22px rgba(15, 16, 13, 0.3);
   color-scheme: light;
 }
 
@@ -84,12 +96,19 @@
   --color-positive: var(--positive);
   --color-warning: var(--warning);
   --color-danger: var(--danger);
+  --color-lime: var(--lime);
+  --color-lime-foreground: var(--lime-foreground);
+  --color-ink: var(--ink);
+  --color-ink-foreground: var(--ink-foreground);
+  --color-hero: var(--hero);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
-  --radius-xl: 10px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 body {
@@ -106,7 +125,97 @@ body {
 }
 
 ::selection {
-  background: rgba(45, 212, 191, 0.3);
+  background: rgba(212, 242, 90, 0.45);
+  color: #10120a;
+}
+
+/* Dark feature band used at the top of every page. */
+.hero-panel {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  background: var(--hero);
+  color: #f2f3ee;
+}
+.hero-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(55% 140% at 55% -30%, rgba(212, 242, 90, 0.2), transparent 65%);
+  pointer-events: none;
+}
+
+.hero-stat {
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  color: #f2f3ee;
+  transition:
+    background-color 0.25s ease,
+    transform 0.3s var(--ease-out-soft);
+}
+a.hero-stat:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px);
+}
+.hero-stat:first-child {
+  background: var(--lime);
+  box-shadow: none;
+  color: var(--lime-foreground);
+}
+a.hero-stat:first-child:hover {
+  background: #dcf56f;
+}
+.hero-panel .arrow-chip {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+.hero-panel .group:hover .arrow-chip,
+.hero-panel .arrow-chip:hover {
+  background: #fff;
+  color: #10120a;
+  border-color: #fff;
+}
+.hero-panel .hero-stat:first-child .arrow-chip {
+  border-color: rgba(16, 18, 10, 0.25);
+}
+.hero-panel .hero-stat:first-child:hover .arrow-chip {
+  background: #10120a;
+  color: var(--lime);
+  border-color: #10120a;
+}
+
+/* Interactive cards: lift and deepen shadow on hover. */
+.lift {
+  transition:
+    transform 0.3s var(--ease-out-soft),
+    box-shadow 0.3s var(--ease-out-soft),
+    border-color 0.2s ease;
+}
+.lift:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--lift-shadow);
+  border-color: var(--line-strong);
+}
+
+/* Circular arrow affordance that rotates on parent hover. */
+.arrow-chip {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 9999px;
+  border: 1px solid var(--line-strong);
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.3s var(--ease-out-soft);
+}
+.group:hover .arrow-chip,
+.arrow-chip:hover {
+  background: var(--ink);
+  color: var(--ink-foreground);
+  border-color: var(--ink);
+  transform: rotate(45deg);
 }
 
 .eyebrow {
@@ -138,7 +247,7 @@ body {
 @keyframes page-in {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -146,7 +255,7 @@ body {
   }
 }
 .page-in {
-  animation: page-in 0.35s ease-out both;
+  animation: page-in 0.45s var(--ease-out-soft) backwards;
 }
 
 @keyframes scan {

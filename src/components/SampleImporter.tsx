@@ -93,7 +93,7 @@ export function SampleImporter({ compact = false }: { compact?: boolean }) {
   }
 
   return (
-    <Panel id="samples" className="scroll-mt-6">
+    <Panel id="samples" className="scroll-mt-24">
       <div className={compact ? "px-5 pb-1 pt-5" : "px-6 pb-1 pt-6"}>
         <div className="label-mono">Sample evidence</div>
         <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-muted">
@@ -159,7 +159,7 @@ export function SampleImporter({ compact = false }: { compact?: boolean }) {
       </ul>
 
       {errors.length > 0 && (
-        <ul className="mx-6 mb-6 space-y-1 rounded-md border border-danger/25 bg-danger/[0.05] p-3 text-[12px] text-danger">
+        <ul className="mx-6 mb-6 space-y-1 rounded-xl border border-danger/25 bg-danger/[0.05] p-3 text-[12px] text-danger">
           {errors.slice(0, 5).map((e) => (
             <li key={e.file}>
               {e.file}: {e.error}

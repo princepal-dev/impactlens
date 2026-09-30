@@ -21,7 +21,7 @@ import { BeforeAfter } from "./BeforeAfter";
 import { EvidenceTimeline } from "./EvidenceTimeline";
 import { ImpactBadge } from "./ImpactBadge";
 import { MediaThumb } from "./MediaThumb";
-import { Logo } from "./Sidebar";
+import { Logo } from "./Logo";
 
 const STAGE_COLORS: Record<string, string> = {
   baseline: "bg-amber-400",
@@ -117,12 +117,12 @@ export function ReportPreview({ report, assets }: { report: ReportContent; asset
 
         {hero && (
           <div className="relative mx-auto w-full max-w-[480px] pb-8 lg:pb-10">
-            <div className="overflow-hidden rounded-lg border border-line">
+            <div className="overflow-hidden rounded-xl border border-line">
               <MediaThumb asset={hero} w={960} h={640} className="aspect-[3/2] w-full" />
             </div>
             {after && <span className="absolute right-3 top-3 rounded bg-black/65 px-1.5 py-0.5 text-[10.5px] font-medium uppercase tracking-wider text-white">After</span>}
             {inset && (
-              <div className="absolute -bottom-1 -left-4 w-[46%] overflow-hidden rounded-lg border-4 border-surface shadow-lg md:-left-8">
+              <div className="absolute -bottom-1 -left-4 w-[46%] overflow-hidden rounded-xl border-4 border-surface shadow-lg md:-left-8">
                 <MediaThumb asset={inset} w={480} h={320} className="aspect-[3/2] w-full" />
                 {before && <span className="absolute left-2 top-2 rounded bg-black/65 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-white">Before</span>}
               </div>
@@ -207,7 +207,7 @@ export function ReportPreview({ report, assets }: { report: ReportContent; asset
       <Section n={before && after ? "05" : "04"} title="Key evidence" className="border-t border-line">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {evidence.map((a) => (
-            <Link key={a.id} href={`/media/${a.id}`} className="group block overflow-hidden rounded-lg border border-line bg-surface transition-colors hover:border-line-strong">
+            <Link key={a.id} href={`/media/${a.id}`} className="group block overflow-hidden rounded-xl border border-line bg-surface transition-colors hover:border-line-strong">
               <div className="relative overflow-hidden">
                 <MediaThumb asset={a} w={640} h={400} className="aspect-[16/10] w-full" />
                 <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/75 to-transparent px-3 pb-2.5 pt-8 text-[11.5px] text-white/85">
@@ -269,7 +269,7 @@ export function ReportPreview({ report, assets }: { report: ReportContent; asset
                   </td>
                   <td className="px-4 py-2.5 font-mono text-[11px] text-muted max-md:hidden">{a.cloudinaryPublicId}</td>
                   <td className="px-4 py-2.5 text-right">
-                    <a href={a.secureUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-md border border-line px-2 py-1 text-[11.5px] font-medium text-accent transition-colors hover:border-accent/50">
+                    <a href={a.secureUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-full border border-line px-2.5 py-1 text-[11.5px] font-medium text-accent transition-colors hover:border-accent/50">
                       Open <ExternalLink className="size-3" />
                     </a>
                   </td>

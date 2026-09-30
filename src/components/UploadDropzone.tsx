@@ -278,17 +278,17 @@ export function UploadDropzone({
           addFiles(e.dataTransfer.files);
         }}
         className={cn(
-          "rounded-xl border border-dashed p-5 outline-none transition-colors focus-visible:border-accent/70",
-          drag ? "border-accent bg-accent/[0.05]" : "border-line-strong bg-panel hover:border-tint/30",
+          "group/drop rounded-2xl border border-dashed p-5 outline-none transition-colors duration-200 focus-visible:border-lime",
+          drag ? "border-lime bg-lime/[0.08]" : "border-line-strong bg-panel hover:border-tint/30",
         )}
       >
         <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-start gap-3.5">
-            <div className="grid size-10 shrink-0 place-items-center rounded-lg border border-line text-muted">
+            <div className={cn("grid size-12 shrink-0 place-items-center rounded-full transition-colors duration-200", drag ? "bg-lime text-lime-foreground" : "bg-tint/[0.05] text-soft group-hover/drop:bg-lime group-hover/drop:text-lime-foreground")}>
               <UploadCloud className="size-[18px]" />
             </div>
             <div className="min-w-0">
-              <h2 className="text-[14.5px] font-medium">{drag ? "Drop to upload" : "Upload field media"}</h2>
+              <h2 className="text-[16px] font-semibold tracking-tight">{drag ? "Drop to upload" : "Upload field media"}</h2>
               <p className="mt-0.5 max-w-xl text-[13px] leading-relaxed text-muted">
                 Drag photos or videos here. Each file is stored in Cloudinary, analyzed by AI and indexed automatically.
               </p>
@@ -306,7 +306,7 @@ export function UploadDropzone({
         </div>
         <div className="mt-5 flex flex-col gap-2.5 border-t border-line pt-4 sm:flex-row sm:items-center">
           <span className="text-[12.5px] font-medium text-muted sm:mr-1">Assign to</span>
-          <Select value={projectId} onChange={(e) => setProjectId(e.target.value)} className="h-9 w-full text-[13px] sm:w-60" onClick={(e) => e.stopPropagation()}>
+          <Select value={projectId} onChange={(e) => setProjectId(e.target.value)} className="h-10 w-full text-[13px] sm:w-60" onClick={(e) => e.stopPropagation()}>
             <option value="">Auto-detect project with AI</option>
             {projects.map((p) => (
               <option key={p.id} value={p.id}>{p.name}</option>
@@ -318,7 +318,7 @@ export function UploadDropzone({
             onClick={(e) => e.stopPropagation()}
             onKeyDown={(e) => e.stopPropagation()}
             placeholder="Site, e.g. Osian, Rajasthan (optional)"
-            className="h-9 w-full text-[13px] sm:w-72"
+            className="h-10 w-full text-[13px] sm:w-72"
           />
         </div>
         <input ref={input} type="file" multiple accept={ACCEPT} className="hidden" onChange={(e) => {
@@ -346,14 +346,14 @@ export function UploadDropzone({
               )}
               {(j.step === 2 || j.step === 3) && !j.error && (
                 <div className="pointer-events-none absolute inset-0 overflow-hidden">
-                  <div className="scan-line absolute inset-x-0 h-1/3 bg-gradient-to-b from-transparent via-accent/25 to-transparent" />
-                  <div className="absolute inset-0 border-2 border-accent/40" />
+                  <div className="scan-line absolute inset-x-0 h-1/3 bg-gradient-to-b from-transparent via-lime/30 to-transparent" />
+                  <div className="absolute inset-0 border-2 border-lime/50" />
                 </div>
               )}
-              <div className="absolute left-2.5 top-2.5 max-w-[85%] truncate rounded-[3px] bg-black/60 px-1.5 py-0.5 text-[11px] text-white/85 backdrop-blur">{j.name}</div>
+              <div className="absolute left-2.5 top-2.5 max-w-[85%] truncate rounded-full bg-black/60 px-2 py-0.5 text-[11px] text-white/90 backdrop-blur-md">{j.name}</div>
               <button
                 onClick={() => dismiss(j)}
-                className="absolute right-2 top-2 rounded bg-black/60 p-1 text-white/70 hover:text-white"
+                className="absolute right-2 top-2 grid size-7 place-items-center rounded-full bg-black/60 text-white/80 transition-colors hover:bg-white hover:text-black"
                 aria-label="Dismiss"
               >
                 <X className="size-3.5" />

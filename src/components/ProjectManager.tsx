@@ -86,8 +86,8 @@ export function ProjectManager({ projects }: { projects: Row[] }) {
             ) : (
               <li key={p.id} className="flex items-center justify-between gap-4 px-5 py-3.5">
                 <div className="flex min-w-0 items-center gap-3">
-                  <div className="grid size-8 shrink-0 place-items-center rounded-md border border-line bg-tint/[0.03]">
-                    <CategoryIcon category={p.category} className="size-3.5 text-accent" />
+                  <div className="grid size-9 shrink-0 place-items-center rounded-full bg-lime text-lime-foreground">
+                    <CategoryIcon category={p.category} className="size-4" />
                   </div>
                   <div className="min-w-0">
                     <Link href={`/media?project=${p.slug}`} className="truncate text-[13.5px] font-medium hover:text-accent">
