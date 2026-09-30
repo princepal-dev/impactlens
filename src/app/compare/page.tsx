@@ -1,8 +1,7 @@
-import { Images, SplitSquareHorizontal } from "lucide-react";
+import { Images, SplitSquareHorizontal, Upload } from "lucide-react";
 import Link from "next/link";
 import { CompareWorkspace } from "@/components/CompareWorkspace";
 import { EmptyState } from "@/components/EmptyState";
-import { NewProjectDialog } from "@/components/NewProjectDialog";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { DEFAULT_PAIRS } from "@/lib/samples";
@@ -17,7 +16,7 @@ export default async function ComparePage({ searchParams }: PageProps<"/compare"
   return (
     <div className="page-in">
       <PageHeader title="Compare" subtitle="Pair baseline and later evidence from the same site to see what changed." />
-      {projects.length ? (
+      {assets.length >= 2 ? (
         <CompareWorkspace
           projects={projects}
           assets={assets}
@@ -28,13 +27,15 @@ export default async function ComparePage({ searchParams }: PageProps<"/compare"
       ) : (
         <EmptyState
           icon={SplitSquareHorizontal}
-          title="Create a project to start comparing"
-          description="Comparisons pair baseline and later evidence within a project. Create one, then upload photos from the same site at different stages."
+          title="Add photos to start comparing"
+          description="Comparison pairs an earlier and a later photo of the same site. Upload at least two photos, or load the sample collection."
           action={
             <>
-              <NewProjectDialog />
+              <Button variant="primary" asChild>
+                <Link href="/media?upload=1"><Upload /> Upload media</Link>
+              </Button>
               <Button variant="ghost" asChild>
-                <Link href="/settings#samples"><Images /> Load sample evidence</Link>
+                <Link href="/settings#samples"><Images /> Load sample photos</Link>
               </Button>
             </>
           }

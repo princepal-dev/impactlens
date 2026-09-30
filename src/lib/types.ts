@@ -34,6 +34,8 @@ export interface CloudinaryRef {
   originalFilename?: string;
   /** Capture date read from EXIF (YYYY-MM-DD) when the file carries one. */
   exifDate?: string;
+  /** Public page for media that came from a third-party library such as Unsplash. */
+  sourceUrl?: string;
 }
 
 export interface MediaAsset extends CloudinaryRef, AIMetadata {

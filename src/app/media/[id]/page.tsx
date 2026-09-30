@@ -74,6 +74,11 @@ export default async function AssetPage({ params }: PageProps<"/media/[id]">) {
             <div className="flex items-center justify-between gap-3 border-t border-line px-4 py-3">
               <span className="min-w-0 truncate font-mono text-[11.5px] text-subtle" title={asset.cloudinaryPublicId}>{asset.cloudinaryPublicId}</span>
               <div className="flex shrink-0 gap-2">
+                {asset.sourceUrl && (
+                  <Button size="sm" variant="ghost" asChild>
+                    <a href={asset.sourceUrl} target="_blank" rel="noreferrer"><ExternalLink /> Unsplash</a>
+                  </Button>
+                )}
                 <Button size="sm" variant="ghost" asChild>
                   <a href={asset.secureUrl} target="_blank" rel="noreferrer"><ExternalLink /> Original</a>
                 </Button>
@@ -135,7 +140,7 @@ export default async function AssetPage({ params }: PageProps<"/media/[id]">) {
           </Panel>
 
           <div className="no-print grid grid-cols-3 gap-2 [&>*]:min-w-0">
-            <Button variant="secondary" asChild><Link href={`/compare?project=${project?.slug ?? ""}&after=${asset.id}`}><SplitSquareHorizontal /> Compare</Link></Button>
+            <Button variant="secondary" asChild><Link href={project ? `/compare?project=${project.slug}&after=${asset.id}` : `/compare?after=${asset.id}`}><SplitSquareHorizontal /> Compare</Link></Button>
             <Button variant="secondary" asChild><Link href={`/search?q=${encodeURIComponent(`${asset.activity} in ${asset.location.split(",").pop()?.trim()}`)}`}><Search /> Similar</Link></Button>
             <Button variant="secondary" asChild><Link href={`/reports?project=${project?.slug ?? ""}`}><FileText /> Report</Link></Button>
           </div>

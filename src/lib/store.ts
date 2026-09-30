@@ -68,6 +68,20 @@ export function createProject(input: Pick<Project, "name" | "category" | "locati
   return project;
 }
 
+/** Returns the project with this id, recreating it from its definition if it was deleted. */
+export function ensureProject(def: Project): Project {
+  const existing = getProject(def.id);
+  if (existing) return existing;
+  let slug = def.slug;
+  for (let i = 2; getProject(slug); i++) slug = `${def.slug}-${i}`;
+  db()
+    .prepare(
+      "INSERT INTO projects (id, slug, name, category, location, region, description, status, start_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    )
+    .run(def.id, slug, def.name, def.category, def.location, def.region, def.description, def.status, def.startDate);
+  return { ...def, slug };
+}
+
 export function updateProject(id: string, input: Partial<Pick<Project, "name" | "category" | "location" | "region" | "description" | "status">>) {
   const current = getProject(id);
   if (!current) return null;

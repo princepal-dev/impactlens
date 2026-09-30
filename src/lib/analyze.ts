@@ -35,7 +35,7 @@ const SCHEMA = `{
   "impactAreas": string[] (2-4, e.g. "Water Access", "Clean Energy", "Climate Action"),
   "peopleCount": number | null (null if not reasonably countable),
   "objects": string[],
-  "stage": "baseline" | "implementation" | "completed" | "monitoring",
+  "stage": "baseline" (conditions before any intervention: degraded, polluted, logged, dry or unbuilt) | "implementation" (work in progress: people working, construction, planting, clean-up underway) | "completed" (the finished intervention is visible) | "monitoring" (later follow-up of established results: grown trees, operating systems, maintained sites),
   "confidence": number (0-1, your confidence in this analysis),
   "date": string (YYYY-MM-DD, use supplied capture date),
   "beforeAfterCandidate": boolean
@@ -45,6 +45,8 @@ export interface AnalyzeContext {
   filename?: string;
   projectHint?: string | null;
   locationHint?: string | null;
+  /** Stage recorded in the uploader's field log; takes precedence over the model's guess. */
+  stageHint?: Stage;
   captureDate: string;
 }
 
@@ -62,18 +64,25 @@ export function normalizeMetadata(raw: Partial<AIMetadata>, ctx: AnalyzeContext)
   const arr = (v: unknown) => (Array.isArray(v) ? v.map((x) => String(x)).filter(Boolean) : []);
   const confidence = Math.max(0, Math.min(1, Number(raw.confidence ?? 0.7)));
   const location = raw.location && raw.location !== "Unknown" ? String(raw.location) : ctx.locationHint || matched?.location || "Unknown";
+  const cleanTitle = String(raw.title ?? "")
+    .trim()
+    .split(/\s+/)
+    .slice(0, 10)
+    .join(" ")
+    .replace(/^[\s\p{P}]+|[\s\p{P}]+$/gu, "");
+  const activity = String(raw.activity ?? "").trim();
   return {
-    title: String(raw.title || "Untitled field media").slice(0, 90),
+    title: (/\p{L}{3}/u.test(cleanTitle) ? cleanTitle : activity || "Field media").slice(0, 90),
     description: String(raw.description || "No description available."),
     project: matched?.name ?? String(raw.project || "Unassigned"),
     location,
     category: String(raw.category || matched?.category || "Other"),
-    activity: String(raw.activity || "Field documentation"),
+    activity: activity || "Field documentation",
     tags: [...new Set(arr(raw.tags).map(slug))].filter(Boolean).slice(0, 10),
     impactAreas: arr(raw.impactAreas).slice(0, 5),
     peopleCount: raw.peopleCount == null || Number.isNaN(Number(raw.peopleCount)) ? null : Number(raw.peopleCount),
     objects: arr(raw.objects).slice(0, 10),
-    stage: STAGES.includes(raw.stage as Stage) ? (raw.stage as Stage) : "implementation",
+    stage: ctx.stageHint ?? (STAGES.includes(raw.stage as Stage) ? (raw.stage as Stage) : "implementation"),
     confidence: Math.round(confidence * 100) / 100,
     date: ctx.captureDate,
     beforeAfterCandidate: Boolean(raw.beforeAfterCandidate),
@@ -93,6 +102,7 @@ Supplied metadata:
 - Capture date: ${ctx.captureDate}
 - Project assigned by uploader: ${assigned ? `${assigned.name} (${assigned.category}, ${assigned.region})` : "not specified"}
 - Site location supplied by uploader: ${ctx.locationHint || "not specified"}
+- Stage recorded in field log: ${ctx.stageHint ?? "not specified"}
 - Known projects: ${projects.map((p) => `${p.name} — ${p.category}, ${p.region}`).join("; ")}
 
 Describe what is actually visible in the image. Return the JSON object only.`;
