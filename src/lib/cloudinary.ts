@@ -1,11 +1,7 @@
 import "server-only";
-import { v2 as cloudinary, type UploadApiResponse } from "cloudinary";
-import { promises as fs } from "fs";
-import path from "path";
-import { config, cloudinaryUploadMode } from "./config";
-import type { CloudinaryRef, ResourceType } from "./types";
-
-const UPLOAD_DIR = path.join(process.cwd(), ".data", "uploads");
+import { v2 as cloudinary, type UploadApiOptions, type UploadApiResponse } from "cloudinary";
+import { config, requireCloudinary } from "./config";
+import type { CloudinaryRef } from "./types";
 
 let configured = false;
 function sdk() {
@@ -21,6 +17,15 @@ function sdk() {
   return cloudinary;
 }
 
+/** EXIF DateTimeOriginal ("2026:03:08 10:21:00") → "2026-03-08". */
+function exifDate(r: Record<string, unknown>): string | undefined {
+  const meta = (r.image_metadata ?? r.media_metadata) as Record<string, string> | undefined;
+  const raw = meta?.DateTimeOriginal ?? meta?.CreateDate ?? meta?.DateTime;
+  const m = raw?.match(/^(\d{4})[:-](\d{2})[:-](\d{2})/);
+  if (!m || m[1] === "0000") return undefined;
+  return `${m[1]}-${m[2]}-${m[3]}`;
+}
+
 function toRef(r: UploadApiResponse | Record<string, unknown>, originalFilename?: string): CloudinaryRef {
   const res = r as UploadApiResponse;
   return {
@@ -33,84 +38,74 @@ function toRef(r: UploadApiResponse | Record<string, unknown>, originalFilename?
     bytes: res.bytes,
     createdAt: res.created_at ?? new Date().toISOString(),
     storage: "cloudinary",
-    originalFilename: originalFilename ?? res.original_filename,
+    originalFilename: originalFilename ?? (res.original_filename ? `${res.original_filename}.${res.format}` : undefined),
+    exifDate: exifDate(r as Record<string, unknown>),
   };
+}
+
+async function unsignedUpload(file: Blob | string, filename: string | undefined, folder: string) {
+  const form = new FormData();
+  if (typeof file === "string") form.append("file", file);
+  else form.append("file", file, filename);
+  form.append("upload_preset", config.cloudinary.uploadPreset);
+  form.append("folder", folder);
+  form.append("tags", "impactlens,field-media");
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${config.cloudinary.cloudName}/auto/upload`, {
+    method: "POST",
+    body: form,
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json?.error?.message ?? "Cloudinary upload failed");
+  return json as UploadApiResponse;
 }
 
 export async function uploadMedia(opts: {
   buffer: Buffer;
   filename: string;
   mimeType: string;
-  id: string;
+  folder?: string;
+  publicId?: string;
+  tags?: string[];
 }): Promise<CloudinaryRef> {
-  const mode = cloudinaryUploadMode();
-  const resourceType: ResourceType = opts.mimeType.startsWith("video") ? "video" : "image";
-  const folder = `${config.cloudinary.folder}/uploads`;
+  const mode = requireCloudinary();
+  const folder = opts.folder ?? `${config.cloudinary.folder}/uploads`;
 
   if (mode === "signed") {
+    const options: UploadApiOptions = {
+      folder,
+      resource_type: "auto",
+      image_metadata: true,
+      context: { source: "impactlens", original_filename: opts.filename },
+      tags: ["impactlens", "field-media", ...(opts.tags ?? [])],
+      ...(opts.publicId ? { public_id: opts.publicId, overwrite: true } : {}),
+    };
     const result = await new Promise<UploadApiResponse>((resolve, reject) => {
-      const stream = sdk().uploader.upload_stream(
-        {
-          folder,
-          resource_type: "auto",
-          context: { source: "impactlens", original_filename: opts.filename },
-          tags: ["impactlens", "field-media"],
-        },
-        (err, res) => (err || !res ? reject(err ?? new Error("Empty Cloudinary response")) : resolve(res)),
+      const stream = sdk().uploader.upload_stream(options, (err, res) =>
+        err || !res ? reject(err ?? new Error("Empty Cloudinary response")) : resolve(res),
       );
       stream.end(opts.buffer);
     });
     return toRef(result, opts.filename);
   }
 
-  if (mode === "unsigned") {
-    const form = new FormData();
-    form.append("file", new Blob([new Uint8Array(opts.buffer)], { type: opts.mimeType }), opts.filename);
-    form.append("upload_preset", config.cloudinary.uploadPreset);
-    form.append("folder", folder);
-    form.append("tags", "impactlens,field-media");
-    const res = await fetch(`https://api.cloudinary.com/v1_1/${config.cloudinary.cloudName}/auto/upload`, {
-      method: "POST",
-      body: form,
-    });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json?.error?.message ?? "Cloudinary upload failed");
-    return toRef(json, opts.filename);
-  }
-
-  // Local demo storage — keeps the same reference shape so nothing downstream changes.
-  const ext = (opts.filename.split(".").pop() || (resourceType === "video" ? "mp4" : "jpg")).toLowerCase();
-  await fs.mkdir(UPLOAD_DIR, { recursive: true });
-  await fs.writeFile(path.join(UPLOAD_DIR, `${opts.id}.${ext}`), opts.buffer);
-  return {
-    cloudinaryPublicId: `${config.cloudinary.folder}/uploads/${opts.id}`,
-    secureUrl: `/api/media/${opts.id}.${ext}`,
-    resourceType,
-    format: ext,
-    width: 0,
-    height: 0,
-    bytes: opts.buffer.length,
-    createdAt: new Date().toISOString(),
-    storage: "local",
-    originalFilename: opts.filename,
-  };
+  const blob = new Blob([new Uint8Array(opts.buffer)], { type: opts.mimeType });
+  return toRef(await unsignedUpload(blob, opts.filename, folder), opts.filename);
 }
 
 const CLD_URL = /^https:\/\/res\.cloudinary\.com\/([^/]+)\/(image|video)\/upload\/(?:[^/]*,[^/]*\/|[a-z]_[^/]+\/)*(?:v\d+\/)?(.+?)(?:\.([a-z0-9]+))?$/i;
 
-/** Import an existing Cloudinary asset (or any public URL) without losing its original reference. */
-export async function importFromUrl(url: string, id: string): Promise<CloudinaryRef> {
-  const mode = cloudinaryUploadMode();
+/** Import an existing Cloudinary asset by URL (keeping its original reference), or ingest any public media URL. */
+export async function importFromUrl(url: string): Promise<CloudinaryRef> {
+  const mode = requireCloudinary();
   const m = url.match(CLD_URL);
 
   if (m) {
-    const [, , type, publicId, format] = m;
-    if (mode === "signed") {
+    const [, cloud, type, publicId, format] = m;
+    if (mode === "signed" && cloud === config.cloudinary.cloudName) {
       try {
-        const r = await sdk().api.resource(publicId, { resource_type: type });
-        return toRef(r);
+        return toRef(await sdk().api.resource(publicId, { resource_type: type, image_metadata: true }));
       } catch {
-        /* fall through to parsed reference */
+        /* fall back to the parsed delivery reference */
       }
     }
     return {
@@ -126,30 +121,12 @@ export async function importFromUrl(url: string, id: string): Promise<Cloudinary
     };
   }
 
+  const folder = `${config.cloudinary.folder}/imports`;
   if (mode === "signed") {
-    const r = await sdk().uploader.upload(url, {
-      folder: `${config.cloudinary.folder}/imports`,
-      resource_type: "auto",
-      tags: ["impactlens", "imported"],
-    });
-    return toRef(r);
+    return toRef(
+      await sdk().uploader.upload(url, { folder, resource_type: "auto", image_metadata: true, tags: ["impactlens", "imported"] }),
+      url.split("?")[0].split("/").pop(),
+    );
   }
-
-  const isVideo = /\.(mp4|mov|webm)(\?|$)/i.test(url);
-  return {
-    cloudinaryPublicId: `${config.cloudinary.folder}/imports/${id}`,
-    secureUrl: url,
-    resourceType: isVideo ? "video" : "image",
-    format: url.split("?")[0].split(".").pop()?.toLowerCase() ?? "",
-    width: 0,
-    height: 0,
-    createdAt: new Date().toISOString(),
-    storage: "local",
-    originalFilename: url.split("?")[0].split("/").pop(),
-  };
-}
-
-export async function readLocalUpload(file: string) {
-  const safe = path.basename(file);
-  return fs.readFile(path.join(UPLOAD_DIR, safe));
+  return toRef(await unsignedUpload(url, undefined, folder), url.split("?")[0].split("/").pop());
 }

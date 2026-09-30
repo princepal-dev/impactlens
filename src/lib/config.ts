@@ -1,9 +1,9 @@
 import "server-only";
+import path from "path";
 
 const env = (k: string) => (process.env[k] ?? "").trim();
 
 export const config = {
-  demoMode: env("DEMO_MODE").toLowerCase() === "true",
   cloudinary: {
     cloudName: env("NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME"),
     apiKey: env("CLOUDINARY_API_KEY"),
@@ -19,46 +19,66 @@ export const config = {
     apiKey: env("OPENAI_API_KEY"),
     model: env("OPENAI_MODEL") || "gpt-4o-mini",
   },
-  supabase: {
-    url: env("SUPABASE_URL") || env("NEXT_PUBLIC_SUPABASE_URL"),
-    key: env("SUPABASE_SERVICE_ROLE_KEY"),
-  },
+  databasePath: path.resolve(/*turbopackIgnore: true*/ process.cwd(), env("DATABASE_PATH") || ".data/impactlens.db"),
 };
 
-export const cloudinaryUploadMode = (): "signed" | "unsigned" | "local" => {
+export class NotConfiguredError extends Error {
+  status = 503;
+}
+
+export const cloudinaryUploadMode = (): "signed" | "unsigned" | null => {
   const c = config.cloudinary;
-  if (config.demoMode || !c.cloudName) return "local";
+  if (!c.cloudName) return null;
   if (c.apiKey && c.apiSecret) return "signed";
   if (c.uploadPreset) return "unsigned";
-  return "local";
+  return null;
 };
 
-export const aiProvider = (): "gemini" | "openai" | "demo" => {
-  if (config.demoMode) return "demo";
+export const aiProvider = (): "gemini" | "openai" | null => {
   if (config.gemini.apiKey) return "gemini";
   if (config.openai.apiKey) return "openai";
-  return "demo";
+  return null;
 };
 
 export const aiEngineLabel = () => {
   const p = aiProvider();
   if (p === "gemini") return `Gemini · ${config.gemini.model}`;
   if (p === "openai") return `OpenAI · ${config.openai.model}`;
-  return "Demo engine (deterministic)";
+  return "Not configured";
 };
 
-export const dataBackend = (): "supabase" | "local" =>
-  config.supabase.url && config.supabase.key ? "supabase" : "local";
-
-export function integrationStatus() {
+export function setupStatus() {
+  const cloudinary = cloudinaryUploadMode();
+  const ai = aiProvider();
+  const missing: string[] = [];
+  if (!cloudinary) {
+    if (!config.cloudinary.cloudName) missing.push("NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME");
+    missing.push("CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET");
+  }
+  if (!ai) missing.push("GEMINI_API_KEY");
   return {
-    demoMode: config.demoMode,
-    cloudinary: {
-      mode: cloudinaryUploadMode(),
-      cloudName: config.cloudinary.cloudName || null,
-      folder: config.cloudinary.folder,
-    },
-    ai: { provider: aiProvider(), label: aiEngineLabel() },
-    data: { backend: dataBackend() },
+    ready: Boolean(cloudinary && ai),
+    missing,
+    cloudinary: { mode: cloudinary, cloudName: config.cloudinary.cloudName || null, folder: config.cloudinary.folder },
+    ai: { provider: ai, label: aiEngineLabel() },
+    database: { path: path.relative(/*turbopackIgnore: true*/ process.cwd(), config.databasePath) },
   };
+}
+
+export type SetupStatus = ReturnType<typeof setupStatus>;
+
+export function requireCloudinary() {
+  const mode = cloudinaryUploadMode();
+  if (!mode) {
+    throw new NotConfiguredError(
+      "Cloudinary is not configured. Set NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET in .env.local.",
+    );
+  }
+  return mode;
+}
+
+export function requireAI() {
+  const provider = aiProvider();
+  if (!provider) throw new NotConfiguredError("AI is not configured. Set GEMINI_API_KEY in .env.local.");
+  return provider;
 }

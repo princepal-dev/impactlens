@@ -2,7 +2,7 @@ import "server-only";
 import { generateJSON } from "./ai";
 import { aiEngineLabel, aiProvider } from "./config";
 import { metadataCompare, pickPair } from "./compare";
-import { DEFAULT_PAIRS } from "./seed";
+import { DEFAULT_PAIRS } from "./samples";
 import { getProject, projectAssets, saveReport, addActivity } from "./store";
 import type { MediaAsset, ReportContent } from "./types";
 
@@ -24,7 +24,7 @@ export async function buildReport(opts: { projectId: string; from: string; to: s
 
   const all = await projectAssets(project.id);
   const assets = all
-    .filter((a) => a.status !== "analyzing" && (!a.date || (a.date >= opts.from && a.date <= opts.to)))
+    .filter((a) => a.status === "indexed" && (!a.date || (a.date >= opts.from && a.date <= opts.to)))
     .sort((a, b) => a.date.localeCompare(b.date));
   if (!assets.length) throw new Error("No evidence found for this project and period");
 
@@ -80,11 +80,11 @@ export async function buildReport(opts: { projectId: string; from: string; to: s
     "Impact outcomes (beneficiaries, volumes, energy output) are not measurable from imagery and should be verified with field records.",
     ...(assets.some((a) => a.confidence < 0.86) ? [`${assets.filter((a) => a.confidence < 0.86).length} assets have AI confidence below 86% and should be manually reviewed.`] : []),
     ...(assets.some((a) => a.peopleCount == null) ? ["People counts are only recorded where reasonably visible."] : []),
-    "Geo-location is based on uploader-supplied project metadata, not GPS EXIF data.",
+    "Site locations come from uploader-supplied metadata or visible context, not verified GPS coordinates.",
   ];
 
-  let engine = "Template narrative (demo engine)";
-  if (aiProvider() !== "demo") {
+  let engine = "Template narrative (AI unavailable)";
+  if (aiProvider()) {
     try {
       const facts = assets.map((a) => `${a.date} | ${a.location} | ${a.stage} | ${a.title} | ${a.description}`).join("\n");
       const ai = await generateJSON<{ summary: string; observations: string[]; patterns: string[]; potentialImpact: string[] }>({

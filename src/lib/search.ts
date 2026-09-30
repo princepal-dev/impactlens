@@ -1,17 +1,25 @@
 import "server-only";
 import { generateJSON } from "./ai";
 import { aiEngineLabel, aiProvider } from "./config";
-import { PROJECTS } from "./seed";
-import { listAssets } from "./store";
-import type { MediaAsset, SearchInterpretation, SearchResponse, SearchResult, Stage } from "./types";
+import { listAssets, listProjects } from "./store";
+import type { MediaAsset, Project, SearchInterpretation, SearchResponse, SearchResult, Stage } from "./types";
 
 const MONTHS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
 
-const LOCATIONS: Record<string, string> = {
-  rajasthan: "Rajasthan", jodhpur: "Jodhpur", barmer: "Barmer", phalodi: "Phalodi", osian: "Osian", jaisalmer: "Jaisalmer",
-  delhi: "Delhi", "new delhi": "New Delhi", dwarka: "Dwarka", saket: "Saket", bhalswa: "Bhalswa", yamuna: "Yamuna",
-  maharashtra: "Maharashtra", pune: "Pune", satara: "Satara", baramati: "Baramati", nashik: "Nashik",
-};
+/** Place names the parser can recognise, learned from indexed evidence and project regions. */
+function locationDictionary(assets: MediaAsset[], projects: Project[]) {
+  const dict: Record<string, string> = {};
+  const add = (place: string) => {
+    const clean = place.trim();
+    if (clean.length < 3 || /^(unknown|india)$/i.test(clean)) return;
+    dict[clean.toLowerCase()] = clean;
+  };
+  for (const a of assets) a.location.split(",").forEach(add);
+  for (const p of projects) [...p.location.split(","), ...p.region.split(",")].forEach(add);
+  return dict;
+}
+
+const today = () => new Date().toISOString().slice(0, 10);
 
 const CATEGORY_RULES: [RegExp, string][] = [
   [/\b(water|sanitation|wash|borewell|hand ?pump|tank|pipeline|drinking|rainwater|check ?dam)\b/i, "Water & Sanitation"],
@@ -56,35 +64,38 @@ const STOP = new Set(
 );
 
 function parseDates(q: string) {
+  const year = today().slice(0, 4);
   const out: { dateAfter?: string; dateBefore?: string } = {};
   const m = (re: RegExp) => q.match(re);
   const monthIdx = (s: string) => MONTHS.findIndex((x) => x.startsWith(s.toLowerCase().slice(0, 3)));
   const after = m(/\b(?:after|since|from)\s+([a-z]+)\s*(\d{4})?/i);
   if (after && monthIdx(after[1]) >= 0) {
-    out.dateAfter = `${after[2] ?? "2026"}-${String(monthIdx(after[1]) + 1).padStart(2, "0")}-01`;
+    out.dateAfter = `${after[2] ?? year}-${String(monthIdx(after[1]) + 1).padStart(2, "0")}-01`;
   }
   const before = m(/\b(?:before|until|till|prior to)\s+([a-z]+)\s*(\d{4})?/i);
   if (before && monthIdx(before[1]) >= 0) {
-    out.dateBefore = `${before[2] ?? "2026"}-${String(monthIdx(before[1]) + 1).padStart(2, "0")}-01`;
+    out.dateBefore = `${before[2] ?? year}-${String(monthIdx(before[1]) + 1).padStart(2, "0")}-01`;
   }
-  const year = m(/\bin\s+(20\d{2})\b/i);
-  if (year && !out.dateAfter && !out.dateBefore) {
-    out.dateAfter = `${year[1]}-01-01`;
-    out.dateBefore = `${year[1]}-12-31`;
+  const inYear = m(/\bin\s+(20\d{2})\b/i);
+  if (inYear && !out.dateAfter && !out.dateBefore) {
+    out.dateAfter = `${inYear[1]}-01-01`;
+    out.dateBefore = `${inYear[1]}-12-31`;
   }
   return out;
 }
 
-export function ruleInterpret(query: string): SearchInterpretation {
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+export function ruleInterpret(query: string, locations: Record<string, string>, projects: Project[]): SearchInterpretation {
   const q = query.toLowerCase();
   const it: SearchInterpretation = { keywords: [] };
 
-  const locKey = Object.keys(LOCATIONS)
+  const locKey = Object.keys(locations)
     .sort((a, b) => b.length - a.length)
-    .find((k) => new RegExp(`\\b${k}\\b`).test(q));
-  if (locKey) it.location = LOCATIONS[locKey];
+    .find((k) => new RegExp(`\\b${escapeRe(k)}\\b`).test(q));
+  if (locKey) it.location = locations[locKey];
 
-  for (const p of PROJECTS) if (q.includes(p.name.toLowerCase())) it.project = p.name;
+  for (const p of projects) if (q.includes(p.name.toLowerCase())) it.project = p.name;
   for (const [re, cat] of CATEGORY_RULES) if (re.test(q)) { it.category = cat; break; }
 
   if (/\b(completed|finished|complete|operational|done)\b/.test(q)) it.stage = "completed";
@@ -101,7 +112,7 @@ export function ruleInterpret(query: string): SearchInterpretation {
   else if (/waste|clean/.test(q)) it.activity = "Waste management";
   else if (/school/.test(q)) it.activity = "School programmes";
 
-  const locWords = new Set(Object.keys(LOCATIONS).flatMap((k) => k.split(" ")));
+  const locWords = new Set(Object.keys(locations).flatMap((k) => k.split(" ")));
   it.keywords = [
     ...new Set(
       q
@@ -114,8 +125,8 @@ export function ruleInterpret(query: string): SearchInterpretation {
   return it;
 }
 
-async function aiInterpret(query: string): Promise<SearchInterpretation | null> {
-  if (aiProvider() === "demo") return null;
+async function aiInterpret(query: string, projects: Project[]): Promise<SearchInterpretation | null> {
+  if (!aiProvider()) return null;
   try {
     const raw = await generateJSON<Partial<SearchInterpretation>>({
       system:
@@ -124,10 +135,10 @@ async function aiInterpret(query: string): Promise<SearchInterpretation | null> 
 
 Query: "${query}"
 
-Known projects: ${PROJECTS.map((p) => `${p.name} (${p.category}, ${p.region})`).join("; ")}
+Known projects: ${projects.map((p) => `${p.name} (${p.category}, ${p.region})`).join("; ")}
 Categories: "Water & Sanitation" | "Environment" | "Renewable Energy"
 Stages: "baseline" | "implementation" | "completed" | "monitoring"
-Today is 2026-09-30.
+Today is ${today()}.
 
 Return:
 { "category"?: string, "location"?: string (state or city only), "project"?: string, "activity"?: string (short human label), "stage"?: string, "dateAfter"?: "YYYY-MM-DD", "dateBefore"?: "YYYY-MM-DD", "beforeAfter"?: boolean, "keywords": string[] (2-6 concrete visual concepts, singular, e.g. "water tank", "sapling") }
@@ -190,13 +201,14 @@ const stageOk = (asset: Stage, wanted?: Stage) =>
 
 export async function searchEvidence(query: string): Promise<SearchResponse> {
   const t0 = Date.now();
-  const rules = ruleInterpret(query);
-  const ai = await aiInterpret(query);
+  const projects = listProjects();
+  const assets = (await listAssets()).filter((a) => a.status === "indexed");
+  const rules = ruleInterpret(query, locationDictionary(assets, projects), projects);
+  const ai = await aiInterpret(query, projects);
   const it: SearchInterpretation = ai
     ? { ...rules, ...Object.fromEntries(Object.entries(ai).filter(([, v]) => v !== undefined && v !== null && v !== "")), keywords: [...new Set([...(ai.keywords ?? []), ...rules.keywords])] }
     : rules;
 
-  const assets = (await listAssets()).filter((a) => a.status !== "analyzing");
   const groups = it.keywords.map((k) => {
     const base = k.toLowerCase();
     const key = Object.keys(CONCEPTS).find((c) => base === c || base.startsWith(c) || base.split(" ").includes(c));
@@ -207,7 +219,7 @@ export async function searchEvidence(query: string): Promise<SearchResponse> {
     const reasons: string[] = [];
     if (it.project && a.project !== it.project && relax < 3) return null;
     if (it.location && relax < 2) {
-      const loc = `${a.location} ${PROJECTS.find((p) => p.id === a.projectId)?.region ?? ""}`.toLowerCase();
+      const loc = `${a.location} ${projects.find((p) => p.id === a.projectId)?.region ?? ""}`.toLowerCase();
       if (!loc.includes(it.location.toLowerCase())) return null;
       reasons.push("location");
     }

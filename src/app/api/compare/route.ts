@@ -1,3 +1,4 @@
+import { errorResponse } from "@/lib/api";
 import { compareAssets } from "@/lib/compare";
 import { getAsset } from "@/lib/store";
 
@@ -8,9 +9,8 @@ export async function POST(req: Request) {
   const [before, after] = await Promise.all([getAsset(beforeId), getAsset(afterId)]);
   if (!before || !after) return Response.json({ error: "Asset not found" }, { status: 404 });
   try {
-    return Response.json(await compareAssets(before, after, new URL(req.url).origin));
+    return Response.json(await compareAssets(before, after));
   } catch (e) {
-    console.error("[compare]", e);
-    return Response.json({ error: "Comparison failed" }, { status: 500 });
+    return errorResponse("compare", e, "Comparison failed");
   }
 }

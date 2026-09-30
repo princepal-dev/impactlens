@@ -1,6 +1,6 @@
 import "server-only";
 import { generateJSON, loadImage } from "./ai";
-import { aiEngineLabel, aiProvider } from "./config";
+import { aiEngineLabel } from "./config";
 import { analysisFrameUrl } from "./media-url";
 import type { ComparisonResult, MediaAsset } from "./types";
 
@@ -53,20 +53,14 @@ export function metadataCompare(before: MediaAsset, after: MediaAsset): Comparis
     impactAreas,
     confidence,
     caveats: CAVEATS,
-    engine: "Metadata comparison (demo engine)",
+    engine: "Metadata comparison",
   };
 }
 
-export async function compareAssets(before: MediaAsset, after: MediaAsset, origin: string): Promise<ComparisonResult> {
+export async function compareAssets(before: MediaAsset, after: MediaAsset): Promise<ComparisonResult> {
   const fb = metadataCompare(before, after);
-  const bUrl = analysisFrameUrl(before);
-  const aUrl = analysisFrameUrl(after);
-  if (aiProvider() === "demo" || !bUrl || !aUrl) {
-    await new Promise((r) => setTimeout(r, 700));
-    return fb;
-  }
   try {
-    const [bi, ai] = await Promise.all([loadImage(bUrl, origin), loadImage(aUrl, origin)]);
+    const [bi, ai] = await Promise.all([loadImage(analysisFrameUrl(before)), loadImage(analysisFrameUrl(after))]);
     const raw = await generateJSON<Partial<ComparisonResult>>({
       system:
         "You compare two field photos from the same sustainability project: image 1 is BEFORE, image 2 is AFTER. Describe only visible changes. Never state numbers, measurements, beneficiaries or percentages that are not visible. Use cautious wording: 'observed', 'visible evidence', 'appears', 'potential impact'. Return JSON only.",
@@ -88,7 +82,7 @@ Return: { "summary": string (1-2 sentences), "observations": string[] (3-5 short
     };
   } catch (e) {
     console.warn("[compare] AI comparison failed, using metadata comparison", e);
-    return fb;
+    return { ...fb, engine: "Metadata comparison (AI vision unavailable)" };
   }
 }
 
@@ -99,7 +93,7 @@ export function pickPair(assets: MediaAsset[], preferred?: [string, string]) {
     const a = assets.find((x) => x.id === preferred[1]);
     if (b && a) return [b, a] as const;
   }
-  const images = assets.filter((a) => a.resourceType === "image" || a.storage === "cloudinary");
+  const images = assets.filter((a) => a.status === "indexed");
   const sorted = [...images].sort((x, y) => x.date.localeCompare(y.date));
   const before = sorted.find((a) => a.stage === "baseline" && a.beforeAfterCandidate) ?? sorted[0];
   const after =
