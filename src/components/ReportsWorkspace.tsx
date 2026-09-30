@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertTriangle, Download, FileText, Link as LinkIcon, Loader2, RotateCcw, Trash2 } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -9,9 +10,12 @@ import type { MediaAsset, Project, ReportContent } from "@/lib/types";
 import { cn, timeAgo } from "@/lib/utils";
 import { EmptyState } from "./EmptyState";
 import { ProcessingStatus, type StepState } from "./ProcessingStatus";
-import { ReportPreview } from "./ReportPreview";
 import { Button } from "./ui/button";
 import { Panel, Select } from "./ui/panel";
+
+const ReportPreview = dynamic(() => import("./ReportPreview").then((m) => m.ReportPreview), {
+  loading: () => <div className="skeleton h-[640px] rounded-2xl" />,
+});
 
 const STEPS = ["Analyzing project evidence…", "Grouping media…", "Comparing before/after evidence…", "Extracting impact themes…", "Building report…"];
 /** Every month from the earliest evidence to the current month (inclusive). */

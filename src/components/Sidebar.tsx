@@ -8,11 +8,9 @@ import {
   FilePlus2,
   LayoutDashboard,
   type LucideIcon,
-  Mic,
   Plus,
   Settings2,
 } from "lucide-react";
-import { motion } from "motion/react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -20,7 +18,7 @@ import { thumbUrl } from "@/lib/media-url";
 import type { WorkspaceSummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
-import { openVoiceAgent } from "./VoiceAgent";
+import { openVoiceAgent } from "@/lib/voice-events";
 
 export { Logo } from "./Logo";
 
@@ -29,7 +27,7 @@ type NavItem = { label: string; icon: LucideIcon; href?: string; onClick?: () =>
 const NAV: NavItem[] = [
   { label: "Dashboard", icon: LayoutDashboard, href: "/", active: (p) => p === "/" },
   { label: "Upload media", icon: CloudUpload, href: "/media?upload=1" },
-  { label: "Sample library", icon: Database, href: "/settings#samples" },
+  { label: "Sample library", icon: Database, href: "/samples", active: (p) => p.startsWith("/samples") },
   { label: "Settings", icon: Settings2, href: "/settings", active: (p) => p.startsWith("/settings") },
 ];
 
@@ -65,20 +63,16 @@ export function Sidebar({ initial }: { initial: WorkspaceSummary }) {
       <button
         type="button"
         onClick={() => openVoiceAgent(true)}
-        className="hero-panel group mt-3 rounded-2xl p-4 text-left ring-1 ring-inset ring-lime/25 transition-[transform,box-shadow] duration-300 ease-[var(--ease-out-soft)] hover:-translate-y-0.5 hover:ring-lime/50"
+        className="group mt-3 flex items-center gap-3 rounded-2xl border border-line bg-tint/[0.03] p-2 pr-3.5 text-left transition-colors duration-200 hover:border-lime/60 hover:bg-lime/10"
       >
-        <div className="flex items-center justify-between">
-          <span className="relative grid size-10 place-items-center rounded-full bg-lime text-lime-foreground">
-            <span className="launcher-pulse absolute inset-0 rounded-full bg-lime" />
-            <AudioLines className="relative size-5" />
-          </span>
-          <kbd className="rounded-full border border-white/15 px-2 py-0.5 font-mono text-[10.5px] text-white/60">⌘J</kbd>
-        </div>
-        <div className="mt-3 text-[15px] font-semibold tracking-tight">Ask ImpactLens</div>
-        <div className="mt-0.5 text-[12px] leading-snug text-white/60">Ask about your evidence by voice or text.</div>
-        <span className="mt-3 inline-flex h-8 items-center gap-1.5 rounded-full bg-white/10 px-3 text-[12px] font-medium text-white transition-colors duration-200 group-hover:bg-lime group-hover:text-lime-foreground">
-          <Mic className="size-3.5" /> Start talking
+        <span className="grid size-9 shrink-0 place-items-center rounded-full bg-lime text-lime-foreground">
+          <AudioLines className="size-4" />
         </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[13.5px] font-semibold tracking-tight">Ask ImpactLens</span>
+          <span className="block truncate text-[11.5px] text-subtle">Voice or text questions</span>
+        </span>
+        <kbd className="font-mono text-[11px] text-subtle">⌘J</kbd>
       </button>
 
       <div className="mx-2 my-4 h-px bg-line" />
@@ -143,7 +137,7 @@ function ProjectAvatar({ name, cover }: { name: string; cover: WorkspaceSummary[
   if (usable) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={thumbUrl(cover, 96, 96)} alt="" className="size-9 shrink-0 rounded-full bg-media object-cover" loading="lazy" />
+      <img src={thumbUrl(cover, 96, 96)} alt="" className="size-9 shrink-0 rounded-full bg-media object-cover" loading="lazy" decoding="async" />
     );
   }
   const initials = name
@@ -159,20 +153,13 @@ function SideLink({ item, active }: { item: NavItem; active: boolean }) {
   const { label, icon: Icon, href, onClick, kbd } = item;
   const className = cn(
     "relative flex h-11 w-full items-center gap-3 rounded-full px-4 text-[13.5px] font-medium transition-colors duration-200",
-    active ? "text-ink-foreground" : "text-muted hover:bg-tint/[0.05] hover:text-foreground",
+    active ? "bg-ink text-ink-foreground" : "text-muted hover:bg-tint/[0.05] hover:text-foreground",
   );
   const body = (
     <>
-      {active && (
-        <motion.span
-          layoutId="sidebar-active"
-          transition={{ type: "spring", stiffness: 450, damping: 38 }}
-          className="absolute inset-0 rounded-full bg-ink"
-        />
-      )}
-      <Icon className="relative size-[18px] shrink-0" />
-      <span className="relative flex-1 truncate text-left">{label}</span>
-      {kbd && <kbd className="relative font-mono text-[11px] text-subtle">{kbd}</kbd>}
+      <Icon className="size-[18px] shrink-0" />
+      <span className="flex-1 truncate text-left">{label}</span>
+      {kbd && <kbd className="font-mono text-[11px] text-subtle">{kbd}</kbd>}
     </>
   );
   if (href) {

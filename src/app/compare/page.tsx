@@ -35,7 +35,7 @@ export default async function ComparePage({ searchParams }: PageProps<"/compare"
                 <Link href="/media?upload=1"><Upload /> Upload media</Link>
               </Button>
               <Button variant="ghost" asChild>
-                <Link href="/settings#samples"><Images /> Load sample photos</Link>
+                <Link href="/samples"><Images /> Load sample photos</Link>
               </Button>
             </>
           }

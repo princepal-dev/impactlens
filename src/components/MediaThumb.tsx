@@ -57,6 +57,7 @@ export function MediaThumb({
       src={src}
       alt={asset.title ?? "Field media"}
       loading="lazy"
+      decoding="async"
       onError={() => setFailed(true)}
       className={cn("bg-tint/[0.03] object-cover", className)}
     />

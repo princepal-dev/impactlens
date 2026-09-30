@@ -42,7 +42,7 @@ export default async function ReportsPage() {
             <>
               <NewProjectDialog />
               <Button variant="ghost" asChild>
-                <Link href="/settings#samples"><Images /> Load sample evidence</Link>
+                <Link href="/samples"><Images /> Load sample evidence</Link>
               </Button>
             </>
           }

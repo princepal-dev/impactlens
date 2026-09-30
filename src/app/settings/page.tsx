@@ -1,7 +1,6 @@
 import { Brain, Cloud, Database } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { ProjectManager } from "@/components/ProjectManager";
-import { SampleImporter } from "@/components/SampleImporter";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Panel, PanelHeader } from "@/components/ui/panel";
 import { aiEngineLabel, PROVIDER_NAMES, serviceStatus } from "@/lib/config";
@@ -35,7 +34,7 @@ export default async function SettingsPage() {
 
   return (
     <div className="page-in">
-      <PageHeader title="Settings" subtitle="Projects, connected services, appearance and workspace data." />
+      <PageHeader title="Settings" subtitle="Projects, connected services and appearance." />
 
       <div className="space-y-6">
         <div id="projects" className="scroll-mt-24">
@@ -75,8 +74,6 @@ export default async function SettingsPage() {
             <ThemeToggle showLabels className="w-full sm:w-auto" />
           </div>
         </Panel>
-
-        <SampleImporter />
       </div>
     </div>
   );

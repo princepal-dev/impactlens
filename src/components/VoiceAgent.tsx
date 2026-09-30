@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, ArrowUpRight, AudioLines, Loader2, Mic, MicOff, Send, Square, Volume2, VolumeX, X } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Loader2, Mic, MicOff, Send, Square, Volume2, VolumeX, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -11,9 +11,8 @@ import { requestJSON } from "@/lib/http";
 import { speak, stopSpeaking, useSpeechRecognition } from "@/lib/speech";
 import type { MediaAsset } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { VOICE_EVENT } from "@/lib/voice-events";
 import { MediaThumb } from "./MediaThumb";
-
-export const VOICE_EVENT = "impactlens:voice";
 
 type Mode = "idle" | "listening" | "thinking" | "speaking";
 type Turn =
@@ -26,10 +25,6 @@ const SUGGESTIONS = [
   "Which project has the most evidence?",
   "Open the impact reports",
 ];
-
-export function openVoiceAgent(listen = true) {
-  window.dispatchEvent(new CustomEvent(VOICE_EVENT, { detail: { listen } }));
-}
 
 export function VoiceOrb({ mode, size = 56, className }: { mode: Mode; size?: number; className?: string }) {
   const Icon = mode === "thinking" ? Loader2 : mode === "speaking" ? Volume2 : Mic;
@@ -68,9 +63,9 @@ function AssetStrip({ assets }: { assets: MediaAsset[] }) {
   );
 }
 
-export function VoiceAgent() {
+export function VoiceAgent({ openOnMount }: { openOnMount?: { listen: boolean } }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(!!openOnMount);
   const [mode, setMode] = useState<Mode>("idle");
   const [turns, setTurns] = useState<Turn[]>([]);
   const [text, setText] = useState("");
@@ -139,6 +134,14 @@ export function VoiceAgent() {
     };
   }, [listen, speech.supported]);
 
+  const listenOnMount = useRef(openOnMount?.listen && speech.supported);
+  useEffect(() => {
+    if (!listenOnMount.current) return;
+    listenOnMount.current = false;
+    const t = setTimeout(listen, 250);
+    return () => clearTimeout(t);
+  }, [listen]);
+
   useEffect(() => {
     if (!open) {
       stopSpeaking();
@@ -156,32 +159,6 @@ export function VoiceAgent() {
 
   return (
     <div className="no-print">
-      <AnimatePresence>
-        {!open && (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 12 }}
-            className="fixed bottom-6 right-6 z-50"
-          >
-            <button
-              onClick={() => openVoiceAgent(true)}
-              aria-label="Ask ImpactLens by voice"
-              className="group relative flex h-14 items-center gap-3 rounded-full bg-lime pl-2 pr-2 text-lime-foreground shadow-[0_14px_40px_-10px_rgba(170,210,40,0.75)] ring-1 ring-black/10 transition-[transform,box-shadow] duration-300 ease-[var(--ease-out-soft)] hover:-translate-y-1 hover:shadow-[0_20px_50px_-10px_rgba(170,210,40,0.9)] active:scale-95 sm:pr-5"
-            >
-              <span className="launcher-pulse pointer-events-none absolute inset-0 -z-10 rounded-full bg-lime" />
-              <span className="grid size-10 place-items-center rounded-full bg-[#10120a] text-lime transition-transform duration-300 group-hover:scale-105">
-                <AudioLines className="size-5" />
-              </span>
-              <span className="flex flex-col items-start leading-tight max-sm:hidden">
-                <span className="text-[14.5px] font-semibold tracking-tight">Ask ImpactLens</span>
-                <span className="text-[11.5px] font-medium opacity-65">Voice &amp; chat assistant · ⌘J</span>
-              </span>
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       <AnimatePresence>
         {open && (
           <motion.section

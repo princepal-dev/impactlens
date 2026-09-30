@@ -47,6 +47,7 @@ function GalleryItem({ asset: a }: { asset: MediaAsset }) {
           src={naturalUrl(a)}
           alt={a.title}
           loading="lazy"
+          decoding="async"
           onError={() => setFailed(true)}
           className="block h-auto w-full transition-transform duration-700 ease-[var(--ease-out-soft)] group-hover:scale-[1.04]"
         />

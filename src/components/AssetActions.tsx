@@ -1,14 +1,18 @@
 "use client";
 
 import { Loader2, Pencil, RotateCcw, Trash2 } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import { requestJSON } from "@/lib/http";
 import type { MediaAsset, Project } from "@/lib/types";
-import { ManualTagForm } from "./ManualTagForm";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent } from "./ui/dialog";
+
+const ManualTagForm = dynamic(() => import("./ManualTagForm").then((m) => m.ManualTagForm), {
+  loading: () => <div className="skeleton h-72 rounded-xl" />,
+});
 
 export function AssetActions({ asset, projects }: { asset: MediaAsset; projects: Project[] }) {
   const router = useRouter();

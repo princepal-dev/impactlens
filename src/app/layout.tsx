@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { Sidebar } from "@/components/Sidebar";
 import { ThemedToaster } from "@/components/ThemeToggle";
-import { VoiceAgent } from "@/components/VoiceAgent";
+import { VoiceAgentLoader } from "@/components/VoiceAgentLoader";
 import { workspaceSummary } from "@/lib/store";
 import { THEME_INIT_SCRIPT } from "@/lib/theme-script";
 import type { WorkspaceSummary } from "@/lib/types";
@@ -42,7 +42,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           </Suspense>
           <main className="print-root min-w-0 flex-1">{children}</main>
         </div>
-        <VoiceAgent />
+        <VoiceAgentLoader />
         <ThemedToaster />
       </body>
     </html>

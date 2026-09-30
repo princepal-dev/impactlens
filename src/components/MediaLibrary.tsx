@@ -2,7 +2,7 @@
 
 import { CalendarRange, ImageOff, LayoutDashboard, LayoutGrid, type LucideIcon, Rows3, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { MediaView } from "@/lib/media-views";
 import type { MediaAsset, Project } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -12,7 +12,7 @@ import { UploadDropzone } from "./UploadDropzone";
 import { Button } from "./ui/button";
 import { Input } from "./ui/panel";
 
-const PAGE_SIZE = 48;
+const PAGE_SIZE = 24;
 const STAGES = [
   ["all", "All"],
   ["baseline", "Baseline"],
@@ -81,6 +81,19 @@ export function MediaLibrary({
   };
 
   const shown = filtered.slice(0, visible);
+  const hasMore = filtered.length > visible;
+  const sentinel = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = sentinel.current;
+    if (!el || !hasMore) return;
+    const io = new IntersectionObserver(
+      ([entry]) => entry.isIntersecting && setPage({ key: filterKey, n: visible + PAGE_SIZE }),
+      { rootMargin: "800px 0px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [hasMore, filterKey, visible]);
 
   return (
     <div className="space-y-8">
@@ -171,8 +184,8 @@ export function MediaLibrary({
             )}
           </div>
         ) : null}
-        {filtered.length > visible ? (
-          <div className="mt-6 flex justify-center">
+        {hasMore ? (
+          <div ref={sentinel} className="mt-6 flex justify-center">
             <Button size="sm" variant="secondary" onClick={() => setPage({ key: filterKey, n: visible + PAGE_SIZE })}>
               Load more <span className="tabular-nums text-subtle">{filtered.length - visible}</span>
             </Button>
