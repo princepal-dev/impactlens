@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { ThemeCycleButton, ThemeToggle } from "./ThemeToggle";
+import { openVoiceAgent, VoiceOrb } from "./VoiceAgent";
 
 const NAV = [
   { href: "/", label: "Overview", icon: LayoutGrid },
@@ -17,7 +18,7 @@ const NAV = [
 export function Logo({ className }: { className?: string }) {
   return (
     <div className={cn("flex items-center gap-2.5", className)}>
-      <div className="relative grid size-7 place-items-center rounded-[5px] border border-accent/40 bg-accent/10">
+      <div className="relative grid size-7 place-items-center rounded-md border border-accent/40 bg-gradient-to-b from-accent/25 to-accent/5 shadow-[0_0_14px_-2px_color-mix(in_srgb,var(--accent)_50%,transparent)]">
         <div className="size-2.5 rotate-45 border border-accent" />
         <div className="absolute size-1 rounded-full bg-accent" />
       </div>
@@ -45,11 +46,13 @@ export function Sidebar({ online }: { online: boolean }) {
             key={href}
             href={href}
             className={cn(
-              "group relative flex items-center gap-3 rounded-md px-2.5 py-2 text-[13.5px] transition-colors",
-              isActive(href) ? "bg-tint/[0.06] text-foreground" : "text-muted hover:bg-tint/[0.03] hover:text-foreground",
+              "group relative flex items-center gap-3 rounded-lg px-2.5 py-2 text-[13.5px] transition-colors",
+              isActive(href)
+                ? "bg-gradient-to-r from-accent/[0.14] to-accent/[0.02] font-medium text-foreground"
+                : "text-muted hover:bg-tint/[0.04] hover:text-foreground",
             )}
           >
-            {isActive(href) && <span className="absolute -left-3 top-1/2 h-4 w-[2px] -translate-y-1/2 rounded-r bg-accent" />}
+            {isActive(href) && <span className="absolute -left-3 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r bg-accent shadow-[0_0_10px_var(--accent)]" />}
             <Icon className={cn("size-4", isActive(href) ? "text-accent" : "text-subtle group-hover:text-muted")} />
             {label}
           </Link>
@@ -69,7 +72,21 @@ export function Sidebar({ online }: { online: boolean }) {
         </Link>
       )}
 
-      <div className="mt-auto border-t border-line p-3">
+      <button
+        onClick={() => openVoiceAgent(true)}
+        className="group relative mx-3 mt-auto overflow-hidden rounded-xl border border-line bg-panel p-3 text-left shadow-[var(--panel-shadow)] transition-colors hover:border-accent/40"
+      >
+        <div aria-hidden className="pointer-events-none absolute -right-8 -top-10 size-28 rounded-full bg-accent/15 blur-2xl transition-opacity group-hover:opacity-100 md:opacity-60" />
+        <div className="relative flex items-center gap-3">
+          <VoiceOrb mode="idle" size={30} />
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[13px] font-medium">Ask ImpactLens</div>
+            <div className="truncate text-[11.5px] text-subtle">Talk to your evidence · ⌘J</div>
+          </div>
+        </div>
+      </button>
+
+      <div className="mt-3 border-t border-line p-3">
         <div className="mb-2 flex items-center justify-between gap-2 px-2.5 py-1">
           <span className="text-[12px] text-subtle">Theme</span>
           <ThemeToggle />

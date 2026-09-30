@@ -1,16 +1,32 @@
-import { ArrowLeft, ChevronRight, ExternalLink, FileText, Search, SplitSquareHorizontal } from "lucide-react";
+import {
+  ArrowLeft,
+  CalendarDays,
+  ChevronRight,
+  Cloud,
+  Database,
+  ExternalLink,
+  FileText,
+  FolderOpen,
+  Image as ImageIcon,
+  MapPin,
+  Search,
+  Sparkles,
+  SplitSquareHorizontal,
+} from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Spotlight } from "@/components/aceternity/spotlight";
 import { AIAnalysisPanel } from "@/components/AIAnalysisPanel";
 import { AssetActions } from "@/components/AssetActions";
+import { ConfidenceRing } from "@/components/ConfidenceRing";
 import { CloudinaryLabel, MediaCard } from "@/components/MediaCard";
 import { ManualTagForm } from "@/components/ManualTagForm";
 import { MediaThumb } from "@/components/MediaThumb";
 import { SourceTrace } from "@/components/SourceTrace";
 import { Button } from "@/components/ui/button";
 import { Panel, PanelHeader } from "@/components/ui/panel";
-import { displayUrl } from "@/lib/media-url";
-import { fmtDate } from "@/lib/utils";
+import { displayUrl, thumbUrl } from "@/lib/media-url";
+import { cn, fmtDate } from "@/lib/utils";
 import { getAsset, getProject, listProjects, projectAssets } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -26,12 +42,46 @@ export default async function AssetPage({ params }: PageProps<"/media/[id]">) {
 
   return (
     <div className="page-in">
-      <div className="no-print mb-6 flex items-center gap-2 text-[13px] text-muted">
-        <Link href="/media" className="flex items-center gap-1.5 transition-colors hover:text-foreground"><ArrowLeft className="size-3.5" /> Media Library</Link>
-        {project && (<><ChevronRight className="size-3.5 text-subtle" /><Link href={`/media?project=${project.slug}`} className="hover:text-foreground">{project.name}</Link></>)}
-        <ChevronRight className="size-3.5 text-subtle" />
-        <span className="truncate text-foreground">{asset.title}</span>
-      </div>
+      <section className="no-print relative mb-6 overflow-hidden rounded-2xl border border-line-strong bg-[#06110f] text-white">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={thumbUrl(asset, 480, 240)} alt="" aria-hidden className="absolute inset-0 size-full scale-125 object-cover opacity-80 blur-3xl saturate-150" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#06110f] via-[#06110f]/80 to-[#06110f]/25" />
+        <Spotlight className="-left-10 -top-40 text-teal-300 md:-top-28 md:left-20" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-teal-300/40 to-transparent" />
+        <div className="relative z-10 flex flex-col gap-6 px-6 py-6 md:flex-row md:items-center md:justify-between md:px-8 md:py-7">
+          <div className="min-w-0">
+            <nav className="flex min-w-0 items-center gap-1.5 text-[12.5px] text-white/55">
+              <Link href="/media" className="flex shrink-0 items-center gap-1.5 transition-colors hover:text-white"><ArrowLeft className="size-3.5" /> Media Library</Link>
+              {project && (<><ChevronRight className="size-3.5 shrink-0 text-white/30" /><Link href={`/media?project=${project.slug}`} className="truncate hover:text-white">{project.name}</Link></>)}
+            </nav>
+            <h1 className="mt-3 bg-gradient-to-b from-white to-white/70 bg-clip-text text-[26px] font-semibold leading-tight tracking-tight text-transparent md:text-[32px]">
+              {asset.title}
+            </h1>
+            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[13px] text-white/65">
+              {asset.project && <span className="flex items-center gap-1.5"><FolderOpen className="size-3.5 text-teal-300/80" />{asset.project}</span>}
+              {asset.location && <span className="flex items-center gap-1.5"><MapPin className="size-3.5 text-teal-300/80" />{asset.location}</span>}
+              {asset.date && <span className="flex items-center gap-1.5"><CalendarDays className="size-3.5 text-teal-300/80" />{fmtDate(asset.date)}</span>}
+            </div>
+            <div className="mt-4 flex flex-wrap gap-1.5">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-teal-300/30 bg-teal-300/10 px-2.5 py-0.5 text-[12px] font-medium capitalize text-teal-100">
+                <span className="size-1.5 rounded-full bg-teal-300 shadow-[0_0_6px_#5eead4]" /> {asset.stage}
+              </span>
+              {asset.impactAreas.slice(0, 4).map((a) => (
+                <span key={a} className="rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-0.5 text-[12px] text-white/75">{a}</span>
+              ))}
+            </div>
+          </div>
+          {!needsTags && (
+            <div className="flex shrink-0 items-center gap-4 rounded-2xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur">
+              <ConfidenceRing value={asset.confidence} size={76} tone="light" />
+              <div className="max-w-[160px]">
+                <div className="text-[13px] font-medium text-white">AI confidence</div>
+                <div className="mt-0.5 truncate text-[12px] text-white/50" title={asset.analysisEngine}>{asset.analysisEngine || "Vision analysis"}</div>
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(400px,1fr)]">
         <div className="min-w-0 space-y-6">
@@ -56,12 +106,25 @@ export default async function AssetPage({ params }: PageProps<"/media/[id]">) {
           <Panel>
             <PanelHeader eyebrow="Traceability" title="Source asset & transformations" />
             <div className="p-5">
-              <div className="mb-5 grid grid-cols-2 gap-2 md:grid-cols-4">
-                {["AI insight", "Evidence record", "Cloudinary asset", "Original media"].map((s, i) => (
-                  <div key={s} className="relative rounded-md border border-line bg-tint/[0.02] px-3 py-2.5">
-                    <div className="text-[11px] font-semibold tabular-nums text-accent">0{i + 1}</div>
-                    <div className="mt-0.5 text-[12.5px]">{s}</div>
-                    {i < 3 && <ChevronRight className="absolute -right-3 top-1/2 z-10 hidden size-4 -translate-y-1/2 text-subtle md:block" />}
+              <div className="relative mb-6 grid grid-cols-2 gap-y-4 md:grid-cols-4">
+                <div aria-hidden className="absolute left-[12.5%] right-[12.5%] top-5 hidden h-px bg-gradient-to-r from-accent via-accent/50 to-accent/20 md:block" />
+                {([
+                  [Sparkles, "AI insight"],
+                  [Database, "Evidence record"],
+                  [Cloud, "Cloudinary asset"],
+                  [ImageIcon, "Original media"],
+                ] as const).map(([Icon, s], i) => (
+                  <div key={s} className="relative flex flex-col items-center text-center">
+                    <div
+                      className={cn(
+                        "grid size-10 place-items-center rounded-full border bg-surface",
+                        i === 0 ? "border-accent/50 text-accent shadow-[0_0_18px_color-mix(in_srgb,var(--accent)_40%,transparent)]" : "border-line-strong text-muted",
+                      )}
+                    >
+                      <Icon className="size-4" />
+                    </div>
+                    <div className="mt-2 text-[12.5px] font-medium">{s}</div>
+                    <div className="text-[11px] tabular-nums text-subtle">Step {i + 1}</div>
                   </div>
                 ))}
               </div>

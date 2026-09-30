@@ -76,7 +76,7 @@ export function SampleImporter({ compact = false }: { compact?: boolean }) {
   const pct = total ? Math.round((done / total) * 100) : 0;
 
   return (
-    <Panel id="samples" className={compact ? "p-5" : "p-6"}>
+    <Panel id="samples" className={compact ? "scroll-mt-6 p-5" : "scroll-mt-6 p-6"}>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="max-w-xl">
           <div className="label-mono">Sample evidence</div>

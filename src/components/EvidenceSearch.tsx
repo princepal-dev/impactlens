@@ -1,13 +1,15 @@
 "use client";
 
-import { AlertTriangle, ChevronDown, Cpu, SearchX, Sparkles } from "lucide-react";
+import { AlertTriangle, Brain, ChevronDown, Cpu, Link2, ScanSearch, SearchX, Sparkles } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState, useRef } from "react";
 import { requestJSON } from "@/lib/http";
 import type { SearchResponse } from "@/lib/types";
 import { cn, fmtDate } from "@/lib/utils";
+import { NumberTicker } from "./aceternity/number-ticker";
 import { EmptyState } from "./EmptyState";
 import { MediaCardSkeleton } from "./MediaCard";
+import { PageHero } from "./PageHero";
 import { SearchBar } from "./SearchBar";
 import { SearchResultCard } from "./SearchResultCard";
 import { Button } from "./ui/button";
@@ -76,25 +78,35 @@ export function EvidenceSearch() {
 
   return (
     <div>
-      <div className="mx-auto max-w-3xl">
-        <SearchBar value={q} onChange={setQ} onSubmit={run} loading={loading} />
-        <div className="mt-4 flex flex-wrap justify-center gap-1.5">
-          {SUGGESTIONS.map((s) => (
-            <button
-              key={s}
-              onClick={() => run(s)}
-              className={cn(
-                "rounded-md border px-2.5 py-1 text-[12.5px] transition-colors",
-                q === s ? "border-accent/40 bg-accent/10 text-accent" : "border-line text-muted hover:border-line-strong hover:text-foreground",
-              )}
-            >
-              {s}
-            </button>
-          ))}
+      <PageHero
+        center
+        icon={Sparkles}
+        eyebrow="AI evidence search"
+        title="Ask your evidence anything."
+        subtitle="Plain-language questions become structured filters over every photo's AI metadata — or tap the mic and just say it."
+      >
+        <div className="mx-auto max-w-3xl text-left">
+          <SearchBar value={q} onChange={setQ} onSubmit={run} loading={loading} />
+          <div className="mt-4 flex flex-wrap justify-center gap-1.5">
+            {SUGGESTIONS.map((s) => (
+              <button
+                key={s}
+                onClick={() => run(s)}
+                className={cn(
+                  "rounded-full border px-3 py-1 text-[12.5px] backdrop-blur transition-colors",
+                  q === s
+                    ? "border-teal-300/50 bg-teal-300/15 text-teal-100"
+                    : "border-white/10 bg-white/[0.04] text-white/65 hover:border-white/25 hover:text-white",
+                )}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      </PageHero>
 
-      <div className="mt-12">
+      <div>
         {loading && (
           <div>
             <div className="mb-6 flex items-center gap-2 text-[13px] text-accent">
@@ -118,29 +130,45 @@ export function EvidenceSearch() {
 
         {!loading && data && (
           <div className="page-in">
-            <Panel className="mb-6 overflow-hidden">
-              <div className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center">
-                <div className="flex shrink-0 items-center gap-2 lg:w-48">
-                  <Sparkles className="size-4 text-accent" />
-                  <span className="text-[13px] font-medium">AI interpretation</span>
+            <Panel className="relative mb-6 overflow-hidden">
+              <div aria-hidden className="pointer-events-none absolute -left-16 -top-20 size-56 rounded-full bg-accent/10 blur-3xl" />
+              <div className="relative flex flex-col gap-5 p-5 lg:flex-row lg:items-center">
+                <div className="flex shrink-0 items-center gap-3 lg:w-52">
+                  <div className="grid size-10 place-items-center rounded-xl border border-accent/30 bg-gradient-to-b from-accent/25 to-accent/5">
+                    <Sparkles className="size-[18px] text-accent" />
+                  </div>
+                  <div>
+                    <div className="text-[13.5px] font-semibold">AI understood</div>
+                    <div className="text-[12px] text-subtle">your question as</div>
+                  </div>
                 </div>
-                <div className="flex flex-1 flex-wrap gap-x-8 gap-y-3">
-                  {chips.filter(([, v]) => v).map(([k, v]) => (
-                    <div key={k}>
-                      <div className="label-mono">{k}</div>
-                      <div className="mt-0.5 text-[14px] capitalize text-foreground">{v}</div>
-                    </div>
+                <div className="flex flex-1 flex-wrap gap-2">
+                  {chips.filter(([, v]) => v).map(([k, v], i) => (
+                    <span
+                      key={k}
+                      className="page-in inline-flex items-center gap-1.5 rounded-full border border-accent/25 bg-accent/[0.07] py-1 pl-2.5 pr-3 text-[12.5px]"
+                      style={{ animationDelay: `${i * 60}ms` }}
+                    >
+                      <span className="text-subtle">{k}</span>
+                      <span className="font-medium capitalize text-foreground">{v}</span>
+                    </span>
                   ))}
-                  {it && it.keywords.length > 0 && (
-                    <div>
-                      <div className="label-mono">Visual concepts</div>
-                      <div className="mt-0.5 text-[14px] text-foreground">{it.keywords.join(", ")}</div>
-                    </div>
-                  )}
+                  {it?.keywords.map((kw, i) => (
+                    <span
+                      key={kw}
+                      className="page-in inline-flex items-center rounded-full border border-line bg-tint/[0.03] px-2.5 py-1 text-[12.5px] text-soft"
+                      style={{ animationDelay: `${(chips.length + i) * 60}ms` }}
+                    >
+                      #{kw}
+                    </span>
+                  ))}
+                  {!chips.some(([, v]) => v) && !it?.keywords.length && <span className="text-[13px] text-muted">A broad search across all evidence.</span>}
                 </div>
-                <div className="shrink-0 text-right">
-                  <div className="text-[22px] font-semibold tabular-nums">{data.results.length}</div>
-                  <div className="text-[12px] text-muted">matching assets</div>
+                <div className="shrink-0 border-line lg:border-l lg:pl-6 lg:text-right">
+                  <div className="text-[30px] font-semibold leading-none tabular-nums">
+                    <NumberTicker value={String(data.results.length)} />
+                  </div>
+                  <div className="mt-1 text-[12px] text-muted">matching assets</div>
                 </div>
               </div>
               <button
@@ -176,16 +204,21 @@ export function EvidenceSearch() {
         )}
 
         {!loading && !data && !error && (
-          <div className="mx-auto grid max-w-3xl grid-cols-1 gap-3 md:grid-cols-3">
-            {[
-              ["Understands intent", "Extracts project type, location, stage and dates from plain language."],
-              ["Searches AI metadata", "Matches tags, objects and activities generated from every asset."],
-              ["Always traceable", "Every result links back to the original Cloudinary asset."],
-            ].map(([t, d], i) => (
-              <Panel key={t} className="p-4">
-                <div className="text-[12px] font-semibold tabular-nums text-accent">0{i + 1}</div>
-                <div className="mt-2 text-[13.5px] font-medium">{t}</div>
-                <div className="mt-1 text-[12.5px] leading-relaxed text-muted">{d}</div>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            {([
+              [Brain, "Understands intent", "Extracts project type, location, stage and dates from plain language — typed or spoken."],
+              [ScanSearch, "Searches AI metadata", "Matches tags, objects and activities that vision AI generated from every asset."],
+              [Link2, "Always traceable", "Every result links back to the original Cloudinary asset and its analysis."],
+            ] as const).map(([Icon, t, d], i) => (
+              <Panel key={t} className="glow-card relative overflow-hidden p-5">
+                <div className="flex items-center justify-between">
+                  <div className="grid size-10 place-items-center rounded-xl border border-accent/25 bg-gradient-to-b from-accent/20 to-accent/5">
+                    <Icon className="size-[18px] text-accent" />
+                  </div>
+                  <span className="text-[28px] font-semibold tabular-nums text-tint/[0.08]">0{i + 1}</span>
+                </div>
+                <div className="mt-4 text-[14.5px] font-semibold tracking-tight">{t}</div>
+                <div className="mt-1.5 text-[13px] leading-relaxed text-muted">{d}</div>
               </Panel>
             ))}
           </div>

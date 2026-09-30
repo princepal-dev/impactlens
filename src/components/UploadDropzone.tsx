@@ -278,24 +278,32 @@ export function UploadDropzone({
           addFiles(e.dataTransfer.files);
         }}
         className={cn(
-          "relative rounded-lg border border-dashed p-5 outline-none transition-all duration-200 focus-visible:border-accent/70 sm:p-6",
-          drag ? "border-accent bg-accent/[0.06]" : "border-line-strong bg-panel hover:border-tint/25",
+          "glow-card group relative overflow-hidden rounded-2xl border border-dashed p-5 shadow-[var(--panel-shadow)] outline-none transition-all duration-200 focus-visible:border-accent/70 sm:p-6",
+          drag ? "scale-[1.005] border-accent bg-accent/[0.07]" : "border-line-strong bg-panel hover:border-accent/40",
         )}
       >
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+        <div aria-hidden className="pointer-events-none absolute -right-20 -top-24 size-64 rounded-full bg-accent/10 blur-3xl transition-opacity group-hover:opacity-100 md:opacity-70" />
+        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-start gap-4">
-            <div className="grid size-11 shrink-0 place-items-center rounded-lg border border-accent/25 bg-accent/10">
-              <UploadCloud className="size-5 text-accent" />
+            <div className="relative grid size-12 shrink-0 place-items-center">
+              <span className={cn("absolute inset-0 rounded-xl bg-accent/20", drag ? "animate-ping" : "group-hover:animate-pulse")} />
+              <span className="relative grid size-12 place-items-center rounded-xl border border-accent/30 bg-gradient-to-b from-accent/25 to-accent/5 shadow-lg shadow-accent/10">
+                <UploadCloud className={cn("size-5 text-accent transition-transform", drag ? "-translate-y-0.5 scale-110" : "group-hover:-translate-y-0.5")} />
+              </span>
             </div>
             <div className="min-w-0">
-              <h2 className="text-[15px] font-semibold tracking-tight">Upload field media</h2>
+              <h2 className="text-[16px] font-semibold tracking-tight">{drag ? "Drop to upload and analyze" : "Upload field media"}</h2>
               <p className="mt-1 max-w-lg text-[13px] leading-relaxed text-muted">
                 Drag and drop photos or videos here. Each upload is stored in Cloudinary, analyzed by AI and indexed automatically.
               </p>
-              <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-                {FORMATS.map((f) => (
-                  <span key={f} className="rounded-[3px] border border-line px-1.5 py-0.5 text-[10.5px] font-medium text-subtle">{f}</span>
+              <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[11.5px] font-medium text-subtle">
+                {["Cloudinary storage", "AI vision", "Impact metadata", "Searchable"].map((s, i) => (
+                  <span key={s} className="flex items-center gap-1.5">
+                    {i > 0 && <ArrowRight className="size-3 text-accent/60" />}
+                    <span className="rounded-full border border-line bg-tint/[0.03] px-2 py-0.5">{s}</span>
+                  </span>
                 ))}
+                <span className="ml-1 hidden text-subtle/80 sm:inline">· {FORMATS.join(" · ")}</span>
               </div>
             </div>
           </div>
@@ -308,7 +316,7 @@ export function UploadDropzone({
             </Button>
           </div>
         </div>
-        <div className="mt-5 flex flex-col gap-2.5 border-t border-line pt-4 sm:flex-row sm:items-center">
+        <div className="relative mt-5 flex flex-col gap-2.5 border-t border-line pt-4 sm:flex-row sm:items-center">
           <span className="text-[12.5px] font-medium text-muted sm:mr-1">Assign to</span>
           <Select value={projectId} onChange={(e) => setProjectId(e.target.value)} className="h-9 w-full text-[13px] sm:w-60" onClick={(e) => e.stopPropagation()}>
             <option value="">Auto-detect project with AI</option>

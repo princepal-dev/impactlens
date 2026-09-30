@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Download, FileText, History, Link as LinkIcon, RotateCcw, Sparkles, Trash2 } from "lucide-react";
+import { AlertTriangle, Download, FileText, History, Link as LinkIcon, RotateCcw, ShieldCheck, Sparkles, Trash2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -8,6 +8,7 @@ import { requestJSON } from "@/lib/http";
 import type { MediaAsset, Project, ReportContent } from "@/lib/types";
 import { cn, timeAgo } from "@/lib/utils";
 import { EmptyState } from "./EmptyState";
+import { ReportIllustration } from "./Illustrations";
 import { ProcessingStatus, type StepState } from "./ProcessingStatus";
 import { ReportPreview } from "./ReportPreview";
 import { Button } from "./ui/button";
@@ -111,8 +112,18 @@ export function ReportsWorkspace({
   return (
     <div className="space-y-8">
       <div className="no-print grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <Panel className="p-5">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]">
+        <Panel className="relative overflow-hidden p-5">
+          <div aria-hidden className="pointer-events-none absolute -right-24 -top-28 size-72 rounded-full bg-accent/10 blur-3xl" />
+          <div className="relative mb-5 flex items-center gap-3">
+            <div className="grid size-10 place-items-center rounded-xl border border-accent/30 bg-gradient-to-b from-accent/25 to-accent/5">
+              <Sparkles className="size-[18px] text-accent" />
+            </div>
+            <div>
+              <h2 className="text-[15px] font-semibold tracking-tight">Report builder</h2>
+              <p className="text-[12.5px] text-muted">Pick a project and period — AI does the rest in under a minute.</p>
+            </div>
+          </div>
+          <div className="relative grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]">
             <label className="space-y-1.5">
               <span className="label-mono">Project</span>
               <Select value={projectId} onChange={(e) => setProjectId(e.target.value)} disabled={busy}>
@@ -138,11 +149,12 @@ export function ReportsWorkspace({
               </Select>
             </label>
           </div>
-          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5">
-            <p className="text-[12.5px] text-muted">
-              Reports use only uploaded evidence. No impact statistics are inferred beyond what is visible.
+          <div className="relative mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5">
+            <p className="flex items-center gap-2 text-[12.5px] text-muted">
+              <ShieldCheck className="size-4 shrink-0 text-positive" />
+              Uses only uploaded evidence — nothing is inferred beyond what is visible.
             </p>
-            <Button variant="primary" onClick={generate} disabled={busy}>
+            <Button variant="primary" size="lg" onClick={generate} disabled={busy} className="shadow-[0_0_24px_-4px_color-mix(in_srgb,var(--accent)_60%,transparent)]">
               <Sparkles /> {busy ? "Generating…" : "Generate Report"}
             </Button>
           </div>
@@ -161,7 +173,10 @@ export function ReportsWorkspace({
         </Panel>
 
         <Panel className="p-5">
-          <div className="flex items-center gap-2 text-[13px] font-medium"><History className="size-4 text-subtle" /> Recent reports</div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-[13.5px] font-semibold"><History className="size-4 text-accent" /> Recent reports</div>
+            {history.length > 0 && <span className="rounded-full bg-tint/[0.06] px-2 py-0.5 text-[11.5px] tabular-nums text-muted">{history.length}</span>}
+          </div>
           {history.length ? (
             <ul className="scrollbar-thin mt-3 max-h-56 space-y-1 overflow-auto">
               {history.map((r) => (
@@ -173,12 +188,17 @@ export function ReportsWorkspace({
                       router.replace(`/reports?id=${r.id}`, { scroll: false });
                     }}
                     className={cn(
-                      "w-full rounded-md px-2.5 py-2 pr-9 text-left transition-colors hover:bg-tint/[0.04]",
-                      report?.id === r.id && "bg-tint/[0.06]",
+                      "flex w-full items-center gap-3 rounded-lg border border-transparent px-2.5 py-2 pr-9 text-left transition-colors hover:bg-tint/[0.04]",
+                      report?.id === r.id && "border-accent/25 bg-accent/[0.06]",
                     )}
                   >
-                    <div className="truncate text-[13px]">{r.project}</div>
-                    <div className="text-[12px] tabular-nums text-subtle">#{r.id} · {timeAgo(r.generatedAt)}</div>
+                    <span className={cn("grid size-8 shrink-0 place-items-center rounded-lg border", report?.id === r.id ? "border-accent/30 bg-accent/10 text-accent" : "border-line bg-tint/[0.03] text-subtle")}>
+                      <FileText className="size-3.5" />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate text-[13px] font-medium">{r.project}</span>
+                      <span className="block text-[12px] tabular-nums text-subtle">#{r.id} · {timeAgo(r.generatedAt)}</span>
+                    </span>
                   </button>
                   <button
                     onClick={() => removeReport(r.id)}
@@ -191,7 +211,10 @@ export function ReportsWorkspace({
               ))}
             </ul>
           ) : (
-            <p className="mt-3 text-[12.5px] text-subtle">Generated reports will appear here.</p>
+            <div className="mt-4 rounded-lg border border-dashed border-line-strong px-4 py-6 text-center">
+              <FileText className="mx-auto size-5 text-subtle" />
+              <p className="mt-2 text-[12.5px] text-subtle">Generated reports will appear here.</p>
+            </div>
           )}
         </Panel>
       </div>
@@ -227,6 +250,7 @@ export function ReportsWorkspace({
             <EmptyState
               className="no-print"
               icon={FileText}
+              illustration={<ReportIllustration />}
               title="No report generated yet"
               description="Select a project and reporting period, then generate a traceable impact evidence report in one click."
             />

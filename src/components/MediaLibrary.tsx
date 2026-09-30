@@ -9,9 +9,16 @@ import { EmptyState } from "./EmptyState";
 import { MediaCard } from "./MediaCard";
 import { UploadDropzone } from "./UploadDropzone";
 import { Button } from "./ui/button";
-import { Input, Select } from "./ui/panel";
+import { Input } from "./ui/panel";
 
 const PAGE_SIZE = 48;
+const STAGES = [
+  ["all", "All"],
+  ["baseline", "Baseline"],
+  ["implementation", "Implementation"],
+  ["completed", "Completed"],
+  ["monitoring", "Monitoring"],
+] as const;
 
 export function MediaLibrary({
   initial,
@@ -59,25 +66,30 @@ export function MediaLibrary({
       />
 
       <section>
-        <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <h2 className="text-[15px] font-semibold tracking-tight">
-              {project === "all" ? "All field media" : projects.find((p) => p.id === project)?.name}
-              <span className="ml-2 text-[13px] font-normal tabular-nums text-subtle">{filtered.length}</span>
-            </h2>
-          </div>
+        <div className="sticky top-3 z-20 mb-5 flex flex-col gap-3 rounded-xl border border-line bg-panel/85 p-2 pl-4 shadow-[var(--panel-shadow)] backdrop-blur-xl lg:flex-row lg:items-center lg:justify-between">
+          <h2 className="flex items-center gap-2 text-[15px] font-semibold tracking-tight">
+            {project === "all" ? "All field media" : projects.find((p) => p.id === project)?.name}
+            <span className="rounded-full bg-accent/10 px-2 py-0.5 text-[11.5px] font-medium tabular-nums text-accent">{filtered.length}</span>
+          </h2>
           <div className="flex flex-wrap items-center gap-2">
+            <div className="flex overflow-x-auto rounded-lg border border-line bg-inset p-0.5">
+              {STAGES.map(([v, label]) => (
+                <button
+                  key={v}
+                  onClick={() => setStage(v)}
+                  className={cn(
+                    "h-8 whitespace-nowrap rounded-md px-2.5 text-[12.5px] font-medium transition-all",
+                    stage === v ? "bg-surface text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.12)]" : "text-muted hover:text-foreground",
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-subtle" />
               <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filter by tag, place…" className="h-9 w-52 pl-8 text-[13px]" />
             </div>
-            <Select value={stage} onChange={(e) => setStage(e.target.value)} className="h-9 w-40 text-[13px]">
-              <option value="all">All stages</option>
-              <option value="baseline">Baseline</option>
-              <option value="implementation">Implementation</option>
-              <option value="completed">Completed</option>
-              <option value="monitoring">Monitoring</option>
-            </Select>
           </div>
         </div>
 
@@ -87,7 +99,7 @@ export function MediaLibrary({
               key={p.id}
               onClick={() => selectProject(p.id)}
               className={cn(
-                "rounded-md border px-3 py-1.5 text-[12.5px] transition-colors",
+                "rounded-full border px-3 py-1.5 text-[12.5px] transition-colors",
                 project === p.id ? "border-accent/40 bg-accent/10 text-accent" : "border-line text-muted hover:border-line-strong hover:text-foreground",
               )}
             >
