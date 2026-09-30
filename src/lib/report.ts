@@ -1,7 +1,7 @@
 import "server-only";
 import { generateJSON } from "./ai";
 import { UserError } from "./api";
-import { aiEngineLabel, aiProvider } from "./config";
+import { aiProvider } from "./config";
 import { metadataCompare, pickPair } from "./compare";
 import { DEFAULT_PAIRS } from "./samples";
 import { getProject, projectAssets, saveReport, addActivity } from "./store";
@@ -94,7 +94,7 @@ export async function buildReport(opts: { projectId: string; from: string; to: s
   if (aiProvider()) {
     try {
       const facts = assets.slice(-200).map((a) => `${a.date} | ${a.location} | ${a.stage} | ${a.title} | ${a.description}`).join("\n");
-      const ai = await generateJSON<{ summary: string; observations: string[]; patterns: string[]; potentialImpact: string[] }>({
+      const { data: ai, engine: aiEngine } = await generateJSON<{ summary: string; observations: string[]; patterns: string[]; potentialImpact: string[] }>({
         system:
           "You write concise, credible impact evidence reports for NGOs. Use ONLY the supplied media metadata. Never invent statistics, beneficiary numbers, volumes, percentages or outcomes. Use wording like 'The uploaded evidence shows', 'Visual evidence suggests', 'Potential impact', 'Additional verification recommended'. Return JSON only.",
         prompt: `Project: ${project.name} (${project.category}, ${project.region})
@@ -104,6 +104,7 @@ ${facts}
 
 Return { "summary": string (3 sentences max), "observations": string[] (3-4), "patterns": string[] (2-3), "potentialImpact": string[] (2-3) }`,
         timeoutMs: 25000,
+        budgetMs: 70_000,
       });
       if (typeof ai.summary === "string" && ai.summary.trim()) summary = ai.summary.trim();
       const aiObservations = strings(ai.observations, 5);
@@ -112,7 +113,7 @@ Return { "summary": string (3 sentences max), "observations": string[] (3-4), "p
       if (aiObservations.length) observations = aiObservations;
       if (aiPatterns.length) patterns = aiPatterns;
       if (aiImpact.length) potentialImpact = aiImpact;
-      engine = aiEngineLabel();
+      engine = aiEngine;
     } catch (e) {
       console.warn("[report] AI narrative failed, using template", e);
     }

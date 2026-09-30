@@ -18,9 +18,10 @@ npm run dev                  # http://localhost:3000
 | --- | --- |
 | `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | [Cloudinary console](https://console.cloudinary.com/) → Settings → API Keys |
 | `GEMINI_API_KEY` | [Google AI Studio](https://aistudio.google.com/apikey) (free tier works) |
+| `OPENROUTER_API_KEY` (optional) | [OpenRouter](https://openrouter.ai/keys) — free vision models, used automatically when Gemini/OpenAI fail, or on its own |
 | `DATABASE_PATH` (optional) | Defaults to `.data/impactlens.db` |
 
-Until both Cloudinary and Gemini are configured, the app shows a setup banner and upload/analysis endpoints return `503` with the missing variables. Settings shows live integration status.
+AI providers are tried in order — Gemini, OpenAI, then OpenRouter free models — with retries per provider; a provider whose key is rejected is skipped for 10 minutes. Without storage or any AI key, upload/analysis endpoints return `503` with a neutral message and the missing variables are logged server-side. `GET /api/health` reports database, storage and AI status.
 
 ## Getting evidence in
 

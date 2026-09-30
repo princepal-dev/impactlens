@@ -1,5 +1,5 @@
 import "server-only";
-import { config, DEFAULT_GEMINI_MODEL, requireAI } from "./config";
+import { aiProviders, config, DEFAULT_GEMINI_MODEL, NotConfiguredError, PROVIDER_NAMES, type AIProvider } from "./config";
 
 export interface InlineImage {
   mimeType: string;
@@ -45,10 +45,13 @@ export async function loadImage(url: string): Promise<InlineImage> {
   throw new Error(`Could not fetch media from Cloudinary (${lastStatus})`);
 }
 
+/** Extract the JSON object from a model reply, tolerating code fences and surrounding prose. */
 function parseJSON<T>(text: string): T {
-  const cleaned = text.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
+  const cleaned = text.replace(/```(?:json)?/gi, "").trim();
   const start = cleaned.search(/[[{]/);
-  return JSON.parse(start > 0 ? cleaned.slice(start) : cleaned) as T;
+  const end = Math.max(cleaned.lastIndexOf("}"), cleaned.lastIndexOf("]"));
+  if (start < 0 || end < start) throw new SyntaxError("Model reply contained no JSON");
+  return JSON.parse(cleaned.slice(start, end + 1)) as T;
 }
 
 class RetryableError extends Error {
@@ -59,6 +62,12 @@ class RetryableError extends Error {
     super(message);
   }
 }
+
+/** Credentials rejected or project blocked; the provider is skipped for a while instead of retried. */
+class ProviderAuthError extends Error {}
+
+type CallOptions = { system: string; prompt: string; images: InlineImage[]; signal: AbortSignal };
+type CallResult = { text: string; engine: string };
 
 
 /** Gemini 3+ controls reasoning with `thinkingLevel`; 2.x Flash accepts a zero thinking budget. */
@@ -71,7 +80,7 @@ function thinkingConfig(model: string) {
 
 let geminiModel = config.gemini.model;
 
-async function callGemini(opts: { system: string; prompt: string; images: InlineImage[]; signal: AbortSignal }): Promise<string> {
+async function callGemini(opts: CallOptions): Promise<CallResult> {
   const model = geminiModel;
   const thinking = thinkingConfig(model);
   const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
@@ -106,6 +115,7 @@ async function callGemini(opts: { system: string; prompt: string; images: Inline
       geminiModel = DEFAULT_GEMINI_MODEL;
       return callGemini(opts);
     }
+    if (res.status === 401 || res.status === 403 || /denied access|api key not valid|permission/i.test(message)) throw new ProviderAuthError(message);
     throw new Error(message);
   }
   const blocked = json?.promptFeedback?.blockReason;
@@ -119,10 +129,10 @@ async function callGemini(opts: { system: string; prompt: string; images: Inline
     }
     throw new RetryableError(`Gemini returned no content (${reason})`);
   }
-  return text;
+  return { text, engine: `Gemini · ${model}` };
 }
 
-async function callOpenAI(opts: { system: string; prompt: string; images: InlineImage[]; signal: AbortSignal }) {
+async function callOpenAI(opts: CallOptions): Promise<CallResult> {
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     signal: opts.signal,
@@ -131,46 +141,187 @@ async function callOpenAI(opts: { system: string; prompt: string; images: Inline
       model: config.openai.model,
       temperature: 0.2,
       response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: opts.system },
-        {
-          role: "user",
-          content: [
-            { type: "text", text: opts.prompt },
-            ...opts.images.map((i) => ({ type: "image_url", image_url: { url: `data:${i.mimeType};base64,${i.base64}` } })),
-          ],
-        },
-      ],
+      messages: chatMessages(opts),
     }),
   });
   const json = await res.json().catch(() => ({}));
-  if (res.status === 429 || res.status >= 500) throw new RetryableError(json?.error?.message ?? `OpenAI error ${res.status}`);
-  if (!res.ok) throw new Error(json?.error?.message ?? `OpenAI error ${res.status}`);
-  return json.choices?.[0]?.message?.content ?? "";
+  const message = json?.error?.message ?? `OpenAI error ${res.status}`;
+  if (res.status === 429 || res.status >= 500) throw new RetryableError(message);
+  if (res.status === 401 || res.status === 403) throw new ProviderAuthError(message);
+  if (!res.ok) throw new Error(message);
+  return { text: json.choices?.[0]?.message?.content ?? "", engine: `OpenAI · ${config.openai.model}` };
 }
 
-/** Ask the configured model for a JSON object, retrying rate limits and transient failures. */
-export async function generateJSON<T>(opts: { system: string; prompt: string; images?: InlineImage[]; timeoutMs?: number }): Promise<T> {
-  const provider = requireAI();
-  const call = provider === "gemini" ? callGemini : callOpenAI;
-  const attempts = 4;
+function chatMessages(opts: CallOptions) {
+  return [
+    { role: "system", content: opts.system },
+    {
+      role: "user",
+      content: [
+        { type: "text", text: opts.prompt },
+        ...opts.images.map((i) => ({ type: "image_url", image_url: { url: `data:${i.mimeType};base64,${i.base64}` } })),
+      ],
+    },
+  ];
+}
+
+// ---------- OpenRouter (free models) ----------
+
+type OpenRouterModel = {
+  id: string;
+  context_length?: number;
+  supported_parameters?: string[];
+  architecture?: { input_modalities?: string[]; output_modalities?: string[] };
+};
+
+/** OpenRouter's own router across whatever free models are currently up; always the last resort. */
+const FREE_ROUTER = "openrouter/free";
+/** Used when the live model catalogue can't be fetched. */
+const FALLBACK_FREE_MODELS = ["google/gemma-4-31b-it:free", "google/gemma-4-26b-a4b-it:free", "qwen/qwen3.8-27b:free"];
+const PREFERRED = [/gemma/i, /qwen/i, /inkling/i, /nemotron-3-super/i, /llama/i, /mistral/i];
+const EXCLUDED = /safety|guard|code|coder|lyria/i;
+const MODELS_TTL_MS = 60 * 60_000;
+let freeModels: { vision: string[]; text: string[]; at: number } | null = null;
+
+const rank = (m: OpenRouterModel) => {
+  const i = PREFERRED.findIndex((re) => re.test(m.id));
+  return (m.supported_parameters?.includes("response_format") ? 0 : 100) + (i < 0 ? PREFERRED.length : i);
+};
+
+/** Free chat models from OpenRouter's live catalogue, JSON-capable and best-known families first. */
+async function openRouterFreeModels(): Promise<{ vision: string[]; text: string[] }> {
+  if (freeModels && Date.now() - freeModels.at < MODELS_TTL_MS) return freeModels;
+  try {
+    const res = await fetch("https://openrouter.ai/api/v1/models", { signal: AbortSignal.timeout(10000) });
+    if (!res.ok) throw new Error(`catalogue ${res.status}`);
+    const list = ((await res.json())?.data ?? []) as OpenRouterModel[];
+    const free = list
+      .filter((m) => m.id.endsWith(":free") && !EXCLUDED.test(m.id))
+      .filter((m) => (m.architecture?.output_modalities ?? ["text"]).join() === "text")
+      .sort((a, b) => rank(a) - rank(b) || (b.context_length ?? 0) - (a.context_length ?? 0));
+    const vision = free.filter((m) => m.architecture?.input_modalities?.includes("image")).map((m) => m.id);
+    freeModels = { vision, text: free.map((m) => m.id), at: Date.now() };
+  } catch (e) {
+    console.warn("[ai] OpenRouter model catalogue unavailable, using built-in list:", e instanceof Error ? e.message : e);
+    freeModels = { vision: FALLBACK_FREE_MODELS, text: FALLBACK_FREE_MODELS, at: Date.now() - MODELS_TTL_MS + 5 * 60_000 };
+  }
+  return freeModels;
+}
+
+async function callOpenRouter(opts: CallOptions): Promise<CallResult> {
+  const discovered = await openRouterFreeModels();
+  const pool = opts.images.length ? discovered.vision : discovered.text;
+  const models = [...new Set([...config.openrouter.models, ...pool.slice(0, 2), FREE_ROUTER])].slice(0, 3);
+  if (!models.includes(FREE_ROUTER)) models[models.length - 1] = FREE_ROUTER;
+  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    signal: opts.signal,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${config.openrouter.apiKey}`,
+      "HTTP-Referer": "https://github.com/princepal-dev/impactlens",
+      "X-Title": "ImpactLens",
+    },
+    body: JSON.stringify({
+      model: models[0],
+      models,
+      temperature: 0.2,
+      response_format: { type: "json_object" },
+      messages: chatMessages({ ...opts, system: `${opts.system}\nRespond with a single valid JSON object and nothing else.` }),
+    }),
+  });
+  const json = await res.json().catch(() => ({}));
+  const message: string = json?.error?.message ?? `OpenRouter error ${res.status}`;
+  if (res.status === 401 || res.status === 403) throw new ProviderAuthError(message);
+  if (res.status === 429 || res.status >= 500 || res.status === 408) throw new RetryableError(message);
+  if (!res.ok || json?.error) throw new RetryableError(message);
+  const text: string = json.choices?.[0]?.message?.content ?? "";
+  if (!text) throw new RetryableError("OpenRouter returned no content");
+  return { text, engine: `OpenRouter · ${json.model ?? models[0]}` };
+}
+
+// ---------- Provider chain ----------
+
+const CALLERS: Record<AIProvider, (o: CallOptions) => Promise<CallResult>> = {
+  gemini: callGemini,
+  openai: callOpenAI,
+  openrouter: callOpenRouter,
+};
+const AUTH_COOLDOWN_MS = 10 * 60_000;
+const g = globalThis as unknown as { __impactlensAiDown?: Map<AIProvider, number> };
+const down: Map<AIProvider, number> = (g.__impactlensAiDown ??= new Map());
+
+async function runProvider<T>(
+  provider: AIProvider,
+  opts: { system: string; prompt: string; images: InlineImage[]; timeoutMs: number; deadline: number },
+  attempts: number,
+): Promise<{ data: T; engine: string }> {
   let lastError: unknown;
   for (let i = 0; i < attempts; i++) {
+    const remaining = opts.deadline - Date.now();
+    if (remaining < 2000) break;
     try {
-      const text = await call({
+      const { text, engine } = await CALLERS[provider]({
         system: opts.system,
         prompt: opts.prompt,
-        images: opts.images ?? [],
-        signal: AbortSignal.timeout(opts.timeoutMs ?? 45000),
+        images: opts.images,
+        signal: AbortSignal.timeout(Math.min(opts.timeoutMs, remaining)),
       });
-      return parseJSON<T>(text);
+      return { data: parseJSON<T>(text), engine };
     } catch (e) {
       lastError = e;
       const retryable = e instanceof RetryableError || e instanceof SyntaxError;
       if (!retryable || i === attempts - 1) break;
       const wait = e instanceof RetryableError && e.retryAfterMs ? e.retryAfterMs : 1500 * 2 ** i;
+      if (Date.now() + wait > opts.deadline - 2000) break;
       await sleep(Math.min(wait, 30000));
+    }
+  }
+  throw lastError ?? new Error(`${PROVIDER_NAMES[provider]} timed out`);
+}
+
+/**
+ * Ask the configured models for a JSON object. Providers are tried in priority order
+ * (Gemini → OpenAI → OpenRouter free models); each retries transient failures before
+ * the next one takes over. Returns the parsed object and the engine that produced it.
+ */
+export async function generateJSON<T>(opts: {
+  system: string;
+  prompt: string;
+  images?: InlineImage[];
+  timeoutMs?: number;
+  /** Total time budget across all providers and retries. */
+  budgetMs?: number;
+}): Promise<{ data: T; engine: string }> {
+  const configured = aiProviders();
+  if (!configured.length) {
+    throw new NotConfiguredError("AI credentials missing", "AI analysis is unavailable right now. Please try again shortly.");
+  }
+  const now = Date.now();
+  const available = configured.filter((p) => (down.get(p) ?? 0) < now);
+  const chain = available.length ? available : configured;
+  const timeoutMs = opts.timeoutMs ?? 45000;
+  const deadline = now + (opts.budgetMs ?? timeoutMs * 3);
+
+  let lastError: unknown;
+  for (const [i, provider] of chain.entries()) {
+    const hasFallback = i < chain.length - 1;
+    try {
+      const result = await runProvider<T>(
+        provider,
+        { system: opts.system, prompt: opts.prompt, images: opts.images ?? [], timeoutMs, deadline },
+        hasFallback ? 2 : 4,
+      );
+      if (i > 0) console.info(`[ai] served by fallback provider: ${result.engine}`);
+      return result;
+    } catch (e) {
+      lastError = e;
+      if (e instanceof ProviderAuthError) down.set(provider, Date.now() + AUTH_COOLDOWN_MS);
+      if (hasFallback) {
+        console.warn(`[ai] ${PROVIDER_NAMES[provider]} failed (${e instanceof Error ? e.message : e}); trying ${PROVIDER_NAMES[chain[i + 1]]}`);
+      }
     }
   }
   throw lastError instanceof Error ? lastError : new Error(String(lastError));
 }
+

@@ -1,6 +1,5 @@
 import "server-only";
 import { generateJSON, loadImage } from "./ai";
-import { aiEngineLabel } from "./config";
 import { analysisFrameUrl } from "./media-url";
 import type { ComparisonResult, MediaAsset } from "./types";
 
@@ -61,7 +60,7 @@ export async function compareAssets(before: MediaAsset, after: MediaAsset): Prom
   const fb = metadataCompare(before, after);
   try {
     const [bi, ai] = await Promise.all([loadImage(analysisFrameUrl(before)), loadImage(analysisFrameUrl(after))]);
-    const raw = await generateJSON<Partial<ComparisonResult>>({
+    const { data: raw, engine } = await generateJSON<Partial<ComparisonResult>>({
       system:
         "You compare two field photos from the same sustainability project: image 1 is BEFORE, image 2 is AFTER. Describe only visible changes. Never state numbers, measurements, beneficiaries or percentages that are not visible. Use cautious wording: 'observed', 'visible evidence', 'appears', 'potential impact'. Return JSON only.",
       prompt: `Project: ${after.project} (${after.category}, ${after.location}).
@@ -70,6 +69,7 @@ After metadata: ${after.title} — ${after.date} — stage ${after.stage}.
 
 Return: { "summary": string (1-2 sentences), "observations": string[] (3-5 short observed changes), "impactAreas": string[] (2-4 potential impact areas), "confidence": number (0-1), "caveats": string[] (1-2 verification notes) }`,
       images: [bi, ai],
+      budgetMs: 100_000,
     });
     const strings = (v: unknown, max: number) =>
       Array.isArray(v) ? v.filter((x): x is string => typeof x === "string" && x.trim().length > 0).map((x) => x.trim().slice(0, 300)).slice(0, max) : [];
@@ -84,7 +84,7 @@ Return: { "summary": string (1-2 sentences), "observations": string[] (3-5 short
       impactAreas: impactAreas.length ? impactAreas : fb.impactAreas,
       confidence: Number.isFinite(confidence) ? Math.round(Math.max(0, Math.min(1, confidence)) * 100) / 100 : fb.confidence,
       caveats: caveats.length ? caveats : fb.caveats,
-      engine: aiEngineLabel(),
+      engine,
     };
   } catch (e) {
     console.warn("[compare] AI comparison failed, using metadata comparison", e);

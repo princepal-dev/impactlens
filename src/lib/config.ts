@@ -21,6 +21,14 @@ export const config = {
     apiKey: env("OPENAI_API_KEY"),
     model: env("OPENAI_MODEL") || "gpt-4o-mini",
   },
+  openrouter: {
+    apiKey: env("OPENROUTER_API_KEY"),
+    /** Optional comma-separated preference list; otherwise free vision models are discovered automatically. */
+    models: env("OPENROUTER_MODEL")
+      .split(",")
+      .map((m) => m.trim())
+      .filter(Boolean),
+  },
   databasePath: path.resolve(/*turbopackIgnore: true*/ process.cwd(), env("DATABASE_PATH") || ".data/impactlens.db"),
 };
 
@@ -43,16 +51,24 @@ export const cloudinaryUploadMode = (): "signed" | "unsigned" | null => {
   return null;
 };
 
-export const aiProvider = (): "gemini" | "openai" | null => {
-  if (config.gemini.apiKey) return "gemini";
-  if (config.openai.apiKey) return "openai";
-  return null;
-};
+export type AIProvider = "gemini" | "openai" | "openrouter";
 
-export const aiEngineLabel = () => {
-  const p = aiProvider();
-  if (p === "gemini") return `Gemini · ${config.gemini.model}`;
-  if (p === "openai") return `OpenAI · ${config.openai.model}`;
+export const PROVIDER_NAMES: Record<AIProvider, string> = { gemini: "Google Gemini", openai: "OpenAI", openrouter: "OpenRouter" };
+
+/** Configured AI providers in priority order; later ones take over when earlier ones fail. */
+export const aiProviders = (): AIProvider[] =>
+  [
+    config.gemini.apiKey && ("gemini" as const),
+    config.openai.apiKey && ("openai" as const),
+    config.openrouter.apiKey && ("openrouter" as const),
+  ].filter((p): p is AIProvider => !!p);
+
+export const aiProvider = (): AIProvider | null => aiProviders()[0] ?? null;
+
+export const aiEngineLabel = (provider: AIProvider | null = aiProvider()) => {
+  if (provider === "gemini") return `Gemini · ${config.gemini.model}`;
+  if (provider === "openai") return `OpenAI · ${config.openai.model}`;
+  if (provider === "openrouter") return config.openrouter.models.length ? `OpenRouter · ${config.openrouter.models[0]}` : "OpenRouter · free models";
   return "Not configured";
 };
 
@@ -69,7 +85,7 @@ export function serviceStatus() {
   }
   return {
     storage: { connected: !!cloudinary, cloudName: config.cloudinary.cloudName || null, folder: config.cloudinary.folder },
-    ai: { connected: !!ai, provider: ai, label: aiEngineLabel() },
+    ai: { connected: !!ai, provider: ai, providers: aiProviders(), label: aiEngineLabel() },
   };
 }
 
@@ -87,7 +103,10 @@ export function requireCloudinary() {
 export function requireAI() {
   const provider = aiProvider();
   if (!provider) {
-    throw new NotConfiguredError("AI credentials missing (GEMINI_API_KEY)", "AI analysis is unavailable right now. Please try again shortly.");
+    throw new NotConfiguredError(
+      "AI credentials missing (GEMINI_API_KEY, OPENAI_API_KEY or OPENROUTER_API_KEY)",
+      "AI analysis is unavailable right now. Please try again shortly.",
+    );
   }
   return provider;
 }

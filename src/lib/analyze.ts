@@ -1,6 +1,5 @@
 import "server-only";
 import { generateJSON, loadImage } from "./ai";
-import { aiEngineLabel } from "./config";
 import { getProject, listProjects } from "./store";
 import type { AIMetadata, Stage } from "./types";
 
@@ -97,6 +96,11 @@ Supplied metadata:
 - Known projects: ${projects.map((p) => `${p.name} — ${p.category}, ${p.region}`).join("; ")}
 
 Describe what is actually visible in the image. Return the JSON object only.`;
-  const raw = await generateJSON<Partial<AIMetadata>>({ system: ANALYSIS_SYSTEM_PROMPT, prompt, images: [image] });
-  return { metadata: normalizeMetadata(raw, ctx), engine: aiEngineLabel() };
+  const { data, engine } = await generateJSON<Partial<AIMetadata>>({
+    system: ANALYSIS_SYSTEM_PROMPT,
+    prompt,
+    images: [image],
+    budgetMs: 150_000,
+  });
+  return { metadata: normalizeMetadata(data, ctx), engine };
 }

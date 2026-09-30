@@ -6,6 +6,8 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { ThemeCycleButton, ThemeToggle } from "./ThemeToggle";
 
+const AI_NAMES: Record<string, string> = { gemini: "Gemini", openai: "OpenAI", openrouter: "OpenRouter" };
+
 const NAV = [
   { href: "/", label: "Overview", icon: LayoutGrid },
   { href: "/media", label: "Media Library", icon: Images },
@@ -66,7 +68,7 @@ export function Sidebar({ services }: { services: { storage: boolean; ai: string
           </div>
           <div className="mt-2 space-y-1 text-[11px] text-subtle">
             <div className="flex justify-between"><span>Storage</span><span className="text-muted">Cloudinary</span></div>
-            <div className="flex justify-between"><span>AI</span><span className="text-muted">{services.ai === "openai" ? "OpenAI" : "Gemini"}</span></div>
+            <div className="flex justify-between"><span>AI</span><span className="text-muted">{AI_NAMES[services.ai!] ?? services.ai}</span></div>
           </div>
         </div>
       )}

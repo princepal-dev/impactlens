@@ -1,6 +1,6 @@
 import "server-only";
 import { generateJSON } from "./ai";
-import { aiEngineLabel, aiProvider } from "./config";
+import { aiProvider } from "./config";
 import { listAssets, listProjects } from "./store";
 import type { MediaAsset, Project, SearchInterpretation, SearchResponse, SearchResult, Stage } from "./types";
 
@@ -151,10 +151,10 @@ function sanitizeInterpretation(raw: Partial<SearchInterpretation>): SearchInter
   return out;
 }
 
-async function aiInterpret(query: string, projects: Project[]): Promise<SearchInterpretation | null> {
+async function aiInterpret(query: string, projects: Project[]): Promise<{ interpretation: SearchInterpretation; engine: string } | null> {
   if (!aiProvider()) return null;
   try {
-    const raw = await generateJSON<Partial<SearchInterpretation>>({
+    const { data, engine } = await generateJSON<Partial<SearchInterpretation>>({
       system:
         "You convert natural-language questions about an impact/sustainability media library into structured search filters. Return JSON only.",
       prompt: `Convert this natural-language query into searchable filters.
@@ -170,8 +170,9 @@ Return:
 { "category"?: string, "location"?: string (state or city only), "project"?: string, "activity"?: string (short human label), "stage"?: string, "dateAfter"?: "YYYY-MM-DD", "dateBefore"?: "YYYY-MM-DD", "beforeAfter"?: boolean, "keywords": string[] (2-6 concrete visual concepts, singular, e.g. "water tank", "sapling") }
 Omit fields that the query does not specify.`,
       timeoutMs: 9000,
+      budgetMs: 15_000,
     });
-    return sanitizeInterpretation(raw);
+    return { interpretation: sanitizeInterpretation(data), engine };
   } catch (e) {
     console.warn("[search] AI interpretation failed, using rules", e);
     return null;
@@ -230,7 +231,8 @@ export async function searchEvidence(query: string): Promise<SearchResponse> {
   const projects = listProjects();
   const assets = (await listAssets()).filter((a) => a.status === "indexed");
   const rules = ruleInterpret(query, locationDictionary(assets, projects), projects);
-  const ai = await aiInterpret(query, projects);
+  const interpreted = await aiInterpret(query, projects);
+  const ai = interpreted?.interpretation;
   const it: SearchInterpretation = ai
     ? { ...rules, ...Object.fromEntries(Object.entries(ai).filter(([, v]) => v !== undefined && v !== null && v !== "")), keywords: [...new Set([...(ai.keywords ?? []), ...rules.keywords])] }
     : rules;
@@ -295,7 +297,7 @@ export async function searchEvidence(query: string): Promise<SearchResponse> {
     interpretation: it,
     results: results.slice(0, 24),
     diagnostics: {
-      interpreter: ai ? aiEngineLabel() : "Rule-based query parser",
+      interpreter: interpreted ? interpreted.engine : "Rule-based query parser",
       ranking: "Concept-expanded weighted metadata match + filters",
       scanned: assets.length,
       filtersApplied,

@@ -4,7 +4,7 @@ import { SampleImporter } from "@/components/SampleImporter";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { TopBar } from "@/components/TopBar";
 import { Panel, PanelHeader } from "@/components/ui/panel";
-import { serviceStatus } from "@/lib/config";
+import { aiEngineLabel, PROVIDER_NAMES, serviceStatus } from "@/lib/config";
 import { projectSummaries } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -18,11 +18,14 @@ export default async function SettingsPage() {
       title: "Cloudinary",
       detail: `Originals, f_auto/q_auto delivery, g_auto thumbnails and AI analysis frames · ${s.storage.cloudName}/${s.storage.folder}`,
     },
-    s.ai.connected && {
+    ...s.ai.providers.map((p, i) => ({
       icon: Brain,
-      title: s.ai.provider === "openai" ? "OpenAI" : "Google Gemini",
-      detail: `Vision metadata, query interpretation, before/after comparison and report narrative · ${s.ai.label}`,
-    },
+      title: PROVIDER_NAMES[p],
+      detail:
+        i === 0
+          ? `Vision metadata, query interpretation, before/after comparison and report narrative · ${aiEngineLabel(p)}`
+          : `Automatic fallback when ${PROVIDER_NAMES[s.ai.providers[0]]} is unavailable · ${aiEngineLabel(p)}`,
+    })),
     { icon: Database, title: "Evidence index", detail: "Projects, media records, AI metadata, reports and activity" },
   ].filter(Boolean) as { icon: typeof Cloud; title: string; detail: string }[];
 
