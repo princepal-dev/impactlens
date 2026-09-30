@@ -197,12 +197,19 @@ type OpenRouterModel = {
   context_length?: number;
   supported_parameters?: string[];
   architecture?: { input_modalities?: string[]; output_modalities?: string[] };
+  pricing?: { prompt?: string; completion?: string };
 };
 
 /** OpenRouter's own router across whatever free models are currently up; always the last resort. */
 const FREE_ROUTER = "openrouter/free";
+/** Zero-priced vision model that isn't counted against the daily `:free` request quota; tried first. */
+const DEFAULT_MODEL = "stealth/space-bunny-alpha";
 /** Used when the live model catalogue can't be fetched. */
-const FALLBACK_FREE_MODELS = ["google/gemma-4-31b-it:free", "google/gemma-4-26b-a4b-it:free", "qwen/qwen3.8-27b:free"];
+const FALLBACK_FREE_MODELS = [DEFAULT_MODEL, "google/gemma-4-31b-it:free", "google/gemma-4-26b-a4b-it:free", "qwen/qwen3.8-27b:free"];
+const isFree = (m: OpenRouterModel) => m.id.endsWith(":free") || (m.pricing?.prompt === "0" && m.pricing?.completion === "0");
+/** Models that count against the daily free-model request quota. */
+const quotaLimited = (id: string) => id.endsWith(":free") || id === FREE_ROUTER;
+let freeQuotaUntil = 0;
 const PREFERRED = [/gemma/i, /qwen/i, /inkling/i, /nemotron-3-super/i, /llama/i, /mistral/i];
 const EXCLUDED = /safety|guard|code|coder|lyria/i;
 const MODELS_TTL_MS = 60 * 60_000;
@@ -221,7 +228,7 @@ async function openRouterFreeModels(): Promise<{ vision: string[]; text: string[
     if (!res.ok) throw new Error(`catalogue ${res.status}`);
     const list = ((await res.json())?.data ?? []) as OpenRouterModel[];
     const free = list
-      .filter((m) => m.id.endsWith(":free") && !EXCLUDED.test(m.id))
+      .filter((m) => isFree(m) && m.id !== FREE_ROUTER && !EXCLUDED.test(m.id))
       .filter((m) => (m.architecture?.output_modalities ?? ["text"]).join() === "text")
       .sort((a, b) => rank(a) - rank(b) || (b.context_length ?? 0) - (a.context_length ?? 0));
     const vision = free.filter((m) => m.architecture?.input_modalities?.includes("image")).map((m) => m.id);
@@ -237,9 +244,12 @@ async function callOpenRouter(opts: CallOptions): Promise<CallResult> {
   const discovered = await openRouterFreeModels();
   const pool = opts.images.length ? discovered.vision : discovered.text;
   const available = new Set(pool);
-  const preferred = config.openrouter.models.filter((m) => m !== FREE_ROUTER && (!discovered.live || available.has(m)));
-  const models = [...new Set([...preferred, ...pool.slice(0, 2), FREE_ROUTER])].slice(0, 3);
-  if (!models.includes(FREE_ROUTER)) models[models.length - 1] = FREE_ROUTER;
+  const quotaOut = Date.now() < freeQuotaUntil;
+  const allowed = (m: string) =>
+    m !== FREE_ROUTER && (discovered.live ? available.has(m) : m.endsWith(":free") || m === DEFAULT_MODEL) && !(quotaOut && quotaLimited(m));
+  const models = [...new Set([DEFAULT_MODEL, ...config.openrouter.models, ...pool].filter(allowed))].slice(0, 2);
+  if (!quotaOut) models.push(FREE_ROUTER);
+  if (!models.length) throw new QuotaExhaustedError("OpenRouter free-model quota used up", freeQuotaUntil);
   const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     signal: opts.signal,
@@ -262,7 +272,9 @@ async function callOpenRouter(opts: CallOptions): Promise<CallResult> {
   if (res.status === 401 || res.status === 403) throw new ProviderAuthError(message);
   if (res.status === 429 && /per-day|daily/i.test(`${message} ${json?.error?.metadata?.limit_source ?? ""}`)) {
     const reset = Number(res.headers.get("x-ratelimit-reset") ?? json?.error?.metadata?.headers?.["X-RateLimit-Reset"]);
-    throw new QuotaExhaustedError(message, reset > Date.now() ? reset : nextUtcMidnight());
+    freeQuotaUntil = reset > Date.now() ? reset : nextUtcMidnight();
+    if (models.some((m) => !quotaLimited(m))) throw new RetryableError(message);
+    throw new QuotaExhaustedError(message, freeQuotaUntil);
   }
   if (res.status === 429 || res.status >= 500 || res.status === 408) throw new RetryableError(message);
   if (!res.ok || json?.error) throw new RetryableError(message);

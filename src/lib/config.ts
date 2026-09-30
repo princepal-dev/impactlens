@@ -18,11 +18,11 @@ export const config = {
   },
   openrouter: {
     apiKey: env("OPENROUTER_API_KEY"),
-    /** Optional comma-separated preference list of free models; otherwise free vision models are discovered automatically. */
+    /** Optional comma-separated preference list; only models the live catalogue prices at zero are ever called. */
     models: env("OPENROUTER_MODEL")
       .split(",")
       .map((m) => m.trim())
-      .filter((m) => m.endsWith(":free") || m === "openrouter/free"),
+      .filter(Boolean),
   },
   /** Optional comma-separated provider order, e.g. "openrouter,groq". Defaults to Groq, then OpenRouter free models. */
   providers: env("AI_PROVIDERS")
