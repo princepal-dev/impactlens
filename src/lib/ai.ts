@@ -372,7 +372,7 @@ export function aiAvailable() {
 
 /**
  * Ask the configured models for a JSON object. Providers are tried in priority order
- * (Groq, then OpenRouter by default, see `aiProviders`). A provider that is down or rate-limited
+ * (OpenRouter, then Groq by default, see `aiProviders`). A provider that is down or rate-limited
  * hands over to the next one right away; if every provider fails, a rate-limited one is waited
  * for when the budget allows. Returns the parsed object and the engine that produced it.
  */

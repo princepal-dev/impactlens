@@ -17,12 +17,12 @@ npm run dev                  # http://localhost:3000
 | Variable | Where to get it |
 | --- | --- |
 | `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | [Cloudinary console](https://console.cloudinary.com/) → Settings → API Keys |
-| `GROQ_API_KEY` | [Groq](https://console.groq.com/keys) — main AI provider, free tier vision models (Qwen 3.8 27B, Llama 4 Scout) |
-| `OPENROUTER_API_KEY` | [OpenRouter](https://openrouter.ai/keys) — free models, used when Groq is unavailable (50 requests/day, 1000/day after adding 10 credits) |
-| `AI_PROVIDERS` (optional) | Provider order, defaults to `groq,openrouter` |
+| `OPENROUTER_API_KEY` | [OpenRouter](https://openrouter.ai/keys) — main AI provider, free models (`:free` models allow 50 requests/day, 1000/day after adding 10 credits) |
+| `GROQ_API_KEY` | [Groq](https://console.groq.com/keys) — used when OpenRouter is unavailable, free tier vision models (Qwen 3.8 27B) |
+| `AI_PROVIDERS` (optional) | Provider order, defaults to `openrouter,groq` |
 | `DATABASE_PATH` (optional) | Defaults to `.data/impactlens.db` |
 
-Groq is tried first, then OpenRouter's free models: `stealth/space-bunny-alpha` (not counted against the daily free-model quota), dots-3, Gemma 4, Nemotron 3, Qwen 3.8, Inkling, Ling, Laguna and North, three per request (OpenRouter's fallback limit), with `openrouter/free` as the last resort. Photos only go to models that read images, and only models the live catalogue prices at zero are called. Providers listed in `AI_PROVIDERS` are tried in order with retries per provider; a provider whose key is rejected is skipped for 10 minutes. Without storage or any AI key, upload/analysis endpoints return `503` with a neutral message and the missing variables are logged server-side. `GET /api/health` reports database, storage and AI status.
+OpenRouter's free models are tried first: `stealth/space-bunny-alpha` (not counted against the daily free-model quota), dots-3, Gemma 4, Nemotron 3, Qwen 3.8, Inkling, Ling, Laguna and North, three per request (OpenRouter's fallback limit), with `openrouter/free` as the last resort. Photos only go to models that read images, and only models the live catalogue prices at zero are called. If OpenRouter is down or rate-limited, Groq takes over. Providers listed in `AI_PROVIDERS` are tried in order with retries per provider; a provider whose key is rejected is skipped for 10 minutes. Without storage or any AI key, upload/analysis endpoints return `503` with a neutral message and the missing variables are logged server-side. `GET /api/health` reports database, storage and AI status.
 
 ## Getting evidence in
 

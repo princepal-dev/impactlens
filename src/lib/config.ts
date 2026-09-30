@@ -24,7 +24,7 @@ export const config = {
       .map((m) => m.trim())
       .filter(Boolean),
   },
-  /** Optional comma-separated provider order, e.g. "openrouter,groq". Defaults to Groq, then OpenRouter free models. */
+  /** Optional comma-separated provider order, e.g. "groq,openrouter". Defaults to OpenRouter free models, then Groq. */
   providers: env("AI_PROVIDERS")
     .split(",")
     .map((p) => p.trim().toLowerCase())
@@ -63,7 +63,7 @@ const hasKey: Record<AIProvider, () => boolean> = {
 /** Configured AI providers in priority order; later ones take over when earlier ones fail. */
 export const aiProviders = (): AIProvider[] => {
   const requested = config.providers.filter((p): p is AIProvider => p in hasKey);
-  const order: AIProvider[] = requested.length ? requested : ["groq", "openrouter"];
+  const order: AIProvider[] = requested.length ? requested : ["openrouter", "groq"];
   return [...new Set(order)].filter((p) => hasKey[p]());
 };
 
