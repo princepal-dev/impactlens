@@ -210,6 +210,7 @@ Created by **Team Phoenix**:
 - Prince Pal
 - Vansh Singla
 - Dev Garg
+- Amulya Singla
 
 ## Credits
 
