@@ -11,7 +11,7 @@ type SampleStatus = { file: string; projectId: string; status: string | null };
 
 const CONCURRENCY = 2;
 
-export function SampleImporter({ ready, compact = false }: { ready: boolean; compact?: boolean }) {
+export function SampleImporter({ compact = false }: { compact?: boolean }) {
   const router = useRouter();
   const [samples, setSamples] = useState<SampleStatus[] | null>(null);
   const [running, setRunning] = useState(false);
@@ -71,7 +71,7 @@ export function SampleImporter({ ready, compact = false }: { ready: boolean; com
     setRunning(false);
     router.refresh();
     if (fatal) toast.error(fatal);
-    else if (imported) toast.success(`${imported} sample photos uploaded to Cloudinary and analyzed`);
+    else if (imported) toast.success(`${imported} sample photos indexed`);
   }
 
   const pct = total ? Math.round((done / total) * 100) : 0;
@@ -81,10 +81,10 @@ export function SampleImporter({ ready, compact = false }: { ready: boolean; com
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="max-w-xl">
           <div className="label-mono">Sample evidence</div>
-          <h3 className="mt-1.5 text-[15px] font-medium">Import {total || 30} sample field photos</h3>
+          <h3 className="mt-1.5 text-[15px] font-medium">Load {total || 30} sample field photos</h3>
           <p className="mt-1.5 text-[13px] leading-relaxed text-muted">
-            Uploads bundled photos from Rajasthan, Delhi and Maharashtra projects to your Cloudinary account and runs real AI
-            analysis on each one. Only the project, site and capture date are supplied; everything else is generated from the image.
+            Field photos from water, greening and solar projects in Rajasthan, Delhi and Maharashtra, processed through the full
+            pipeline: stored in Cloudinary, analyzed by AI and indexed for search, comparison and reporting.
           </p>
         </div>
         <div className="flex shrink-0 gap-2">
@@ -93,8 +93,8 @@ export function SampleImporter({ ready, compact = false }: { ready: boolean; com
               <Square /> Stop
             </Button>
           ) : remaining > 0 ? (
-            <Button variant="primary" size="sm" onClick={run} disabled={!ready || !samples}>
-              <CloudUpload /> {done ? `Import remaining ${remaining}` : "Import samples"}
+            <Button variant="primary" size="sm" onClick={run} disabled={!samples}>
+              <CloudUpload /> {done ? `Load remaining ${remaining}` : "Load samples"}
             </Button>
           ) : samples ? (
             <span className="flex items-center gap-1.5 text-[12.5px] text-positive">
@@ -117,13 +117,11 @@ export function SampleImporter({ ready, compact = false }: { ready: boolean; com
           </div>
           {running && current.length > 0 && (
             <div className="mt-2.5 flex items-center gap-2 font-mono text-[11px] text-muted">
-              <Loader2 className="size-3 animate-spin text-accent" /> Uploading &amp; analyzing {current.join(", ")}
+              <Loader2 className="size-3 animate-spin text-accent" /> Processing {current.join(", ")}
             </div>
           )}
         </div>
       )}
-
-      {!ready && <p className="mt-4 text-[12px] text-warning">Connect Cloudinary and Gemini first.</p>}
 
       {errors.length > 0 && (
         <ul className="mt-4 space-y-1 rounded-md border border-danger/25 bg-danger/[0.05] p-3 font-mono text-[11px] text-danger">
@@ -132,7 +130,7 @@ export function SampleImporter({ ready, compact = false }: { ready: boolean; com
               {e.file}: {e.error}
             </li>
           ))}
-          {errors.length > 5 && <li>…and {errors.length - 5} more. Run the import again to retry.</li>}
+          {errors.length > 5 && <li>…and {errors.length - 5} more. Load again to retry.</li>}
         </ul>
       )}
     </Panel>

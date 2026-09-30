@@ -21,7 +21,6 @@ import { NewProjectDialog } from "@/components/NewProjectDialog";
 import { SampleImporter } from "@/components/SampleImporter";
 import { Button } from "@/components/ui/button";
 import { Panel, PanelHeader } from "@/components/ui/panel";
-import { setupStatus } from "@/lib/config";
 import { listActivity, orgStats, projectSummaries } from "@/lib/store";
 import { fmtDate, timeAgo } from "@/lib/utils";
 
@@ -38,7 +37,6 @@ const ACTIVITY_ICONS = {
 
 export default async function OverviewPage() {
   const [stats, activity, projects] = await Promise.all([orgStats(), listActivity(), projectSummaries()]);
-  const { ready } = setupStatus();
   const reportProject = [...projects].sort((a, b) => b.totalAssets - a.totalAssets)[0];
 
   return (
@@ -74,8 +72,25 @@ export default async function OverviewPage() {
       </section>
 
       {stats.totalAssets === 0 && (
-        <section className="mt-6">
-          <SampleImporter ready={ready} compact />
+        <section className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-[1fr_1.2fr]">
+          <Panel className="flex flex-col justify-between p-6">
+            <div>
+              <div className="label-mono">Get started</div>
+              <h3 className="mt-1.5 text-[15px] font-medium">Upload your first field media</h3>
+              <p className="mt-1.5 text-[13px] leading-relaxed text-muted">
+                Photos and videos are stored in Cloudinary, analyzed by AI and indexed by project, location, stage and impact area.
+              </p>
+            </div>
+            <div className="mt-5 flex flex-wrap gap-2">
+              <Button variant="primary" size="sm" asChild>
+                <Link href="/media?upload=1"><Upload /> Upload media</Link>
+              </Button>
+              <Button variant="ghost" size="sm" asChild>
+                <Link href="/settings">Manage projects <ArrowRight /></Link>
+              </Button>
+            </div>
+          </Panel>
+          <SampleImporter compact />
         </section>
       )}
 
