@@ -17,7 +17,15 @@ export async function GET() {
   const status = await Promise.all(
     SAMPLES.map(async (s) => {
       const a = await getAsset(s.file);
-      return { file: s.file, projectId: s.projectId, collection: s.collection, status: a?.status ?? null };
+      return {
+        file: s.file,
+        title: sampleTitle(s.file),
+        preview: s.remoteUrl ? s.remoteUrl.replace(/w=\d+&q=\d+/, "w=160&q=60") : `/_next/image?url=${encodeURIComponent(`/samples/${s.file}.jpg`)}&w=256&q=75`,
+        projectId: s.projectId,
+        collection: s.collection,
+        status: a?.status ?? null,
+        engine: a?.analysisEngine || null,
+      };
     }),
   );
   return Response.json(status);

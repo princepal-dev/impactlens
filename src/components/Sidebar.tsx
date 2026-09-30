@@ -12,6 +12,7 @@ import {
   Settings2,
 } from "lucide-react";
 import Link from "next/link";
+import { NavIcon } from "./NavIcon";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { thumbUrl } from "@/lib/media-url";
@@ -155,9 +156,8 @@ function SideLink({ item, active }: { item: NavItem; active: boolean }) {
     "relative flex h-11 w-full items-center gap-3 rounded-full px-4 text-[13.5px] font-medium transition-colors duration-200",
     active ? "bg-ink text-ink-foreground" : "text-muted hover:bg-tint/[0.05] hover:text-foreground",
   );
-  const body = (
+  const rest = (
     <>
-      <Icon className="size-[18px] shrink-0" />
       <span className="flex-1 truncate text-left">{label}</span>
       {kbd && <kbd className="font-mono text-[11px] text-subtle">{kbd}</kbd>}
     </>
@@ -165,13 +165,15 @@ function SideLink({ item, active }: { item: NavItem; active: boolean }) {
   if (href) {
     return (
       <Link href={href} className={className}>
-        {body}
+        <NavIcon icon={Icon} className="size-[18px] shrink-0" />
+        {rest}
       </Link>
     );
   }
   return (
     <button type="button" onClick={onClick} className={className}>
-      {body}
+      <Icon className="size-[18px] shrink-0" />
+      {rest}
     </button>
   );
 }

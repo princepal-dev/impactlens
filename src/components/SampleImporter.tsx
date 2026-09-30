@@ -1,17 +1,29 @@
 "use client";
 
-import { CheckCircle2, CloudUpload, Loader2, Square } from "lucide-react";
+import { CheckCircle2, Clock, CloudUpload, Square } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
+import { eta, ProgressBar, ScanThumb } from "@/components/ui/progress";
 import { requestJSON } from "@/lib/http";
 import type { SampleCollection } from "@/lib/samples";
 
-type SampleStatus = { file: string; projectId: string; collection: SampleCollection; status: string | null };
+type SampleStatus = {
+  file: string;
+  title: string;
+  preview: string;
+  projectId: string;
+  collection: SampleCollection;
+  status: string | null;
+  engine: string | null;
+};
+type RunState = { collection: SampleCollection; startedAt: number; processed: number; queued: number };
+type Result = { file: string; ok: boolean; engine: string | null };
 
 const CONCURRENCY = 2;
+const timestamp = () => Date.now();
 
 const COLLECTIONS: { id: SampleCollection; title: string; description: React.ReactNode }[] = [
   {
@@ -38,8 +50,11 @@ const COLLECTIONS: { id: SampleCollection; title: string; description: React.Rea
 export function SampleImporter({ compact = false }: { compact?: boolean }) {
   const router = useRouter();
   const [samples, setSamples] = useState<SampleStatus[] | null>(null);
-  const [running, setRunning] = useState<SampleCollection | null>(null);
-  const [current, setCurrent] = useState<string[]>([]);
+  const [run, setRun] = useState<RunState | null>(null);
+  const [current, setCurrent] = useState<{ file: string; at: number }[]>([]);
+  const [results, setResults] = useState<Result[]>([]);
+  const [now, setNow] = useState(() => Date.now());
+  const running = run?.collection ?? null;
   const [errors, setErrors] = useState<{ file: string; error: string }[]>([]);
   const stop = useRef(false);
 
@@ -53,40 +68,52 @@ export function SampleImporter({ compact = false }: { compact?: boolean }) {
     };
   }, []);
 
-  async function run(collection: SampleCollection) {
+  useEffect(() => {
+    if (!running) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [running]);
+
+  async function start(collection: SampleCollection) {
     if (!samples) return;
     stop.current = false;
-    setRunning(collection);
     setErrors([]);
+    setResults([]);
     const queue = samples.filter((s) => s.collection === collection && s.status !== "indexed").map((s) => s.file);
+    setRun({ collection, startedAt: timestamp(), processed: 0, queued: queue.length });
     let imported = 0;
     let fatal: string | null = null;
 
     const worker = async () => {
       while (queue.length && !stop.current && !fatal) {
         const file = queue.shift()!;
-        setCurrent((c) => [...c, file]);
-        let res = await requestJSON("/api/samples", { method: "POST", json: { file }, timeoutMs: 200_000 });
+        setCurrent((c) => [...c, { file, at: Date.now() }]);
+        let res = await requestJSON<{ asset?: { analysisEngine?: string } }>("/api/samples", { method: "POST", json: { file }, timeoutMs: 200_000 });
         if (!res.ok && res.status === 429) {
           await new Promise((r) => setTimeout(r, 15_000));
-          res = await requestJSON("/api/samples", { method: "POST", json: { file }, timeoutMs: 200_000 });
+          res = await requestJSON<{ asset?: { analysisEngine?: string } }>("/api/samples", { method: "POST", json: { file }, timeoutMs: 200_000 });
         }
         if (res.ok) {
           imported++;
-          setSamples((list) => list?.map((s) => (s.file === file ? { ...s, status: "indexed" } : s)) ?? list);
+          const engine = res.data.asset?.analysisEngine ?? null;
+          setSamples((list) => list?.map((s) => (s.file === file ? { ...s, status: "indexed", engine } : s)) ?? list);
+          setResults((r) => [{ file, ok: true, engine }, ...r].slice(0, 6));
         } else {
           if (res.status === 503) fatal = res.error;
           const error = res.error;
           setErrors((list) => [...list, { file, error }]);
           setSamples((list) => list?.map((s) => (s.file === file ? { ...s, status: "analysis_failed" } : s)) ?? list);
+          setResults((r) => [{ file, ok: false, engine: null }, ...r].slice(0, 6));
         }
-        setCurrent((c) => c.filter((f) => f !== file));
+        setCurrent((c) => c.filter((f) => f.file !== file));
+        setRun((r) => (r ? { ...r, processed: r.processed + 1 } : r));
       }
     };
 
     await Promise.all(Array.from({ length: CONCURRENCY }, worker));
     if (imported) await requestJSON("/api/samples", { method: "PATCH", json: { imported } });
-    setRunning(null);
+    setRun(null);
+    setCurrent([]);
     router.refresh();
     if (fatal) toast.error(fatal);
     else if (imported) toast.success(`${imported} sample photos indexed`);
@@ -124,7 +151,7 @@ export function SampleImporter({ compact = false }: { compact?: boolean }) {
                       <Square /> Stop
                     </Button>
                   ) : remaining > 0 ? (
-                    <Button variant={c.id === "unsplash" ? "primary" : "secondary"} size="sm" onClick={() => run(c.id)} disabled={!samples || !!running}>
+                    <Button variant={c.id === "unsplash" ? "primary" : "secondary"} size="sm" onClick={() => start(c.id)} disabled={!samples || !!running}>
                       <CloudUpload /> {done ? `Load remaining ${remaining}` : "Load photos"}
                     </Button>
                   ) : samples ? (
@@ -135,7 +162,54 @@ export function SampleImporter({ compact = false }: { compact?: boolean }) {
                 </div>
               </div>
 
-              {samples && (done > 0 || active) && (
+              {!samples && <div className="skeleton mt-4 h-1.5 w-full rounded-full" />}
+
+              {samples && active && run && (
+                <div className="page-in mt-4 rounded-xl border border-line bg-tint/[0.02] p-3.5" aria-live="polite">
+                  <div className="flex items-center justify-between gap-3 text-[12.5px]">
+                    <span className="font-medium">
+                      Importing · <span className="tabular-nums">{done}/{total}</span> indexed
+                    </span>
+                    <span className="flex items-center gap-1 tabular-nums text-subtle">
+                      <Clock className="size-3" />
+                      {eta(run.startedAt, run.processed, run.queued - run.processed) ?? "Estimating time…"}
+                    </span>
+                  </div>
+                  <ProgressBar value={pct} label={`${c.title} import progress`} className="mt-2" />
+                  {current.length > 0 && (
+                    <ul className="mt-3.5 space-y-2.5">
+                      {current.map(({ file, at }) => {
+                        const s = items.find((x) => x.file === file);
+                        return (
+                          <li key={file} className="page-in flex items-center gap-3">
+                            {s && <ScanThumb src={s.preview} alt={s.title} className="h-10 w-[54px]" />}
+                            <div className="min-w-0 flex-1">
+                              <div className="truncate text-[13px] font-medium">{s?.title ?? file}</div>
+                              <div className="text-[11.5px] tabular-nums text-subtle">
+                                Uploading & analyzing with AI · {Math.max(0, Math.round((now - at) / 1000))}s
+                              </div>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                  {results.length > 0 && (
+                    <ul className="mt-3.5 flex flex-wrap gap-2 border-t border-line pt-3">
+                      {results.map((r) => {
+                        const s = items.find((x) => x.file === r.file);
+                        return s ? (
+                          <li key={r.file} className="page-in" title={`${s.title}${r.engine ? ` · ${r.engine}` : ""}`}>
+                            <ScanThumb src={s.preview} alt={s.title} state={r.ok ? "done" : "error"} className="h-9 w-12" />
+                          </li>
+                        ) : null;
+                      })}
+                    </ul>
+                  )}
+                </div>
+              )}
+
+              {samples && !active && done > 0 && (
                 <div className="mt-4">
                   <div className="flex justify-between text-[12px] tabular-nums text-subtle">
                     <span>
@@ -143,14 +217,7 @@ export function SampleImporter({ compact = false }: { compact?: boolean }) {
                     </span>
                     <span>{pct}%</span>
                   </div>
-                  <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-tint/[0.06]">
-                    <div className="h-full rounded-full bg-accent transition-all duration-500" style={{ width: `${pct}%` }} />
-                  </div>
-                  {active && current.length > 0 && (
-                    <div className="mt-2.5 flex items-center gap-2 text-[12px] text-muted">
-                      <Loader2 className="size-3 animate-spin text-accent" /> Processing {current.join(", ")}
-                    </div>
-                  )}
+                  <ProgressBar value={pct} label={`${c.title} progress`} className="mt-1.5 h-1" />
                 </div>
               )}
             </li>
@@ -162,7 +229,7 @@ export function SampleImporter({ compact = false }: { compact?: boolean }) {
         <ul className="mx-6 mb-6 space-y-1 rounded-xl border border-danger/25 bg-danger/[0.05] p-3 text-[12px] text-danger">
           {errors.slice(0, 5).map((e) => (
             <li key={e.file}>
-              {e.file}: {e.error}
+              {samples?.find((x) => x.file === e.file)?.title ?? e.file}: {e.error}
             </li>
           ))}
           {errors.length > 5 && <li>…and {errors.length - 5} more. Load again to retry.</li>}

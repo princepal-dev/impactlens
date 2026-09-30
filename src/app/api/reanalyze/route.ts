@@ -1,11 +1,11 @@
 import { aiAvailable } from "@/lib/ai";
 import { rateLimit } from "@/lib/rate-limit";
-import { pendingAI, reanalyzePending, reanalyzeRunning } from "@/lib/reanalyze";
+import { pendingAI, queueProgress, reanalyzePending, reanalyzeRunning } from "@/lib/reanalyze";
 
 export const dynamic = "force-dynamic";
 
 async function status() {
-  return { pending: (await pendingAI()).length, running: reanalyzeRunning(), available: aiAvailable() };
+  return { pending: (await pendingAI()).length, running: reanalyzeRunning(), available: aiAvailable(), progress: queueProgress() };
 }
 
 /** How many assets are waiting for real AI analysis, and whether the queue is being processed. */

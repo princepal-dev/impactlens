@@ -2,6 +2,7 @@
 
 import { FileText, Images, LayoutGrid, type LucideIcon, ScanSearch, Settings, SplitSquareHorizontal } from "lucide-react";
 import Link from "next/link";
+import { NavIcon } from "./NavIcon";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Logo } from "./Logo";
@@ -94,7 +95,7 @@ function TopLink({ item, active }: { item: NavItem; active: boolean }) {
         active ? "bg-ink text-ink-foreground" : "text-muted hover:bg-tint/[0.05] hover:text-foreground",
       )}
     >
-      <Icon className="size-4" />
+      <NavIcon icon={Icon} className="size-4" />
       {label}
     </Link>
   );

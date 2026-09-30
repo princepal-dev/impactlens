@@ -323,6 +323,24 @@ a.hero-stat:first-child:hover {
   animation: scan 1.6s ease-in-out infinite;
 }
 
+@keyframes progress-sweep {
+  0% {
+    left: -35%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+.progress-sweep {
+  animation: progress-sweep 1.3s var(--ease-out-soft) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .progress-sweep,
+  .scan-line {
+    animation-duration: 4s;
+  }
+}
+
 @keyframes shimmer {
   100% {
     transform: translateX(100%);
