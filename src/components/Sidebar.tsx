@@ -8,6 +8,7 @@ import {
   FilePlus2,
   LayoutDashboard,
   type LucideIcon,
+  Mic,
   Plus,
   Settings2,
 } from "lucide-react";
@@ -28,7 +29,6 @@ type NavItem = { label: string; icon: LucideIcon; href?: string; onClick?: () =>
 const NAV: NavItem[] = [
   { label: "Dashboard", icon: LayoutDashboard, href: "/", active: (p) => p === "/" },
   { label: "Upload media", icon: CloudUpload, href: "/media?upload=1" },
-  { label: "Ask ImpactLens", icon: AudioLines, onClick: () => openVoiceAgent(true), kbd: "⌘J" },
   { label: "Sample library", icon: Database, href: "/settings#samples" },
   { label: "Settings", icon: Settings2, href: "/settings", active: (p) => p.startsWith("/settings") },
 ];
@@ -61,6 +61,25 @@ export function Sidebar({ initial }: { initial: WorkspaceSummary }) {
           <SideLink key={item.label} item={item} active={item.active?.(pathname) ?? false} />
         ))}
       </nav>
+
+      <button
+        type="button"
+        onClick={() => openVoiceAgent(true)}
+        className="hero-panel group mt-3 rounded-2xl p-4 text-left ring-1 ring-inset ring-lime/25 transition-[transform,box-shadow] duration-300 ease-[var(--ease-out-soft)] hover:-translate-y-0.5 hover:ring-lime/50"
+      >
+        <div className="flex items-center justify-between">
+          <span className="relative grid size-10 place-items-center rounded-full bg-lime text-lime-foreground">
+            <span className="launcher-pulse absolute inset-0 rounded-full bg-lime" />
+            <AudioLines className="relative size-5" />
+          </span>
+          <kbd className="rounded-full border border-white/15 px-2 py-0.5 font-mono text-[10.5px] text-white/60">⌘J</kbd>
+        </div>
+        <div className="mt-3 text-[15px] font-semibold tracking-tight">Ask ImpactLens</div>
+        <div className="mt-0.5 text-[12px] leading-snug text-white/60">Ask about your evidence by voice or text.</div>
+        <span className="mt-3 inline-flex h-8 items-center gap-1.5 rounded-full bg-white/10 px-3 text-[12px] font-medium text-white transition-colors duration-200 group-hover:bg-lime group-hover:text-lime-foreground">
+          <Mic className="size-3.5" /> Start talking
+        </span>
+      </button>
 
       <div className="mx-2 my-4 h-px bg-line" />
 

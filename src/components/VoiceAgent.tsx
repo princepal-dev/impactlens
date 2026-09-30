@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, ArrowUpRight, Loader2, Mic, MicOff, Send, Square, Volume2, VolumeX, X } from "lucide-react";
+import { ArrowRight, ArrowUpRight, AudioLines, Loader2, Mic, MicOff, Send, Square, Volume2, VolumeX, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -40,9 +40,7 @@ export function VoiceOrb({ mode, size = 56, className }: { mode: Mode; size?: nu
         "relative inline-grid shrink-0 place-items-center rounded-full border transition-colors",
         mode === "listening"
           ? "border-danger/40 bg-danger/10 text-danger"
-          : mode === "idle"
-            ? "border-line-strong bg-surface text-muted"
-            : "border-accent/40 bg-accent/10 text-accent",
+          : "border-lime bg-lime text-lime-foreground",
         className,
       )}
       style={{ width: size, height: size }}
@@ -164,16 +162,21 @@ export function VoiceAgent() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 12 }}
-            className="fixed bottom-5 right-5 z-50 lg:hidden"
+            className="fixed bottom-6 right-6 z-50"
           >
             <button
               onClick={() => openVoiceAgent(true)}
               aria-label="Ask ImpactLens by voice"
-              className="flex h-11 items-center gap-2 rounded-full bg-ink px-4 text-[13px] font-medium text-ink-foreground shadow-lg shadow-black/20 transition-transform active:scale-95"
+              className="group relative flex h-14 items-center gap-3 rounded-full bg-lime pl-2 pr-2 text-lime-foreground shadow-[0_14px_40px_-10px_rgba(170,210,40,0.75)] ring-1 ring-black/10 transition-[transform,box-shadow] duration-300 ease-[var(--ease-out-soft)] hover:-translate-y-1 hover:shadow-[0_20px_50px_-10px_rgba(170,210,40,0.9)] active:scale-95 sm:pr-5"
             >
-              <Mic className="size-4" />
-              <span className="max-sm:hidden">Ask ImpactLens</span>
-              <kbd className="font-mono text-[11px] opacity-60 max-md:hidden">⌘J</kbd>
+              <span className="launcher-pulse pointer-events-none absolute inset-0 -z-10 rounded-full bg-lime" />
+              <span className="grid size-10 place-items-center rounded-full bg-[#10120a] text-lime transition-transform duration-300 group-hover:scale-105">
+                <AudioLines className="size-5" />
+              </span>
+              <span className="flex flex-col items-start leading-tight max-sm:hidden">
+                <span className="text-[14.5px] font-semibold tracking-tight">Ask ImpactLens</span>
+                <span className="text-[11.5px] font-medium opacity-65">Voice &amp; chat assistant · ⌘J</span>
+              </span>
             </button>
           </motion.div>
         )}
@@ -188,13 +191,16 @@ export function VoiceAgent() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 24, scale: 0.96 }}
             transition={{ type: "spring", stiffness: 380, damping: 32 }}
-            className="fixed bottom-5 right-5 z-50 flex max-h-[min(680px,calc(100vh-40px))] w-[min(420px,calc(100vw-40px))] origin-bottom-right flex-col overflow-hidden rounded-2xl border border-line-strong bg-surface shadow-2xl shadow-black/25"
+            className="fixed bottom-6 right-6 z-50 flex max-h-[min(740px,calc(100vh-48px))] w-[min(460px,calc(100vw-32px))] origin-bottom-right flex-col overflow-hidden rounded-3xl border border-line-strong bg-surface shadow-[0_30px_80px_-20px_rgba(0,0,0,0.55)] max-sm:bottom-4 max-sm:right-4"
           >
-            <header className="flex items-center gap-3 border-b border-line px-4 py-3">
-              <VoiceOrb mode={view} size={30} />
+            <header className="hero-panel flex items-center gap-3 px-5 py-4">
+              <VoiceOrb mode={view} size={40} />
               <div className="min-w-0 flex-1">
-                <div className="text-[13.5px] font-medium">Ask ImpactLens</div>
-                <div className="truncate text-[12px] text-muted">{status}</div>
+                <div className="flex items-center gap-2 text-[15px] font-semibold tracking-tight">
+                  Ask ImpactLens
+                  <span className="rounded-full bg-lime px-1.5 py-px text-[10px] font-semibold text-lime-foreground">AI</span>
+                </div>
+                <div className="truncate text-[12.5px] text-white/60">{status}</div>
               </div>
               <button
                 onClick={() => {
@@ -202,24 +208,24 @@ export function VoiceAgent() {
                   stopSpeaking();
                   if (view === "speaking") setMode("idle");
                 }}
-                className="grid size-8 place-items-center rounded-full text-subtle transition-colors hover:bg-tint/[0.06] hover:text-foreground"
+                className="grid size-9 place-items-center rounded-full border border-white/15 text-white/75 transition-colors hover:border-white hover:bg-white hover:text-[#10120a]"
                 aria-label={muted ? "Unmute voice replies" : "Mute voice replies"}
                 title={muted ? "Voice replies off" : "Voice replies on"}
               >
                 {muted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
               </button>
-              <button onClick={() => setOpen(false)} className="grid size-8 place-items-center rounded-full text-subtle transition-colors hover:bg-ink hover:text-ink-foreground" aria-label="Close assistant">
+              <button onClick={() => setOpen(false)} className="grid size-9 place-items-center rounded-full border border-white/15 text-white/75 transition-colors hover:border-white hover:bg-white hover:text-[#10120a]" aria-label="Close assistant">
                 <X className="size-4" />
               </button>
             </header>
 
-            <div ref={scroller} className="scrollbar-thin min-h-[260px] flex-1 space-y-4 overflow-y-auto px-4 py-4">
+            <div ref={scroller} className="scrollbar-thin min-h-[300px] flex-1 space-y-4 overflow-y-auto px-5 py-5">
               {turns.length === 0 && !speech.interim && (
                 <div className="flex flex-col items-center pb-2 pt-4 text-center">
                   <button onClick={speech.supported ? listen : undefined} className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-accent/50" aria-label="Start listening">
-                    <VoiceOrb mode={view} size={56} />
+                    <VoiceOrb mode={view} size={72} />
                   </button>
-                  <h3 className="mt-4 text-[15px] font-medium">Ask about your evidence</h3>
+                  <h3 className="mt-4 text-[17px] font-semibold tracking-tight">Ask about your evidence</h3>
                   <p className="mt-1 max-w-[280px] text-[13px] leading-relaxed text-muted">
                     Speak naturally. Answers come from your indexed field media, with links to the source.
                   </p>
@@ -285,17 +291,17 @@ export function VoiceAgent() {
                 e.preventDefault();
                 ask(text);
               }}
-              className="flex items-center gap-2 border-t border-line p-3"
+              className="flex items-center gap-2 border-t border-line p-3.5"
             >
               <input
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 placeholder={speech.listening ? "Listening…" : "Ask a question…"}
                 aria-label="Ask a question"
-                className="h-10 min-w-0 flex-1 rounded-full border border-line-strong bg-background px-4 text-[13.5px] outline-none placeholder:text-subtle focus-visible:border-lime"
+                className="h-11 min-w-0 flex-1 rounded-full border border-line-strong bg-background px-4 text-[14px] outline-none placeholder:text-subtle focus-visible:border-lime"
               />
               {text.trim() ? (
-                <button type="submit" disabled={view === "thinking"} className="grid size-10 shrink-0 place-items-center rounded-full bg-lime text-lime-foreground transition-opacity disabled:opacity-50" aria-label="Send">
+                <button type="submit" disabled={view === "thinking"} className="grid size-11 shrink-0 place-items-center rounded-full bg-lime text-lime-foreground transition-opacity disabled:opacity-50" aria-label="Send">
                   <Send className="size-4" />
                 </button>
               ) : speech.supported ? (
@@ -304,7 +310,7 @@ export function VoiceAgent() {
                   onClick={speech.listening ? speech.stop : listen}
                   disabled={view === "thinking"}
                   className={cn(
-                    "relative grid size-10 shrink-0 place-items-center rounded-full transition-all disabled:opacity-50",
+                    "relative grid size-11 shrink-0 place-items-center rounded-full transition-all disabled:opacity-50",
                     speech.listening ? "bg-danger text-white" : "bg-lime text-lime-foreground hover:scale-105",
                   )}
                   aria-label={speech.listening ? "Stop listening" : "Start listening"}

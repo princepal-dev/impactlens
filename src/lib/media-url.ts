@@ -25,6 +25,12 @@ export function thumbUrl(a: Ref, w = 640, h = 420) {
   return withTransform(a.secureUrl, TRANSFORMS.thumb(w, h));
 }
 
+/** Width-bounded still that keeps the original aspect ratio (for masonry layouts). */
+export function naturalUrl(a: Ref, w = 720) {
+  if (a.resourceType === "video") return withTransform(a.secureUrl, `so_50p,c_limit,w_${w},q_auto`, "jpg");
+  return withTransform(a.secureUrl, `c_limit,w_${w},f_auto,q_auto`);
+}
+
 export function displayUrl(a: Ref) {
   return withTransform(a.secureUrl, a.resourceType === "video" ? TRANSFORMS.video : TRANSFORMS.display);
 }

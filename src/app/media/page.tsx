@@ -1,6 +1,7 @@
 import { FolderKanban, Images, MapPinned, Sparkles } from "lucide-react";
 import { MediaLibrary } from "@/components/MediaLibrary";
 import { HeaderStat, PageHeader } from "@/components/PageHeader";
+import { isMediaView } from "@/lib/media-views";
 import { listAssets, listProjects } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -30,6 +31,7 @@ export default async function MediaPage({ searchParams }: PageProps<"/media">) {
         initial={assets}
         projects={projects}
         initialProject={typeof sp.project === "string" ? sp.project : undefined}
+        initialView={isMediaView(sp.view) ? sp.view : undefined}
         autoUpload={sp.upload === "1"}
       />
     </div>

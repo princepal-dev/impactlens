@@ -42,7 +42,18 @@ export function AppHeader() {
         </nav>
 
         <div className="ml-auto flex items-center gap-2 md:ml-0">
-          <button type="button" onClick={() => openVoiceAgent(true)} aria-label="Ask ImpactLens" title="Ask ImpactLens (⌘J)" className={circleButton}>
+          <button
+            type="button"
+            onClick={() => openVoiceAgent(true)}
+            title="Ask ImpactLens (⌘J)"
+            className="group hidden h-10 items-center gap-2 rounded-full bg-lime pl-1.5 pr-4 text-[13px] font-semibold text-lime-foreground shadow-[0_8px_24px_-12px_rgba(170,210,40,0.9)] transition-[transform,box-shadow] duration-200 hover:-translate-y-px hover:shadow-[0_12px_28px_-10px_rgba(170,210,40,1)] active:scale-95 sm:flex"
+          >
+            <span className="grid size-7 place-items-center rounded-full bg-[#10120a] text-lime transition-transform duration-300 group-hover:scale-110">
+              <AudioLines className="size-4" />
+            </span>
+            Ask ImpactLens
+          </button>
+          <button type="button" onClick={() => openVoiceAgent(true)} aria-label="Ask ImpactLens" className={cn(circleButton, "sm:hidden")}>
             <AudioLines />
           </button>
           <ThemeCycleButton className={circleButton} />
