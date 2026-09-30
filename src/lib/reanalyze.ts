@@ -1,5 +1,5 @@
 import "server-only";
-import { aiAvailable } from "./ai";
+import { aiAvailable, foregroundIdleMs, runInBackground } from "./ai";
 import { analyzeMedia } from "./analyze";
 import { NotConfiguredError } from "./config";
 import { analysisFrameUrl, thumbUrl } from "./media-url";
@@ -10,6 +10,8 @@ import type { MediaAsset } from "./types";
 
 const WORKER_INTERVAL_MS = 2 * 60_000;
 const PAUSE_BETWEEN_MS = 2500;
+/** Providers limit tokens per minute, so the queue waits until user-facing AI calls have been quiet this long. */
+const FOREGROUND_QUIET_MS = 30_000;
 const LOCK = "reanalyze:queue";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -78,10 +80,11 @@ export async function reanalyzePending(): Promise<number | null> {
     const progress: QueueProgress = { total: queue.length, done: 0, failed: 0, current: null, recent: [], startedAt: Date.now(), finishedAt: null };
     g.__impactlensQueue = progress;
     for (const asset of queue) {
+      while (foregroundIdleMs() < FOREGROUND_QUIET_MS) await sleep(3000);
       if (!aiAvailable()) break;
       progress.current = item(asset);
       try {
-        const updated = await withLock(`asset:${asset.id}`, () => reanalyzeOne(asset));
+        const updated = await withLock(`asset:${asset.id}`, () => runInBackground(() => reanalyzeOne(asset)));
         if (updated) {
           progress.done++;
           progress.recent = [item(updated, updated.analysisEngine), ...progress.recent].slice(0, 4);

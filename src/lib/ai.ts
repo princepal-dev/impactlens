@@ -1,4 +1,5 @@
 import "server-only";
+import { AsyncLocalStorage } from "node:async_hooks";
 import { aiProviders, config, NotConfiguredError, PROVIDER_NAMES, type AIProvider } from "./config";
 
 export interface InlineImage {
@@ -139,6 +140,16 @@ async function groqModelOrder(vision: boolean, recheck = true): Promise<string[]
   return models;
 }
 
+/** Groq puts the wait in the message ("try again in 1h2m3.5s") rather than a header. */
+function groqWaitMs(message: string) {
+  const span = message.match(/try again in ((?:[\d.]+(?:ms|h|m|s))+)/)?.[1];
+  if (!span) return 0;
+  const unit = { ms: 1, s: 1000, m: 60_000, h: 3_600_000 } as const;
+  let total = 0;
+  for (const [, n, u] of span.matchAll(/([\d.]+)(ms|h|m|s)/g)) total += Number(n) * unit[u as keyof typeof unit];
+  return Math.ceil(total);
+}
+
 async function callGroq(opts: CallOptions): Promise<CallResult> {
   const vision = opts.images.length > 0;
   const models = await groqModelOrder(vision);
@@ -166,11 +177,11 @@ async function callGroq(opts: CallOptions): Promise<CallResult> {
       continue;
     }
     if (res.status === 401 || res.status === 403) throw new ProviderAuthError(message);
-    if (res.status === 429 && /per day|\(RPD\)|\(TPD\)/i.test(message)) throw new QuotaExhaustedError(message, nextUtcMidnight());
-    if (res.status === 429 || res.status >= 500) {
-      const retryAfter = Number(res.headers.get("retry-after"));
-      throw new RetryableError(message, retryAfter > 0 ? retryAfter * 1000 : 0);
+    const waitMs = groqWaitMs(message) || Number(res.headers.get("retry-after")) * 1000;
+    if (res.status === 429 && /per day|\(RPD\)|\(TPD\)/i.test(message)) {
+      throw new QuotaExhaustedError(message, waitMs > 0 ? Date.now() + waitMs + 5000 : nextUtcMidnight());
     }
+    if (res.status === 429 || res.status >= 500) throw new RetryableError(message, waitMs > 0 ? waitMs + 500 : 0);
     if (!res.ok) throw new RetryableError(message);
     const text = String(json.choices?.[0]?.message?.content ?? "").replace(/<think>[\s\S]*?<\/think>/g, "");
     if (!text.trim()) throw new RetryableError("Groq returned no content");
@@ -299,6 +310,15 @@ async function runProvider<T>(
   throw lastError ?? new Error(`${PROVIDER_NAMES[provider]} timed out`);
 }
 
+const background = new AsyncLocalStorage<true>();
+const activity = globalThis as unknown as { __impactlensForegroundAt?: number };
+
+/** Run AI work that should give way to user requests, which share the same per-minute token limits. */
+export const runInBackground = <T>(fn: () => Promise<T>) => background.run(true, fn);
+
+/** Milliseconds since a user-triggered AI call last started or finished. */
+export const foregroundIdleMs = () => Date.now() - (activity.__impactlensForegroundAt ?? 0);
+
 /** True when at least one configured provider is not paused by a quota or auth cooldown. */
 export function aiAvailable() {
   const now = Date.now();
@@ -318,6 +338,16 @@ export async function generateJSON<T>(opts: {
   /** Total time budget across all providers and retries. */
   budgetMs?: number;
 }): Promise<{ data: T; engine: string }> {
+  if (background.getStore()) return callChain<T>(opts);
+  activity.__impactlensForegroundAt = Date.now();
+  try {
+    return await callChain<T>(opts);
+  } finally {
+    activity.__impactlensForegroundAt = Date.now();
+  }
+}
+
+async function callChain<T>(opts: Parameters<typeof generateJSON>[0]): Promise<{ data: T; engine: string }> {
   const configured = aiProviders();
   if (!configured.length) {
     throw new NotConfiguredError("AI credentials missing", "AI analysis is unavailable right now. Please try again shortly.");

@@ -1,9 +1,9 @@
 "use client";
 
-import { AlertTriangle, Columns2, Eye, FileText, Info, Loader2, RotateCcw, SplitSquareHorizontal, Upload } from "lucide-react";
+import { AlertTriangle, Columns2, Eye, FileText, Info, Loader2, RotateCcw, Sparkles, SplitSquareHorizontal, Upload } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { requestJSON } from "@/lib/http";
 import type { ComparisonResult, MediaAsset, Project } from "@/lib/types";
 import { cn, fmtDate, pct } from "@/lib/utils";
@@ -56,30 +56,36 @@ export function CompareWorkspace({
   const list = inScope(scope);
   const [[beforeId, afterId], setPair] = useState<[string, string]>(() => pairFor(scope, initialAfter));
   const [mode, setMode] = useState<"slider" | "side">("side");
-  const [attempt, setAttempt] = useState(0);
-  const [resp, setResp] = useState<{ key: string; data?: ComparisonResult; error?: string }>({ key: "" });
+  const [responses, setResponses] = useState<Record<string, { data?: ComparisonResult; error?: string }>>({});
+  const [pendingKey, setPendingKey] = useState<string | null>(null);
+  const inflight = useRef<AbortController | null>(null);
 
   const before = list.find((a) => a.id === beforeId);
   const after = list.find((a) => a.id === afterId);
-  const key = `${beforeId}|${afterId}|${attempt}`;
-  const loading = !!before && !!after && resp.key !== key;
-  const result = resp.key === key ? resp.data ?? null : null;
-  const error = resp.key === key ? resp.error : undefined;
+  const key = `${beforeId}|${afterId}`;
+  const loading = pendingKey === key;
+  const result = loading ? null : responses[key]?.data ?? null;
+  const error = loading ? undefined : responses[key]?.error;
 
-  useEffect(() => {
+  useEffect(() => () => inflight.current?.abort(), []);
+
+  const runCompare = async () => {
     if (!before || !after) return;
+    inflight.current?.abort();
     const controller = new AbortController();
-    requestJSON<ComparisonResult>("/api/compare", {
+    inflight.current = controller;
+    const runKey = key;
+    setPendingKey(runKey);
+    const r = await requestJSON<ComparisonResult>("/api/compare", {
       method: "POST",
       json: { beforeId: before.id, afterId: after.id },
       signal: controller.signal,
       timeoutMs: 120_000,
-    }).then((r) => {
-      if (controller.signal.aborted) return;
-      setResp(r.ok ? { key, data: r.data } : { key, error: r.error });
     });
-    return () => controller.abort();
-  }, [before, after, key]);
+    if (controller.signal.aborted) return;
+    setResponses((prev) => ({ ...prev, [runKey]: r.ok ? { data: r.data } : { error: r.error } }));
+    setPendingKey(null);
+  };
 
   const changeScope = (next: string) => {
     setScope(next);
@@ -94,7 +100,7 @@ export function CompareWorkspace({
   return (
     <div className="space-y-6">
       <Panel className="p-4 pl-5">
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end [&_.label-mono]:flex [&_.label-mono]:items-center [&_.label-mono]:gap-1.5">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)_auto_auto] md:items-end [&_.label-mono]:flex [&_.label-mono]:items-center [&_.label-mono]:gap-1.5">
           <label className="space-y-1.5">
             <span className="label-mono">Project</span>
             <Select value={scope} onChange={(e) => changeScope(e.target.value)}>
@@ -128,6 +134,10 @@ export function CompareWorkspace({
               </button>
             ))}
           </div>
+          <Button variant="lime" onClick={runCompare} disabled={!before || !after || loading} className="h-10">
+            {loading ? <Loader2 className="animate-spin" /> : result ? <RotateCcw /> : <Sparkles />}
+            {loading ? "Comparing…" : result ? "Compare again" : "Compare"}
+          </Button>
         </div>
       </Panel>
 
@@ -170,8 +180,9 @@ export function CompareWorkspace({
             <div className="relative p-5">
               {loading && (
                 <div className="space-y-3">
-                  <div className="mb-4 flex items-center gap-2 text-[13px] text-muted">
+                  <div className="mb-4 flex flex-wrap items-center gap-2 text-[13px] text-muted">
                     <Loader2 className="size-3.5 animate-spin" /> Comparing both frames…
+                    <span className="text-subtle">Usually a few seconds, up to a minute when AI is busy.</span>
                   </div>
                   {["w-11/12", "w-3/4", "w-5/6", "w-2/3"].map((w, i) => <div key={i} className={cn("skeleton h-4 rounded", w)} />)}
                 </div>
@@ -179,7 +190,18 @@ export function CompareWorkspace({
               {!loading && error && (
                 <div className="flex items-center justify-between gap-3 text-[13px] text-warning">
                   <span className="flex items-center gap-2"><AlertTriangle className="size-4" /> {error}</span>
-                  <Button size="sm" onClick={() => setAttempt((n) => n + 1)}><RotateCcw /> Retry</Button>
+                  <Button size="sm" onClick={runCompare}><RotateCcw /> Retry</Button>
+                </div>
+              )}
+              {!loading && !error && !result && (
+                <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <div className="text-[14px] font-medium">Ready to compare</div>
+                    <p className="mt-1 max-w-md text-[13px] leading-relaxed text-muted">
+                      AI reads both photos and describes what changed on site, with impact areas and a confidence score.
+                    </p>
+                  </div>
+                  <Button variant="primary" size="sm" onClick={runCompare} className="shrink-0"><Sparkles /> Compare photos</Button>
                 </div>
               )}
               {!loading && result && (
@@ -204,7 +226,8 @@ export function CompareWorkspace({
               <div className="label-mono">Potential impact areas</div>
               <div className="mt-3 flex flex-wrap gap-1.5">
                 {(result?.impactAreas ?? []).map((a) => <ImpactBadge key={a} area={a} />)}
-                {!result && <div className="skeleton h-6 w-40 rounded-full" />}
+                {loading && <div className="skeleton h-6 w-40 rounded-full" />}
+                {!loading && !result && <span className="text-[12.5px] text-subtle">Shown after comparing.</span>}
               </div>
               <div className="mt-6 border-t border-line pt-5">
                 <div className="flex items-baseline justify-between">
