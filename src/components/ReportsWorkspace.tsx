@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Download, FileText, History, RotateCcw, Sparkles, Trash2 } from "lucide-react";
+import { AlertTriangle, Download, FileText, History, Link as LinkIcon, RotateCcw, Sparkles, Trash2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -199,11 +199,26 @@ export function ReportsWorkspace({
       <div id="report-top" className="scroll-mt-6">
         {report ? (
           <div className="page-in">
-            <div className="no-print mb-4 flex items-center justify-between">
-              <div className="label-mono">Report preview</div>
-              <Button variant="secondary" onClick={() => window.print()}>
-                <Download /> Export Report
-              </Button>
+            <div className="no-print sticky top-3 z-20 mb-4 flex items-center justify-between gap-3 rounded-xl border border-line bg-chrome px-4 py-2.5 shadow-[var(--panel-shadow)] backdrop-blur-xl">
+              <div className="min-w-0">
+                <div className="truncate text-[13.5px] font-medium">{report.project}</div>
+                <div className="text-[12px] text-subtle">Report #{report.id} · {report.period.label}</div>
+              </div>
+              <div className="flex shrink-0 gap-2">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    navigator.clipboard?.writeText(`${window.location.origin}/reports?id=${report.id}`);
+                    toast.success("Report link copied");
+                  }}
+                >
+                  <LinkIcon /> Copy link
+                </Button>
+                <Button size="sm" variant="primary" onClick={() => window.print()}>
+                  <Download /> Export PDF
+                </Button>
+              </div>
             </div>
             <ReportPreview report={report} assets={assets} />
           </div>

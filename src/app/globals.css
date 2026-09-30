@@ -149,6 +149,73 @@ body {
   animation: page-in 0.35s ease-out both;
 }
 
+@keyframes spotlight {
+  0% {
+    opacity: 0;
+    transform: translate(-72%, -62%) scale(0.5);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -40%) scale(1);
+  }
+}
+.animate-spotlight {
+  animation: spotlight 2s ease 0.4s 1 forwards;
+}
+
+/* Cursor-following border glow (pointer position supplied by <GlowPointer />). */
+.glow-card {
+  position: relative;
+  isolation: isolate;
+}
+.glow-card::before,
+.glow-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: 3;
+}
+.glow-card::before {
+  padding: 1px;
+  background: radial-gradient(240px circle at var(--mx, -999px) var(--my, -999px), var(--accent), transparent 70%);
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+}
+.glow-card::after {
+  background: radial-gradient(420px circle at var(--mx, -999px) var(--my, -999px), color-mix(in srgb, var(--accent) 7%, transparent), transparent 60%);
+}
+.glow-card:hover::before,
+.glow-card:hover::after {
+  opacity: 1;
+}
+
+@keyframes orb-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.06);
+  }
+}
+@keyframes orb-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.orb-spin {
+  animation: orb-spin 6s linear infinite;
+}
+.orb-breathe {
+  animation: orb-breathe 2.4s ease-in-out infinite;
+}
+
 @keyframes scan {
   0% {
     transform: translateY(-100%);
@@ -180,6 +247,10 @@ body {
   animation: shimmer 1.4s infinite;
 }
 
+.print-only {
+  display: none;
+}
+
 /* ---------- Print: report export ---------- */
 @media print {
   @page {
@@ -192,6 +263,17 @@ body {
     color: #111111 !important;
   }
   .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  .text-generate span {
+    opacity: 1 !important;
+    filter: none !important;
+  }
+  .glow-card::before,
+  .glow-card::after {
     display: none !important;
   }
   .print-root {

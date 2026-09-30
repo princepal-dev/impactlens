@@ -5,7 +5,6 @@ import {
   FolderSync,
   Images,
   MapPinned,
-  Plus,
   ScanSearch,
   Sparkles,
   SplitSquareHorizontal,
@@ -19,7 +18,7 @@ import { MediaThumb } from "@/components/MediaThumb";
 import { MetricCard } from "@/components/MetricCard";
 import { NewProjectDialog } from "@/components/NewProjectDialog";
 import { SampleImporter } from "@/components/SampleImporter";
-import { TopBar } from "@/components/TopBar";
+import { OverviewHero } from "@/components/OverviewHero";
 import { Button } from "@/components/ui/button";
 import { Panel, PanelHeader } from "@/components/ui/panel";
 import { listActivity, listAssets, orgStats, projectSummaries } from "@/lib/store";
@@ -63,26 +62,11 @@ export default async function OverviewPage() {
 
   return (
     <div className="page-in">
-      <TopBar
-        title="Overview"
-        subtitle="Field evidence, AI coverage and recent activity across your organization."
-        actions={
-          <>
-            <NewProjectDialog />
-            {stats.totalAssets > 0 && reportProject && (
-              <Button variant="secondary" asChild>
-                <Link href={`/reports?project=${reportProject.slug}&auto=1`}>
-                  <FileText /> Generate Report
-                </Link>
-              </Button>
-            )}
-            <Button variant="primary" asChild>
-              <Link href="/media?upload=1">
-                <Plus /> Upload Media
-              </Link>
-            </Button>
-          </>
-        }
+      <h1 className="sr-only">Overview</h1>
+      <OverviewHero
+        assets={stats.totalAssets}
+        sites={stats.fieldSites}
+        reportHref={stats.totalAssets > 0 && reportProject ? `/reports?project=${reportProject.slug}&auto=1` : undefined}
       />
 
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -150,7 +134,7 @@ export default async function OverviewPage() {
                   <Link
                     key={p.id}
                     href={`/media?project=${p.slug}`}
-                    className="group flex flex-col overflow-hidden rounded-lg border border-line bg-panel shadow-[var(--panel-shadow)] transition-all duration-200 hover:-translate-y-0.5 hover:border-line-strong"
+                    className="glow-card group flex flex-col overflow-hidden rounded-lg border border-line bg-panel shadow-[var(--panel-shadow)] transition-all duration-200 hover:-translate-y-0.5 hover:border-line-strong"
                   >
                     <div className="relative aspect-[16/10] overflow-hidden">
                       {p.cover ? (

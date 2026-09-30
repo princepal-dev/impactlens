@@ -23,7 +23,7 @@ export function MediaCard({ asset, highlight, relevance }: { asset: MediaAsset; 
   return (
     <Link
       href={`/media/${asset.id}`}
-      className="group flex flex-col overflow-hidden rounded-lg border border-line bg-panel shadow-[var(--panel-shadow)] transition-all duration-200 hover:-translate-y-0.5 hover:border-line-strong hover:bg-panel-strong"
+      className="glow-card group flex flex-col overflow-hidden rounded-lg border border-line bg-panel shadow-[var(--panel-shadow)] transition-all duration-200 hover:-translate-y-0.5 hover:border-line-strong hover:bg-panel-strong"
     >
       <div className="relative aspect-[3/2] overflow-hidden">
         <MediaThumb asset={asset} className="size-full transition-transform duration-500 group-hover:scale-[1.03]" />
