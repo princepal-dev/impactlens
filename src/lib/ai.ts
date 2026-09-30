@@ -278,6 +278,7 @@ const CALLERS: Record<AIProvider, (o: CallOptions) => Promise<CallResult>> = {
   openrouter: callOpenRouter,
 };
 const AUTH_COOLDOWN_MS = 10 * 60_000;
+const LONG_WAIT_MS = 3000;
 const g = globalThis as unknown as { __impactlensAiDown?: Map<AIProvider, number> };
 const down: Map<AIProvider, number> = (g.__impactlensAiDown ??= new Map());
 
@@ -285,6 +286,8 @@ async function runProvider<T>(
   provider: AIProvider,
   opts: { system: string; prompt: string; images: InlineImage[]; timeoutMs: number; deadline: number },
   attempts: number,
+  /** Hand over to the next provider instead of sitting out a rate-limit wait. */
+  skipLongWaits = false,
 ): Promise<{ data: T; engine: string }> {
   let lastError: unknown;
   for (let i = 0; i < attempts; i++) {
@@ -302,6 +305,7 @@ async function runProvider<T>(
       lastError = e;
       const retryable = e instanceof RetryableError || e instanceof SyntaxError;
       if (!retryable || i === attempts - 1) break;
+      if (skipLongWaits && e instanceof RetryableError && e.retryAfterMs > LONG_WAIT_MS) break;
       const wait = e instanceof RetryableError && e.retryAfterMs ? e.retryAfterMs : 1500 * 2 ** i;
       if (Date.now() + wait > opts.deadline - 2000) break;
       await sleep(Math.min(wait, 30000));
@@ -327,8 +331,9 @@ export function aiAvailable() {
 
 /**
  * Ask the configured models for a JSON object. Providers are tried in priority order
- * (OpenRouter free models by default, see `aiProviders`); each retries transient failures before
- * the next one takes over. Returns the parsed object and the engine that produced it.
+ * (Groq, then OpenRouter by default, see `aiProviders`). A provider that is down or rate-limited
+ * hands over to the next one right away; if every provider fails, a rate-limited one is waited
+ * for when the budget allows. Returns the parsed object and the engine that produced it.
  */
 export async function generateJSON<T>(opts: {
   system: string;
@@ -360,19 +365,20 @@ async function callChain<T>(opts: Parameters<typeof generateJSON>[0]): Promise<{
   const timeoutMs = opts.timeoutMs ?? 45000;
   const deadline = now + (opts.budgetMs ?? timeoutMs * 3);
 
+  const call = { system: opts.system, prompt: opts.prompt, images: opts.images ?? [], timeoutMs, deadline };
   let lastError: unknown;
+  let rateLimited: { provider: AIProvider; readyAt: number } | null = null;
   for (const [i, provider] of chain.entries()) {
     const hasFallback = i < chain.length - 1;
     try {
-      const result = await runProvider<T>(
-        provider,
-        { system: opts.system, prompt: opts.prompt, images: opts.images ?? [], timeoutMs, deadline },
-        hasFallback ? 2 : 4,
-      );
+      const result = await runProvider<T>(provider, call, hasFallback ? 2 : 4, hasFallback);
       if (i > 0) console.info(`[ai] served by fallback provider: ${result.engine}`);
       return result;
     } catch (e) {
       lastError = e;
+      if (e instanceof RetryableError && e.retryAfterMs > LONG_WAIT_MS && !rateLimited) {
+        rateLimited = { provider, readyAt: Date.now() + e.retryAfterMs };
+      }
       if (e instanceof ProviderAuthError) down.set(provider, Date.now() + AUTH_COOLDOWN_MS);
       if (e instanceof QuotaExhaustedError) {
         down.set(provider, e.resetAt);
@@ -381,6 +387,14 @@ async function callChain<T>(opts: Parameters<typeof generateJSON>[0]): Promise<{
       if (hasFallback) {
         console.warn(`[ai] ${PROVIDER_NAMES[provider]} failed (${e instanceof Error ? e.message : e}); trying ${PROVIDER_NAMES[chain[i + 1]]}`);
       }
+    }
+  }
+  if (rateLimited && rateLimited.provider !== chain.at(-1) && rateLimited.readyAt < deadline - 5000) {
+    await sleep(Math.max(0, rateLimited.readyAt - Date.now()));
+    try {
+      return await runProvider<T>(rateLimited.provider, call, 2);
+    } catch (e) {
+      lastError = e;
     }
   }
   if (lastError instanceof QuotaExhaustedError || lastError instanceof ProviderAuthError || lastError instanceof ModelUnavailableError) {
