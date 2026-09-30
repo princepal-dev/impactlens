@@ -1,5 +1,6 @@
 import { ArrowUpRight, CheckCircle2, FolderKanban, Images, Layers } from "lucide-react";
 import Link from "next/link";
+import { AIQueue } from "@/components/AIQueue";
 import { HeaderStat, PageHeader } from "@/components/PageHeader";
 import { SampleImporter } from "@/components/SampleImporter";
 import { SampleReel } from "@/components/SampleReel";
@@ -28,6 +29,7 @@ export default async function SamplesPage() {
           </>
         }
       />
+      <AIQueue />
       <section className="mb-6">
         <div className="mb-3 flex items-center justify-between px-1">
           <h2 className="text-[17px] font-semibold tracking-tight">Sample evidence</h2>

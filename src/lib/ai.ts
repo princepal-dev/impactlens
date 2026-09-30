@@ -184,6 +184,65 @@ function chatMessages(opts: CallOptions) {
   ];
 }
 
+// ---------- Groq (free tier) ----------
+
+/** Vision-capable Groq models, best first. */
+const GROQ_VISION_MODELS = ["qwen/qwen3.8-27b", "meta-llama/llama-4-scout-17b-16e-instruct", "qwen/qwen3.6-27b"];
+let groqModels: { ids: string[]; at: number } | null = null;
+
+async function groqModelOrder(): Promise<string[]> {
+  const preferred = [...new Set([config.groq.model, ...GROQ_VISION_MODELS].filter(Boolean))];
+  if (groqModels && Date.now() - groqModels.at < MODELS_TTL_MS) return groqModels.ids;
+  try {
+    const res = await fetch("https://api.groq.com/openai/v1/models", {
+      headers: { Authorization: `Bearer ${config.groq.apiKey}` },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!res.ok) throw new Error(`models ${res.status}`);
+    const active = new Set((((await res.json())?.data ?? []) as { id: string }[]).map((m) => m.id));
+    const ids = preferred.filter((m) => active.has(m));
+    groqModels = { ids: ids.length ? ids : preferred, at: Date.now() };
+  } catch {
+    groqModels = { ids: preferred, at: Date.now() - MODELS_TTL_MS + 5 * 60_000 };
+  }
+  return groqModels.ids;
+}
+
+async function callGroq(opts: CallOptions): Promise<CallResult> {
+  const models = await groqModelOrder();
+  let lastError: Error | null = null;
+  for (const model of models.slice(0, 2)) {
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      signal: opts.signal,
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.groq.apiKey}` },
+      body: JSON.stringify({
+        model,
+        temperature: 0.2,
+        response_format: { type: "json_object" },
+        messages: chatMessages({ ...opts, system: `${opts.system}\nRespond with a single valid JSON object and nothing else.` }),
+      }),
+    });
+    const json = await res.json().catch(() => ({}));
+    const message: string = json?.error?.message ?? `Groq error ${res.status}`;
+    if (res.status === 401 || res.status === 403) throw new ProviderAuthError(message);
+    if (res.status === 429 && /per day|\(RPD\)|\(TPD\)/i.test(message)) throw new QuotaExhaustedError(message, nextUtcMidnight());
+    if (res.status === 429 || res.status >= 500) {
+      const retryAfter = Number(res.headers.get("retry-after"));
+      throw new RetryableError(message, retryAfter > 0 ? retryAfter * 1000 : 0);
+    }
+    if (res.status === 404 || /decommissioned|does not exist|not support/i.test(message)) {
+      lastError = new Error(message);
+      continue;
+    }
+    if (!res.ok) throw new RetryableError(message);
+    const text = String(json.choices?.[0]?.message?.content ?? "").replace(/<think>[\s\S]*?<\/think>/g, "");
+    if (!text.trim()) throw new RetryableError("Groq returned no content");
+    return { text, engine: `Groq · ${model}` };
+  }
+  throw new ProviderAuthError(lastError?.message ?? "No Groq vision model available");
+}
+
 // ---------- OpenRouter (free models) ----------
 
 type OpenRouterModel = {
@@ -270,6 +329,7 @@ async function callOpenRouter(opts: CallOptions): Promise<CallResult> {
 const CALLERS: Record<AIProvider, (o: CallOptions) => Promise<CallResult>> = {
   gemini: callGemini,
   openai: callOpenAI,
+  groq: callGroq,
   openrouter: callOpenRouter,
 };
 const AUTH_COOLDOWN_MS = 10 * 60_000;
@@ -303,6 +363,12 @@ async function runProvider<T>(
     }
   }
   throw lastError ?? new Error(`${PROVIDER_NAMES[provider]} timed out`);
+}
+
+/** True when at least one configured provider is not paused by a quota or auth cooldown. */
+export function aiAvailable() {
+  const now = Date.now();
+  return aiProviders().some((p) => (down.get(p) ?? 0) < now);
 }
 
 /**
