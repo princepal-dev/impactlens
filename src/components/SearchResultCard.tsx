@@ -13,14 +13,14 @@ export function SearchResultCard({ result, rank }: { result: SearchResult; rank:
   return (
     <Link
       href={`/media/${asset.id}`}
-      className="page-in glow-card group flex flex-col overflow-hidden rounded-xl border border-line bg-panel shadow-[var(--panel-shadow)] transition-all duration-200 hover:-translate-y-0.5 hover:border-line-strong"
+      className="page-in group flex flex-col overflow-hidden rounded-xl border border-line bg-panel shadow-[var(--panel-shadow)] transition-all duration-200 hover:-translate-y-0.5 hover:border-line-strong"
       style={{ animationDelay: `${Math.min(rank, 8) * 40}ms` }}
     >
       <div className="relative aspect-[16/10] overflow-hidden">
         <MediaThumb asset={asset} w={640} h={400} className="size-full transition-transform duration-500 group-hover:scale-[1.03]" />
         <div className="absolute inset-x-0 top-0 flex items-start justify-between p-2.5">
           <CloudinaryLabel asset={asset} />
-          <span className="rounded-full bg-accent px-2 py-0.5 text-[11px] font-semibold tabular-nums text-accent-foreground shadow-[0_0_16px_color-mix(in_srgb,var(--accent)_55%,transparent)]">{pct(relevance)} match</span>
+          <span className="rounded-[4px] bg-black/65 px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-white backdrop-blur">{pct(relevance)} match</span>
         </div>
         <div className="absolute inset-x-0 bottom-0 h-1 bg-black/40">
           <div className="h-full bg-accent/80" style={{ width: pct(relevance) }} />

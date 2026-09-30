@@ -11,8 +11,6 @@ import { requestJSON } from "@/lib/http";
 import { speak, stopSpeaking, useSpeechRecognition } from "@/lib/speech";
 import type { MediaAsset } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { MovingBorderButton } from "./aceternity/moving-border";
-import { TextGenerateEffect } from "./aceternity/text-generate-effect";
 import { MediaThumb } from "./MediaThumb";
 
 export const VOICE_EVENT = "impactlens:voice";
@@ -34,23 +32,24 @@ export function openVoiceAgent(listen = true) {
 }
 
 export function VoiceOrb({ mode, size = 56, className }: { mode: Mode; size?: number; className?: string }) {
-  const active = mode !== "idle";
+  const Icon = mode === "thinking" ? Loader2 : mode === "speaking" ? Volume2 : Mic;
+  const icon = Math.round(size * 0.4);
   return (
-    <span className={cn("relative inline-grid shrink-0 place-items-center", className)} style={{ width: size, height: size }} aria-hidden>
-      <span
-        className={cn(
-          "orb-spin absolute inset-0 rounded-full blur-[6px] transition-opacity duration-500",
-          active ? "opacity-100" : "opacity-70",
-          mode === "thinking" && "[animation-duration:1.4s]",
-        )}
-        style={{ background: "conic-gradient(from 0deg, #2dd4bf, #38bdf8, #a78bfa, #34d399, #2dd4bf)" }}
-      />
-      <span
-        className={cn("absolute inset-[3px] rounded-full", (mode === "listening" || mode === "speaking") && "orb-breathe")}
-        style={{ background: "radial-gradient(circle at 30% 25%, #ecfeff 0%, #5eead4 22%, #0d9488 58%, #134e4a 100%)" }}
-      />
-      {mode === "listening" && <span className="absolute inset-0 animate-ping rounded-full border border-accent/60" />}
-      <span className="absolute inset-[22%] rounded-full bg-white/25 blur-[3px]" />
+    <span
+      className={cn(
+        "relative inline-grid shrink-0 place-items-center rounded-full border transition-colors",
+        mode === "listening"
+          ? "border-danger/40 bg-danger/10 text-danger"
+          : mode === "idle"
+            ? "border-line-strong bg-surface text-muted"
+            : "border-accent/40 bg-accent/10 text-accent",
+        className,
+      )}
+      style={{ width: size, height: size }}
+      aria-hidden
+    >
+      {mode === "listening" && <span className="absolute inset-0 animate-ping rounded-full border border-danger/40" />}
+      <Icon className={cn(mode === "thinking" && "animate-spin")} style={{ width: icon, height: icon }} />
     </span>
   );
 }
@@ -167,11 +166,15 @@ export function VoiceAgent() {
             exit={{ opacity: 0, y: 12 }}
             className="fixed bottom-5 right-5 z-50"
           >
-            <MovingBorderButton onClick={() => openVoiceAgent(true)} containerClassName="h-12 shadow-2xl shadow-black/20" className="px-3 pr-4" borderRadius="999px" aria-label="Ask ImpactLens by voice">
-              <VoiceOrb mode="idle" size={30} />
+            <button
+              onClick={() => openVoiceAgent(true)}
+              aria-label="Ask ImpactLens by voice"
+              className="flex h-10 items-center gap-2 rounded-full border border-line-strong bg-surface px-3.5 text-[13px] font-medium shadow-lg shadow-black/10 transition-colors hover:border-tint/30"
+            >
+              <Mic className="size-4 text-muted" />
               <span className="max-sm:hidden">Ask ImpactLens</span>
-              <kbd className="rounded border border-line px-1.5 py-0.5 text-[10.5px] text-subtle max-md:hidden">⌘J</kbd>
-            </MovingBorderButton>
+              <kbd className="font-mono text-[11px] text-subtle max-md:hidden">⌘J</kbd>
+            </button>
           </motion.div>
         )}
       </AnimatePresence>
@@ -185,12 +188,12 @@ export function VoiceAgent() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 24, scale: 0.96 }}
             transition={{ type: "spring", stiffness: 380, damping: 32 }}
-            className="fixed bottom-5 right-5 z-50 flex max-h-[min(680px,calc(100vh-40px))] w-[min(420px,calc(100vw-40px))] origin-bottom-right flex-col overflow-hidden rounded-2xl border border-line-strong bg-surface/95 shadow-2xl shadow-black/30 backdrop-blur-xl"
+            className="fixed bottom-5 right-5 z-50 flex max-h-[min(680px,calc(100vh-40px))] w-[min(420px,calc(100vw-40px))] origin-bottom-right flex-col overflow-hidden rounded-xl border border-line-strong bg-surface shadow-2xl shadow-black/25"
           >
             <header className="flex items-center gap-3 border-b border-line px-4 py-3">
               <VoiceOrb mode={view} size={30} />
               <div className="min-w-0 flex-1">
-                <div className="text-[13.5px] font-semibold">ImpactLens Voice</div>
+                <div className="text-[13.5px] font-medium">Ask ImpactLens</div>
                 <div className="truncate text-[12px] text-muted">{status}</div>
               </div>
               <button
@@ -214,9 +217,9 @@ export function VoiceAgent() {
               {turns.length === 0 && !speech.interim && (
                 <div className="flex flex-col items-center pb-2 pt-4 text-center">
                   <button onClick={speech.supported ? listen : undefined} className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-accent/50" aria-label="Start listening">
-                    <VoiceOrb mode={view} size={92} />
+                    <VoiceOrb mode={view} size={56} />
                   </button>
-                  <h3 className="mt-5 text-[16px] font-semibold tracking-tight">Ask your evidence anything</h3>
+                  <h3 className="mt-4 text-[15px] font-medium">Ask about your evidence</h3>
                   <p className="mt-1 max-w-[280px] text-[13px] leading-relaxed text-muted">
                     Speak naturally. Answers come from your indexed field media, with links to the source.
                   </p>
@@ -225,7 +228,7 @@ export function VoiceAgent() {
                       <button
                         key={s}
                         onClick={() => ask(s)}
-                        className="rounded-full border border-line bg-tint/[0.02] px-3 py-1.5 text-[12px] text-muted transition-colors hover:border-accent/40 hover:text-foreground"
+                        className="rounded-md border border-line px-2.5 py-1 text-[12.5px] text-muted transition-colors hover:border-line-strong hover:text-foreground"
                       >
                         {s}
                       </button>
@@ -234,17 +237,16 @@ export function VoiceAgent() {
                 </div>
               )}
 
-              {turns.map((t, i) =>
+              {turns.map((t) =>
                 t.role === "user" ? (
                   <div key={t.id} className="flex justify-end">
-                    <div className="max-w-[85%] rounded-2xl rounded-br-md bg-accent px-3.5 py-2 text-[13.5px] leading-snug text-accent-foreground">{t.text}</div>
+                    <div className="max-w-[85%] rounded-2xl rounded-br-md bg-tint/[0.08] px-3.5 py-2 text-[13.5px] leading-snug">{t.text}</div>
                   </div>
                 ) : (
                   <div key={t.id} className="flex gap-2.5">
-                    <VoiceOrb mode={i === turns.length - 1 && view === "speaking" ? "speaking" : "idle"} size={22} className="mt-0.5" />
                     <div className="min-w-0 flex-1">
-                      <div className="rounded-2xl rounded-tl-md border border-line bg-tint/[0.03] px-3.5 py-2.5 text-[13.5px] leading-relaxed">
-                        {i === turns.length - 1 ? <TextGenerateEffect words={t.text} /> : t.text}
+                      <div className="text-[13.5px] leading-relaxed">
+                        {t.text}
                       </div>
                       <AssetStrip assets={t.assets} />
                       {t.action && !t.action.navigate && (
@@ -272,7 +274,7 @@ export function VoiceAgent() {
                 </div>
               )}
               {view === "thinking" && (
-                <div className="flex items-center gap-2 pl-8 text-[12.5px] text-muted">
+                <div className="flex items-center gap-2 text-[12.5px] text-muted">
                   <Loader2 className="size-3.5 animate-spin text-accent" /> Searching your evidence…
                 </div>
               )}

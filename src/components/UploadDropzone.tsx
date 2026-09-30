@@ -278,33 +278,21 @@ export function UploadDropzone({
           addFiles(e.dataTransfer.files);
         }}
         className={cn(
-          "glow-card group relative overflow-hidden rounded-2xl border border-dashed p-5 shadow-[var(--panel-shadow)] outline-none transition-all duration-200 focus-visible:border-accent/70 sm:p-6",
-          drag ? "scale-[1.005] border-accent bg-accent/[0.07]" : "border-line-strong bg-panel hover:border-accent/40",
+          "rounded-xl border border-dashed p-5 outline-none transition-colors focus-visible:border-accent/70",
+          drag ? "border-accent bg-accent/[0.05]" : "border-line-strong bg-panel hover:border-tint/30",
         )}
       >
-        <div aria-hidden className="pointer-events-none absolute -right-20 -top-24 size-64 rounded-full bg-accent/10 blur-3xl transition-opacity group-hover:opacity-100 md:opacity-70" />
-        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-start gap-4">
-            <div className="relative grid size-12 shrink-0 place-items-center">
-              <span className={cn("absolute inset-0 rounded-xl bg-accent/20", drag ? "animate-ping" : "group-hover:animate-pulse")} />
-              <span className="relative grid size-12 place-items-center rounded-xl border border-accent/30 bg-gradient-to-b from-accent/25 to-accent/5 shadow-lg shadow-accent/10">
-                <UploadCloud className={cn("size-5 text-accent transition-transform", drag ? "-translate-y-0.5 scale-110" : "group-hover:-translate-y-0.5")} />
-              </span>
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-start gap-3.5">
+            <div className="grid size-10 shrink-0 place-items-center rounded-lg border border-line text-muted">
+              <UploadCloud className="size-[18px]" />
             </div>
             <div className="min-w-0">
-              <h2 className="text-[16px] font-semibold tracking-tight">{drag ? "Drop to upload and analyze" : "Upload field media"}</h2>
-              <p className="mt-1 max-w-lg text-[13px] leading-relaxed text-muted">
-                Drag and drop photos or videos here. Each upload is stored in Cloudinary, analyzed by AI and indexed automatically.
+              <h2 className="text-[14.5px] font-medium">{drag ? "Drop to upload" : "Upload field media"}</h2>
+              <p className="mt-0.5 max-w-xl text-[13px] leading-relaxed text-muted">
+                Drag photos or videos here. Each file is stored in Cloudinary, analyzed by AI and indexed automatically.
               </p>
-              <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[11.5px] font-medium text-subtle">
-                {["Cloudinary storage", "AI vision", "Impact metadata", "Searchable"].map((s, i) => (
-                  <span key={s} className="flex items-center gap-1.5">
-                    {i > 0 && <ArrowRight className="size-3 text-accent/60" />}
-                    <span className="rounded-full border border-line bg-tint/[0.03] px-2 py-0.5">{s}</span>
-                  </span>
-                ))}
-                <span className="ml-1 hidden text-subtle/80 sm:inline">· {FORMATS.join(" · ")}</span>
-              </div>
+              <p className="mt-1 text-[12px] text-subtle">{FORMATS.join(", ")} · up to 100 MB</p>
             </div>
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-2">
@@ -316,7 +304,7 @@ export function UploadDropzone({
             </Button>
           </div>
         </div>
-        <div className="relative mt-5 flex flex-col gap-2.5 border-t border-line pt-4 sm:flex-row sm:items-center">
+        <div className="mt-5 flex flex-col gap-2.5 border-t border-line pt-4 sm:flex-row sm:items-center">
           <span className="text-[12.5px] font-medium text-muted sm:mr-1">Assign to</span>
           <Select value={projectId} onChange={(e) => setProjectId(e.target.value)} className="h-9 w-full text-[13px] sm:w-60" onClick={(e) => e.stopPropagation()}>
             <option value="">Auto-detect project with AI</option>

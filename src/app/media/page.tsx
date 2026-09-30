@@ -1,6 +1,5 @@
-import { Images } from "lucide-react";
 import { MediaLibrary } from "@/components/MediaLibrary";
-import { HeroStat, PageHero } from "@/components/PageHero";
+import { HeaderStat, PageHeader } from "@/components/PageHeader";
 import { listAssets, listProjects } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -10,20 +9,17 @@ export default async function MediaPage({ searchParams }: PageProps<"/media">) {
   const assets = await listAssets();
   const projects = listProjects();
   const indexed = assets.filter((a) => a.status === "indexed").length;
-  const videos = assets.filter((a) => a.resourceType === "video").length;
   return (
     <div className="page-in">
-      <PageHero
-        icon={Images}
-        eyebrow="Media Library"
-        title="Every field photo, understood."
-        subtitle="Originals stay safe in Cloudinary while AI reads each frame — project, place, activity, stage and impact — so nothing gets lost in a folder again."
-        aside={
-          <div className="grid grid-cols-3 gap-2.5">
-            <HeroStat label="Assets" value={assets.length.toLocaleString("en-IN")} />
-            <HeroStat label="AI indexed" value={assets.length ? `${Math.round((indexed / assets.length) * 100)}%` : "—"} />
-            <HeroStat label={videos ? "Videos" : "Projects"} value={videos || projects.length} />
-          </div>
+      <PageHeader
+        title="Media Library"
+        subtitle="Every photo and video from the field, stored in Cloudinary and indexed by AI."
+        stats={
+          <>
+            <HeaderStat label="Assets" value={assets.length.toLocaleString("en-IN")} />
+            <HeaderStat label="Indexed" value={assets.length ? `${Math.round((indexed / assets.length) * 100)}%` : "—"} />
+            <HeaderStat label="Projects" value={projects.length} />
+          </>
         }
       />
       <MediaLibrary

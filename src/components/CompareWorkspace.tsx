@@ -1,15 +1,13 @@
 "use client";
 
-import { AlertTriangle, Columns2, Eye, FileText, Info, RotateCcw, Sparkles, SplitSquareHorizontal } from "lucide-react";
+import { AlertTriangle, Columns2, Eye, FileText, Info, Loader2, RotateCcw, SplitSquareHorizontal } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { requestJSON } from "@/lib/http";
 import type { ComparisonResult, MediaAsset, Project } from "@/lib/types";
-import { cn, fmtDate } from "@/lib/utils";
-import { TextGenerateEffect } from "./aceternity/text-generate-effect";
+import { cn, fmtDate, pct } from "@/lib/utils";
 import { BeforeAfter } from "./BeforeAfter";
-import { ConfidenceRing } from "./ConfidenceRing";
 import { EmptyState } from "./EmptyState";
 import { ImpactBadge } from "./ImpactBadge";
 import { Button } from "./ui/button";
@@ -96,7 +94,7 @@ export function CompareWorkspace({
             </Select>
           </label>
           <label className="space-y-1.5">
-            <span className="label-mono"><span className="size-1.5 rounded-full bg-accent shadow-[0_0_6px_var(--accent)]" /> After</span>
+            <span className="label-mono"><span className="size-1.5 rounded-full bg-accent" /> After</span>
             <Select value={afterId} onChange={(e) => setPair([beforeId, e.target.value])}>
               {list.map((a) => <option key={a.id} value={a.id} disabled={a.id === beforeId}>{fmtDate(a.date)} — {a.title}</option>)}
             </Select>
@@ -127,18 +125,17 @@ export function CompareWorkspace({
       )}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-        <Panel className="relative overflow-hidden">
-          <div aria-hidden className="pointer-events-none absolute -left-20 -top-24 size-64 rounded-full bg-accent/10 blur-3xl" />
-          <PanelHeader
+        <Panel>
+                    <PanelHeader
             eyebrow="Based on uploaded media"
-            title={<span className="flex items-center gap-2"><Sparkles className="size-4 text-accent" /> Comparison insights</span>}
+            title="Comparison insights"
             action={result && !loading && <span className="max-w-[50%] truncate text-[12px] text-subtle" title={result.engine}>{result.engine}</span>}
           />
           <div className="relative p-5">
             {loading && (
               <div className="space-y-3">
-                <div className="mb-4 flex items-center gap-2 text-[13px] text-accent">
-                  <Sparkles className="size-4 animate-pulse" /> AI is comparing both frames…
+                <div className="mb-4 flex items-center gap-2 text-[13px] text-muted">
+                  <Loader2 className="size-3.5 animate-spin" /> Comparing both frames…
                 </div>
                 {["w-11/12", "w-3/4", "w-5/6", "w-2/3"].map((w, i) => <div key={i} className={cn("skeleton h-4 rounded", w)} />)}
               </div>
@@ -151,16 +148,12 @@ export function CompareWorkspace({
             )}
             {!loading && result && (
               <div className="page-in">
-                <TextGenerateEffect words={result.summary} className="text-[15px] leading-relaxed text-soft" />
+                <p className="text-[14.5px] leading-relaxed text-soft">{result.summary}</p>
                 <div className="label-mono mb-3 mt-6">Observed changes</div>
                 <ul className="space-y-2">
-                  {result.observations.map((o, i) => (
-                    <li
-                      key={o}
-                      className="page-in flex gap-3 rounded-lg border border-line bg-tint/[0.02] px-3 py-2.5 text-[13.5px] leading-relaxed"
-                      style={{ animationDelay: `${200 + i * 80}ms` }}
-                    >
-                      <span className="grid size-5 shrink-0 place-items-center rounded-full bg-accent/15 text-[11px] font-semibold tabular-nums text-accent">{i + 1}</span>
+                  {result.observations.map((o) => (
+                    <li key={o} className="flex gap-2.5 text-[13.5px] leading-relaxed">
+                      <span className="mt-[9px] size-1 shrink-0 rounded-full bg-subtle" />
                       <span className="text-foreground/90">{o}</span>
                     </li>
                   ))}
@@ -177,14 +170,14 @@ export function CompareWorkspace({
               {(result?.impactAreas ?? []).map((a) => <ImpactBadge key={a} area={a} />)}
               {!result && <div className="skeleton h-6 w-40 rounded" />}
             </div>
-            <div className="mt-6 flex items-center justify-between gap-4 border-t border-line pt-5">
-              <div>
+            <div className="mt-6 border-t border-line pt-5">
+              <div className="flex items-baseline justify-between">
                 <div className="label-mono">Comparison confidence</div>
-                <p className="mt-1.5 max-w-[220px] text-[12.5px] leading-relaxed text-muted">
-                  How clearly the visible change is supported by both frames.
-                </p>
+                <div className="text-[20px] font-semibold tabular-nums">{result ? pct(result.confidence) : "—"}</div>
               </div>
-              <ConfidenceRing value={result?.confidence ?? null} size={84} stroke={7} />
+              <div className="mt-2 h-1 overflow-hidden rounded-full bg-tint/[0.08]">
+                <div className="h-full rounded-full bg-accent transition-[width] duration-500" style={{ width: result ? pct(result.confidence) : "0%" }} />
+              </div>
             </div>
           </Panel>
           <Panel className="p-5">

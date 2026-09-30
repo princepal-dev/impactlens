@@ -18,7 +18,8 @@ import { MediaThumb } from "@/components/MediaThumb";
 import { MetricCard } from "@/components/MetricCard";
 import { NewProjectDialog } from "@/components/NewProjectDialog";
 import { SampleImporter } from "@/components/SampleImporter";
-import { OverviewHero } from "@/components/OverviewHero";
+import { AskVoiceButton } from "@/components/AskVoice";
+import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Panel, PanelHeader } from "@/components/ui/panel";
 import { listActivity, listAssets, orgStats, projectSummaries } from "@/lib/store";
@@ -47,7 +48,7 @@ function SectionHeader({ title, href, linkLabel }: { title: string; href?: strin
     <div className="mb-3 flex items-center justify-between">
       <h2 className="text-[15px] font-semibold tracking-tight">{title}</h2>
       {href && (
-        <Link href={href} className="flex items-center gap-1 text-[13px] text-muted transition-colors hover:text-accent">
+        <Link href={href} className="flex items-center gap-1 text-[13px] text-muted transition-colors hover:text-muted">
           {linkLabel} <ArrowRight className="size-3.5" />
         </Link>
       )}
@@ -59,14 +60,28 @@ export default async function OverviewPage() {
   const [stats, activity, projects, assets] = await Promise.all([orgStats(), listActivity(), projectSummaries(), listAssets()]);
   const reportProject = [...projects].sort((a, b) => b.totalAssets - a.totalAssets)[0];
   const recent = [...assets].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 4);
+  const reportHref = stats.totalAssets > 0 && reportProject ? `/reports?project=${reportProject.slug}&auto=1` : undefined;
 
   return (
     <div className="page-in">
-      <h1 className="sr-only">Overview</h1>
-      <OverviewHero
-        assets={stats.totalAssets}
-        sites={stats.fieldSites}
-        reportHref={stats.totalAssets > 0 && reportProject ? `/reports?project=${reportProject.slug}&auto=1` : undefined}
+      <PageHeader
+        title="Overview"
+        subtitle="Field evidence across your projects, indexed by AI and ready to search, compare and report."
+        actions={
+          <>
+            <AskVoiceButton />
+            {reportHref ? (
+              <Button variant="secondary" asChild>
+                <Link href={reportHref}><FileText /> Generate report</Link>
+              </Button>
+            ) : (
+              <NewProjectDialog />
+            )}
+            <Button variant="primary" asChild>
+              <Link href="/media?upload=1"><Upload /> Upload media</Link>
+            </Button>
+          </>
+        }
       />
 
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -134,7 +149,7 @@ export default async function OverviewPage() {
                   <Link
                     key={p.id}
                     href={`/media?project=${p.slug}`}
-                    className="glow-card group flex flex-col overflow-hidden rounded-lg border border-line bg-panel shadow-[var(--panel-shadow)] transition-all duration-200 hover:-translate-y-0.5 hover:border-line-strong"
+                    className="group flex flex-col overflow-hidden rounded-lg border border-line bg-panel shadow-[var(--panel-shadow)] transition-all duration-200 hover:-translate-y-0.5 hover:border-line-strong"
                   >
                     <div className="relative aspect-[16/10] overflow-hidden">
                       {p.cover ? (
@@ -187,11 +202,11 @@ export default async function OverviewPage() {
                 <li key={a.id} className="relative flex gap-3 py-3">
                   {i < activity.length - 1 && <span className="absolute left-[13px] top-10 h-[calc(100%-28px)] w-px bg-line" />}
                   <span className="grid size-[27px] shrink-0 place-items-center rounded-md border border-line bg-surface">
-                    <Icon className="size-3.5 text-accent" />
+                    <Icon className="size-3.5 text-subtle" />
                   </span>
                   <div className="min-w-0 flex-1">
                     {a.href ? (
-                      <Link href={a.href} className="line-clamp-2 break-words text-[13px] leading-snug text-foreground transition-colors hover:text-accent">
+                      <Link href={a.href} className="line-clamp-2 break-words text-[13px] leading-snug text-foreground transition-colors hover:text-muted">
                         {a.message}
                       </Link>
                     ) : (

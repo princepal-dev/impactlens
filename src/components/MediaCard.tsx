@@ -23,14 +23,14 @@ export function MediaCard({ asset, highlight, relevance }: { asset: MediaAsset; 
   return (
     <Link
       href={`/media/${asset.id}`}
-      className="glow-card group flex flex-col overflow-hidden rounded-xl border border-line bg-panel shadow-[var(--panel-shadow)] transition-all duration-200 hover:-translate-y-0.5 hover:border-line-strong hover:bg-panel-strong"
+      className="group flex flex-col overflow-hidden rounded-xl border border-line bg-panel shadow-[var(--panel-shadow)] transition-all duration-200 hover:-translate-y-0.5 hover:border-line-strong hover:bg-panel-strong"
     >
       <div className="relative aspect-[3/2] overflow-hidden">
         <MediaThumb asset={asset} className="size-full transition-transform duration-500 group-hover:scale-[1.03]" />
         <div className="absolute inset-x-0 top-0 flex items-start justify-between p-2.5">
           <CloudinaryLabel asset={asset} />
           {relevance !== undefined ? (
-            <span className="rounded-[4px] bg-accent px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-accent-foreground">{pct(relevance)} relevant</span>
+            <span className="rounded-[4px] bg-black/65 px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-white backdrop-blur">{pct(relevance)} relevant</span>
           ) : (
             asset.resourceType === "video" && <Film className="size-4 text-white/80" />
           )}
@@ -64,7 +64,7 @@ export function MediaCard({ asset, highlight, relevance }: { asset: MediaAsset; 
             <span className="flex shrink-0 items-center gap-1 whitespace-nowrap text-[11px] text-warning"><AlertTriangle className="size-3" /> Needs tagging</span>
           ) : (
             <span className="flex shrink-0 items-center gap-1 whitespace-nowrap text-[11.5px] tabular-nums text-subtle">
-              <Sparkles className="size-3 text-accent/70" /> AI {pct(asset.confidence)}
+              <Sparkles className="size-3 text-subtle" /> AI {pct(asset.confidence)}
             </span>
           )}
         </div>

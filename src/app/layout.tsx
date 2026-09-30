@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { MobileNav, Sidebar } from "@/components/Sidebar";
-import { GlowPointer } from "@/components/aceternity/glow-pointer";
 import { ThemedToaster } from "@/components/ThemeToggle";
 import { VoiceAgent } from "@/components/VoiceAgent";
 import { listProjects, orgStats } from "@/lib/store";
@@ -40,7 +39,6 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           </div>
         </div>
         <VoiceAgent />
-        <GlowPointer />
         <ThemedToaster />
       </body>
     </html>

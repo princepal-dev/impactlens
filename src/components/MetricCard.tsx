@@ -1,5 +1,4 @@
 import type { LucideIcon } from "lucide-react";
-import { NumberTicker } from "./aceternity/number-ticker";
 import { Panel } from "./ui/panel";
 
 export function MetricCard({
@@ -16,14 +15,14 @@ export function MetricCard({
   trend?: string;
 }) {
   return (
-    <Panel className="glow-card group relative overflow-hidden p-5 transition-colors hover:border-line-strong">
+    <Panel className="p-5">
       <div className="flex items-center justify-between">
-        <span className="label-mono">{label}</span>
-        <Icon className="size-4 text-subtle transition-colors group-hover:text-accent" />
+        <span className="text-[13px] text-muted">{label}</span>
+        <Icon className="size-4 text-subtle" />
       </div>
-      <NumberTicker value={value} className="mt-5 block text-[34px] font-semibold leading-none tracking-tight tabular-nums" />
-      <div className="mt-3 flex items-center gap-2 text-[12.5px] text-muted">
-        {trend && <span className="whitespace-nowrap text-[12px] font-medium text-positive">{trend}</span>}
+      <div className="mt-3 text-[28px] font-semibold leading-none tracking-tight tabular-nums">{value}</div>
+      <div className="mt-2.5 flex items-center gap-2 text-[12.5px] text-subtle">
+        {trend && <span className="whitespace-nowrap font-medium text-positive">{trend}</span>}
         <span>{hint}</span>
       </div>
     </Panel>

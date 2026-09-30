@@ -11,17 +11,12 @@ import {
   MapPin,
   ShieldAlert,
   ShieldCheck,
-  Sparkles,
   Tag,
   TrendingUp,
 } from "lucide-react";
 import Link from "next/link";
 import type { MediaAsset, ReportContent } from "@/lib/types";
 import { cn, fmtDate } from "@/lib/utils";
-import { BackgroundBeams } from "./aceternity/background-beams";
-import { NumberTicker } from "./aceternity/number-ticker";
-import { Spotlight } from "./aceternity/spotlight";
-import { TextGenerateEffect } from "./aceternity/text-generate-effect";
 import { BeforeAfter } from "./BeforeAfter";
 import { EvidenceTimeline } from "./EvidenceTimeline";
 import { ImpactBadge } from "./ImpactBadge";
@@ -38,13 +33,12 @@ const STAGE_COLORS: Record<string, string> = {
 function Section({ n, title, subtitle, children, className }: { n: string; title: string; subtitle?: string; children: React.ReactNode; className?: string }) {
   return (
     <section className={cn("px-6 py-10 md:px-12", className)}>
-      <div className="mb-6 flex items-center gap-3">
-        <span className="print-accent grid size-8 shrink-0 place-items-center rounded-full bg-accent/10 text-[12px] font-semibold tabular-nums text-accent ring-1 ring-accent/30">{n}</span>
+      <div className="mb-6 flex items-baseline gap-3">
+        <span className="w-6 shrink-0 text-[13px] font-medium tabular-nums text-subtle">{n}</span>
         <div>
           <h2 className="text-[19px] font-semibold tracking-tight">{title}</h2>
           {subtitle && <p className="text-[12.5px] text-muted">{subtitle}</p>}
         </div>
-        <span className="ml-2 h-px flex-1 bg-gradient-to-r from-line-strong to-transparent" />
       </div>
       {children}
     </section>
@@ -74,10 +68,10 @@ function StageBar({ stages }: { stages: Record<string, number> }) {
 }
 
 const INSIGHTS = [
-  { key: "observations", title: "Observed changes", icon: Eye, tone: "text-accent bg-accent/10 ring-accent/25" },
-  { key: "patterns", title: "Evidence patterns", icon: Layers, tone: "text-sky-500 bg-sky-500/10 ring-sky-500/25" },
-  { key: "potentialImpact", title: "Potential impact", icon: TrendingUp, tone: "text-emerald-500 bg-emerald-500/10 ring-emerald-500/25" },
-  { key: "verificationNotes", title: "Needs additional verification", icon: ShieldAlert, tone: "text-warning bg-warning/10 ring-warning/25" },
+  { key: "observations", title: "Observed changes", icon: Eye, tone: "text-subtle" },
+  { key: "patterns", title: "Evidence patterns", icon: Layers, tone: "text-subtle" },
+  { key: "potentialImpact", title: "Potential impact", icon: TrendingUp, tone: "text-subtle" },
+  { key: "verificationNotes", title: "Needs additional verification", icon: ShieldAlert, tone: "text-warning" },
 ] as const;
 
 export function ReportPreview({ report, assets }: { report: ReportContent; assets: Record<string, MediaAsset> }) {
@@ -98,58 +92,43 @@ export function ReportPreview({ report, assets }: { report: ReportContent; asset
   ];
 
   return (
-    <article className="report-doc overflow-hidden rounded-2xl border border-line-strong bg-surface shadow-[var(--panel-shadow)]">
-      <header className="relative overflow-hidden bg-[#06110f] text-white">
-        <Spotlight className="no-print -left-10 -top-40 text-teal-300 md:-top-24 md:left-20" />
-        <BackgroundBeams className="no-print opacity-70" />
-        <div className="no-print pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_80%_0%,rgba(45,212,191,0.18),transparent_55%)]" />
-
-        <div className="relative z-10 grid grid-cols-1 gap-10 px-6 pb-10 pt-7 md:px-12 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:items-center">
-          <div>
-            <div className="flex items-center justify-between gap-3">
-              <Logo />
-              <span className="rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-[11px] tabular-nums text-white/70">Report #{report.id}</span>
-            </div>
-            <div className="mt-12 flex items-center gap-2">
-              <span className="relative flex size-2">
-                <span className="absolute inline-flex size-full animate-ping rounded-full bg-teal-300 opacity-60" />
-                <span className="relative inline-flex size-2 rounded-full bg-teal-300" />
-              </span>
-              <span className="print-accent text-[11.5px] font-semibold uppercase tracking-[0.14em] text-teal-300">Impact Evidence Report</span>
-            </div>
-            <h1 className="mt-4 bg-gradient-to-b from-white to-white/60 bg-clip-text text-[38px] font-semibold leading-[1.05] tracking-tight text-transparent md:text-[52px]">
-              {report.project}
-            </h1>
-            <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-[13.5px] text-white/70">
-              <span className="flex items-center gap-1.5"><CalendarRange className="size-4 text-teal-300" />{report.period.label}</span>
-              <span className="flex items-center gap-1.5"><MapPin className="size-4 text-teal-300" />{report.overview.location}</span>
-            </div>
-            <div className="mt-8 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-              {stats.map(([label, value, Icon]) => (
-                <div key={label} className="rounded-xl border border-white/10 bg-white/[0.04] p-3.5 backdrop-blur">
-                  <Icon className="size-4 text-teal-300" />
-                  <NumberTicker value={value} className="mt-2 block text-[26px] font-semibold leading-none tabular-nums" />
-                  <div className="mt-1.5 text-[11.5px] text-white/60">{label}</div>
-                </div>
-              ))}
-            </div>
+    <article className="report-doc overflow-hidden rounded-xl border border-line bg-surface shadow-[var(--panel-shadow)]">
+      <header className="grid grid-cols-1 gap-10 border-b border-line px-6 pb-10 pt-7 md:px-12 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:items-center">
+        <div>
+          <div className="flex items-center justify-between gap-3">
+            <Logo />
+            <span className="text-[12px] tabular-nums text-subtle">Report #{report.id}</span>
           </div>
-
-          {hero && (
-            <div className="relative mx-auto w-full max-w-[480px] pb-8 lg:pb-10">
-              <div className="overflow-hidden rounded-2xl border border-white/15 shadow-2xl shadow-black/50">
-                <MediaThumb asset={hero} w={960} h={640} className="aspect-[3/2] w-full" />
+          <div className="print-accent mt-12 text-[12px] font-medium uppercase tracking-[0.08em] text-accent">Impact evidence report</div>
+          <h1 className="mt-3 text-[34px] font-semibold leading-[1.1] tracking-tight md:text-[42px]">{report.project}</h1>
+          <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-[13.5px] text-muted">
+            <span className="flex items-center gap-1.5"><CalendarRange className="size-4 text-subtle" />{report.period.label}</span>
+            <span className="flex items-center gap-1.5"><MapPin className="size-4 text-subtle" />{report.overview.location}</span>
+          </div>
+          <dl className="mt-8 grid grid-cols-2 gap-x-6 gap-y-4 border-t border-line pt-5 sm:grid-cols-4">
+            {stats.map(([label, value]) => (
+              <div key={label}>
+                <dt className="text-[12px] text-muted">{label}</dt>
+                <dd className="mt-0.5 text-[24px] font-semibold leading-tight tabular-nums">{value}</dd>
               </div>
-              {after && <span className="absolute right-3 top-3 rounded-md bg-teal-400 px-2 py-1 text-[10.5px] font-semibold uppercase tracking-wider text-black">After</span>}
-              {inset && (
-                <div className="absolute -bottom-1 -left-4 w-[46%] overflow-hidden rounded-xl border-2 border-[#06110f] shadow-2xl shadow-black/60 md:-left-8">
-                  <MediaThumb asset={inset} w={480} h={320} className="aspect-[3/2] w-full" />
-                  {before && <span className="absolute left-2 top-2 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white">Before</span>}
-                </div>
-              )}
-            </div>
-          )}
+            ))}
+          </dl>
         </div>
+
+        {hero && (
+          <div className="relative mx-auto w-full max-w-[480px] pb-8 lg:pb-10">
+            <div className="overflow-hidden rounded-lg border border-line">
+              <MediaThumb asset={hero} w={960} h={640} className="aspect-[3/2] w-full" />
+            </div>
+            {after && <span className="absolute right-3 top-3 rounded bg-black/65 px-1.5 py-0.5 text-[10.5px] font-medium uppercase tracking-wider text-white">After</span>}
+            {inset && (
+              <div className="absolute -bottom-1 -left-4 w-[46%] overflow-hidden rounded-lg border-4 border-surface shadow-lg md:-left-8">
+                <MediaThumb asset={inset} w={480} h={320} className="aspect-[3/2] w-full" />
+                {before && <span className="absolute left-2 top-2 rounded bg-black/65 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-white">Before</span>}
+              </div>
+            )}
+          </div>
+        )}
       </header>
 
       <dl className="grid grid-cols-2 divide-line border-b border-line bg-tint/[0.02] md:grid-cols-4 md:divide-x">
@@ -168,10 +147,7 @@ export function ReportPreview({ report, assets }: { report: ReportContent; asset
 
       <Section n="01" title="Executive summary">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
-          <div className="relative rounded-xl border border-line bg-gradient-to-br from-accent/[0.06] to-transparent p-6">
-            <Sparkles className="print-accent absolute right-5 top-5 size-4 text-accent/70" />
-            <TextGenerateEffect words={report.summary} className="text-[16px] leading-[1.8] text-foreground/90" delay={0.012} />
-          </div>
+          <p className="text-[15.5px] leading-[1.8] text-foreground/90">{report.summary}</p>
           <div className="rounded-xl border border-line p-5">
             <div className="label-mono">At a glance</div>
             <dl className="mt-3 space-y-2.5 text-[13px]">
@@ -201,8 +177,8 @@ export function ReportPreview({ report, assets }: { report: ReportContent; asset
           </div>
           <ul className="mt-6 grid grid-cols-1 gap-2.5 md:grid-cols-2">
             {report.comparison.observations.map((o) => (
-              <li key={o} className="flex gap-2.5 rounded-lg border border-line bg-tint/[0.02] p-3.5 text-[13.5px] leading-relaxed">
-                <CheckCircle2 className="print-accent mt-0.5 size-4 shrink-0 text-accent" />
+              <li key={o} className="flex gap-2.5 text-[13.5px] leading-relaxed">
+                <CheckCircle2 className="print-accent mt-0.5 size-4 shrink-0 text-subtle" />
                 {o}
               </li>
             ))}
@@ -213,14 +189,14 @@ export function ReportPreview({ report, assets }: { report: ReportContent; asset
       <Section n={before && after ? "04" : "03"} title="Impact areas" subtitle="Evidence assets tagged with each area — not measured outcomes" className="border-t border-line">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {report.impactAreas.map((a) => (
-            <div key={a.name} className="glow-card rounded-xl border border-line p-4">
+            <div key={a.name} className="rounded-xl border border-line p-4">
               <ImpactBadge area={a.name} />
               <div className="mt-4 flex items-baseline gap-1.5">
-                <NumberTicker value={String(a.evidenceCount)} className="text-[30px] font-semibold leading-none tabular-nums" />
+                <span className="text-[26px] font-semibold leading-none tabular-nums">{a.evidenceCount}</span>
                 <span className="text-[12px] text-subtle">assets</span>
               </div>
               <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-tint/[0.06]">
-                <div className="h-full rounded-full bg-gradient-to-r from-accent to-emerald-400" style={{ width: `${(a.evidenceCount / maxImpact) * 100}%` }} />
+                <div className="h-full rounded-full bg-accent" style={{ width: `${(a.evidenceCount / maxImpact) * 100}%` }} />
               </div>
               <p className="mt-3 text-[12.5px] leading-relaxed text-muted">{a.note}</p>
             </div>
@@ -231,9 +207,9 @@ export function ReportPreview({ report, assets }: { report: ReportContent; asset
       <Section n={before && after ? "05" : "04"} title="Key evidence" className="border-t border-line">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {evidence.map((a) => (
-            <Link key={a.id} href={`/media/${a.id}`} className="glow-card group block overflow-hidden rounded-xl border border-line bg-surface transition-transform duration-300 hover:-translate-y-0.5">
+            <Link key={a.id} href={`/media/${a.id}`} className="group block overflow-hidden rounded-lg border border-line bg-surface transition-colors hover:border-line-strong">
               <div className="relative overflow-hidden">
-                <MediaThumb asset={a} w={640} h={400} className="aspect-[16/10] w-full transition-transform duration-500 group-hover:scale-[1.04]" />
+                <MediaThumb asset={a} w={640} h={400} className="aspect-[16/10] w-full" />
                 <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/75 to-transparent px-3 pb-2.5 pt-8 text-[11.5px] text-white/85">
                   <span className="flex min-w-0 items-center gap-1"><MapPin className="size-3 shrink-0" /><span className="truncate">{a.location}</span></span>
                   <span className="shrink-0">{fmtDate(a.date)}</span>
@@ -251,10 +227,10 @@ export function ReportPreview({ report, assets }: { report: ReportContent; asset
       <Section n={before && after ? "06" : "05"} title="AI-generated insights" subtitle="Derived only from visible evidence in this report" className="border-t border-line">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {INSIGHTS.map(({ key, title, icon: Icon, tone }) => (
-            <div key={key} className="glow-card rounded-xl border border-line p-5">
+            <div key={key} className="rounded-xl border border-line p-5">
               <div className="flex items-center gap-2.5">
-                <span className={cn("grid size-8 place-items-center rounded-lg ring-1", tone)}><Icon className="size-4" /></span>
-                <h3 className="text-[14px] font-semibold">{title}</h3>
+                <Icon className={cn("size-4", tone)} />
+                <h3 className="text-[14px] font-medium">{title}</h3>
               </div>
               <ul className="mt-4 space-y-2.5">
                 {report[key].map((o) => (
@@ -305,7 +281,7 @@ export function ReportPreview({ report, assets }: { report: ReportContent; asset
       </Section>
 
       <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-line bg-tint/[0.02] px-6 py-5 text-[12px] text-subtle md:px-12">
-        <span className="flex items-center gap-2"><ShieldCheck className="print-accent size-4 text-accent" /> Generated by ImpactLens from uploaded field media</span>
+        <span className="flex items-center gap-2"><ShieldCheck className="size-4 text-subtle" /> Generated by ImpactLens from uploaded field media</span>
         <span>No impact statistics were inferred beyond visible evidence.</span>
       </footer>
     </article>
