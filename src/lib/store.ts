@@ -102,15 +102,34 @@ export function deleteProject(id: string) {
 }
 
 // ---------- Media assets ----------
-const parseAsset = (r: { data: string }) => JSON.parse(r.data) as MediaAsset;
+const ARRAY_FIELDS = ["tags", "impactAreas", "objects"] as const;
+
+function parseAsset(r: { data: string }): MediaAsset {
+  const a = JSON.parse(r.data) as MediaAsset;
+  for (const k of ARRAY_FIELDS) if (!Array.isArray(a[k])) a[k] = [];
+  return a;
+}
+
+/** Parse rows, skipping (and logging) any that are corrupt instead of failing the whole page. */
+function parseRows<T>(rows: { data: string }[], parse: (r: { data: string }) => T): T[] {
+  const out: T[] = [];
+  for (const r of rows) {
+    try {
+      out.push(parse(r));
+    } catch (e) {
+      console.error("[store] skipping unreadable row:", e instanceof Error ? e.message : e);
+    }
+  }
+  return out;
+}
 
 export async function listAssets(): Promise<MediaAsset[]> {
-  return (db().prepare("SELECT data FROM media_assets ORDER BY capture_date DESC, created_at DESC").all() as { data: string }[]).map(parseAsset);
+  return parseRows(db().prepare("SELECT data FROM media_assets ORDER BY capture_date DESC, created_at DESC").all() as { data: string }[], parseAsset);
 }
 
 export async function getAsset(id: string): Promise<MediaAsset | null> {
   const row = db().prepare("SELECT data FROM media_assets WHERE id = ?").get(id) as { data: string } | undefined;
-  return row ? parseAsset(row) : null;
+  return row ? (parseRows([row], parseAsset)[0] ?? null) : null;
 }
 
 export async function saveAsset(asset: MediaAsset) {
@@ -141,9 +160,7 @@ export async function deleteAsset(id: string) {
 export async function projectAssets(projectId: string) {
   const p = getProject(projectId);
   if (!p) return [];
-  return (
-    db().prepare("SELECT data FROM media_assets WHERE project_id = ? ORDER BY capture_date DESC").all(p.id) as { data: string }[]
-  ).map(parseAsset);
+  return parseRows(db().prepare("SELECT data FROM media_assets WHERE project_id = ? ORDER BY capture_date DESC").all(p.id) as { data: string }[], parseAsset);
 }
 
 // ---------- Activity ----------
@@ -173,14 +190,12 @@ export async function saveReport(r: ReportContent) {
 }
 
 export async function listReports(): Promise<ReportContent[]> {
-  return (db().prepare("SELECT data FROM reports ORDER BY created_at DESC LIMIT 50").all() as { data: string }[]).map(
-    (r) => JSON.parse(r.data) as ReportContent,
-  );
+  return parseRows(db().prepare("SELECT data FROM reports ORDER BY created_at DESC LIMIT 50").all() as { data: string }[], (r) => JSON.parse(r.data) as ReportContent);
 }
 
 export async function getReport(id: string) {
   const row = db().prepare("SELECT data FROM reports WHERE id = ?").get(id) as { data: string } | undefined;
-  return row ? (JSON.parse(row.data) as ReportContent) : null;
+  return row ? (parseRows([row], (r) => JSON.parse(r.data) as ReportContent)[0] ?? null) : null;
 }
 
 export async function deleteReport(id: string) {

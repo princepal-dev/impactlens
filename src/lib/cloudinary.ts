@@ -3,6 +3,8 @@ import { v2 as cloudinary, type UploadApiOptions, type UploadApiResponse } from 
 import { cloudinaryUploadMode, config, requireCloudinary } from "./config";
 import type { CloudinaryRef } from "./types";
 
+const UPLOAD_TIMEOUT_MS = 120_000;
+
 let configured = false;
 function sdk() {
   if (!configured) {
@@ -53,9 +55,10 @@ async function unsignedUpload(file: Blob | string, filename: string | undefined,
   const res = await fetch(`https://api.cloudinary.com/v1_1/${config.cloudinary.cloudName}/auto/upload`, {
     method: "POST",
     body: form,
+    signal: AbortSignal.timeout(UPLOAD_TIMEOUT_MS),
   });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json?.error?.message ?? "Cloudinary upload failed");
+  const json = await res.json().catch(() => null);
+  if (!res.ok || !json?.secure_url) throw new Error(json?.error?.message ?? `Cloudinary upload failed (${res.status})`);
   return json as UploadApiResponse;
 }
 
@@ -75,7 +78,8 @@ export async function uploadMedia(opts: {
       folder,
       resource_type: "auto",
       image_metadata: true,
-      context: { source: "impactlens", original_filename: opts.filename },
+      timeout: UPLOAD_TIMEOUT_MS,
+      context: { source: "impactlens", original_filename: opts.filename.replace(/[|=]/g, "_").slice(0, 200) },
       tags: ["impactlens", "field-media", ...(opts.tags ?? [])],
       ...(opts.publicId ? { public_id: opts.publicId, overwrite: true } : {}),
     };
@@ -132,7 +136,13 @@ export async function importFromUrl(url: string): Promise<CloudinaryRef> {
   const folder = `${config.cloudinary.folder}/imports`;
   if (mode === "signed") {
     return toRef(
-      await sdk().uploader.upload(url, { folder, resource_type: "auto", image_metadata: true, tags: ["impactlens", "imported"] }),
+      await sdk().uploader.upload(url, {
+        folder,
+        resource_type: "auto",
+        image_metadata: true,
+        timeout: UPLOAD_TIMEOUT_MS,
+        tags: ["impactlens", "imported"],
+      }),
       url.split("?")[0].split("/").pop(),
     );
   }

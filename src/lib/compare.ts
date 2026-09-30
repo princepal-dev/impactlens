@@ -71,13 +71,19 @@ After metadata: ${after.title} — ${after.date} — stage ${after.stage}.
 Return: { "summary": string (1-2 sentences), "observations": string[] (3-5 short observed changes), "impactAreas": string[] (2-4 potential impact areas), "confidence": number (0-1), "caveats": string[] (1-2 verification notes) }`,
       images: [bi, ai],
     });
+    const strings = (v: unknown, max: number) =>
+      Array.isArray(v) ? v.filter((x): x is string => typeof x === "string" && x.trim().length > 0).map((x) => x.trim().slice(0, 300)).slice(0, max) : [];
+    const observations = strings(raw.observations, 5);
+    const impactAreas = strings(raw.impactAreas, 4);
+    const caveats = strings(raw.caveats, 3);
+    const confidence = Number(raw.confidence);
     return {
       ...fb,
-      summary: raw.summary || fb.summary,
-      observations: raw.observations?.length ? raw.observations.slice(0, 5) : fb.observations,
-      impactAreas: raw.impactAreas?.length ? raw.impactAreas.slice(0, 4) : fb.impactAreas,
-      confidence: typeof raw.confidence === "number" ? Math.round(raw.confidence * 100) / 100 : fb.confidence,
-      caveats: raw.caveats?.length ? raw.caveats : fb.caveats,
+      summary: typeof raw.summary === "string" && raw.summary.trim() ? raw.summary.trim().slice(0, 600) : fb.summary,
+      observations: observations.length ? observations : fb.observations,
+      impactAreas: impactAreas.length ? impactAreas : fb.impactAreas,
+      confidence: Number.isFinite(confidence) ? Math.round(Math.max(0, Math.min(1, confidence)) * 100) / 100 : fb.confidence,
+      caveats: caveats.length ? caveats : fb.caveats,
       engine: aiEngineLabel(),
     };
   } catch (e) {

@@ -49,14 +49,36 @@ CREATE TABLE IF NOT EXISTS activity (
 CREATE INDEX IF NOT EXISTS activity_at ON activity(at);
 `;
 
+const SCHEMA_VERSION = 1;
+
 const g = globalThis as unknown as { __impactlensSqlite?: DatabaseSync };
+
+/** Anything left "analyzing" when the process started was interrupted; surface it for retry. */
+function recoverInterrupted(conn: DatabaseSync) {
+  const rows = conn.prepare("SELECT id, data FROM media_assets WHERE status = 'analyzing'").all() as { id: string; data: string }[];
+  if (!rows.length) return;
+  const update = conn.prepare("UPDATE media_assets SET status = 'analysis_failed', data = ? WHERE id = ?");
+  for (const r of rows) {
+    try {
+      const a = JSON.parse(r.data);
+      const status = a.analyzedAt ? "indexed" : "analysis_failed";
+      conn.prepare("UPDATE media_assets SET status = ?, data = ? WHERE id = ?").run(status, JSON.stringify({ ...a, status }), r.id);
+    } catch {
+      update.run(r.data, r.id);
+    }
+  }
+  console.warn(`[db] recovered ${rows.length} interrupted analyses`);
+}
 
 export function db(): DatabaseSync {
   if (g.__impactlensSqlite) return g.__impactlensSqlite;
   mkdirSync(path.dirname(config.databasePath), { recursive: true });
   const conn = new DatabaseSync(config.databasePath);
-  conn.exec("PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;");
+  conn.exec("PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000; PRAGMA synchronous = NORMAL;");
   conn.exec(SCHEMA);
+  const { user_version } = conn.prepare("PRAGMA user_version").get() as { user_version: number };
+  if (user_version < SCHEMA_VERSION) conn.exec(`PRAGMA user_version = ${SCHEMA_VERSION}`);
+  recoverInterrupted(conn);
 
   const { n } = conn.prepare("SELECT COUNT(*) AS n FROM projects").get() as { n: number };
   if (n === 0) {

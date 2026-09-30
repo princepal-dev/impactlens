@@ -6,12 +6,43 @@ export interface InlineImage {
   base64: string;
 }
 
-/** Fetch a (Cloudinary-derived) image and return it as base64 for vision models. */
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+const MAX_IMAGE_BYTES = 15 * 1024 * 1024;
+
+/** Only Cloudinary delivery hosts are fetched server-side, so stored URLs can't be used to probe other hosts. */
+function assertCloudinaryUrl(url: string) {
+  let host: string;
+  try {
+    const u = new URL(url);
+    if (u.protocol !== "https:") throw new Error();
+    host = u.hostname;
+  } catch {
+    throw new Error("Invalid media URL");
+  }
+  if (host !== "res.cloudinary.com" && !host.endsWith(".cloudinary.com")) throw new Error("Media must be delivered by Cloudinary");
+}
+
+/** Fetch a Cloudinary-derived frame and return it as base64 for vision models. */
 export async function loadImage(url: string): Promise<InlineImage> {
-  const res = await fetch(url, { signal: AbortSignal.timeout(20000) });
-  if (!res.ok) throw new Error(`Could not fetch media from Cloudinary (${res.status})`);
-  const buf = Buffer.from(await res.arrayBuffer());
-  return { mimeType: res.headers.get("content-type")?.split(";")[0] || "image/jpeg", base64: buf.toString("base64") };
+  assertCloudinaryUrl(url);
+  let lastStatus = 0;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const res = await fetch(url, { signal: AbortSignal.timeout(25000) });
+    lastStatus = res.status;
+    // Derived assets are generated on first request; Cloudinary can briefly answer 420/423/5xx.
+    if (res.status === 420 || res.status === 423 || res.status >= 500) {
+      await sleep(1500 * (attempt + 1));
+      continue;
+    }
+    if (!res.ok) break;
+    const type = res.headers.get("content-type")?.split(";")[0] || "image/jpeg";
+    if (!type.startsWith("image/")) throw new Error(`Unexpected media type for analysis frame (${type})`);
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (buf.length > MAX_IMAGE_BYTES) throw new Error("Analysis frame is too large");
+    return { mimeType: type, base64: buf.toString("base64") };
+  }
+  throw new Error(`Could not fetch media from Cloudinary (${lastStatus})`);
 }
 
 function parseJSON<T>(text: string): T {
@@ -29,7 +60,6 @@ class RetryableError extends Error {
   }
 }
 
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function callGemini(opts: { system: string; prompt: string; images: InlineImage[]; signal: AbortSignal }) {
   const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${config.gemini.model}:generateContent`, {
@@ -57,8 +87,17 @@ async function callGemini(opts: { system: string; prompt: string; images: Inline
     throw new RetryableError(json?.error?.message ?? `Gemini error ${res.status}`, delay ? parseFloat(delay) * 1000 : 0);
   }
   if (!res.ok) throw new Error(json?.error?.message ?? `Gemini error ${res.status}`);
-  const text = json?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text ?? "").join("") ?? "";
-  if (!text) throw new RetryableError(`Gemini returned no content (${json?.candidates?.[0]?.finishReason ?? "unknown"})`);
+  const blocked = json?.promptFeedback?.blockReason;
+  if (blocked) throw new Error(`Content blocked by the AI provider (${blocked})`);
+  const candidate = json?.candidates?.[0];
+  const text = candidate?.content?.parts?.map((p: { text?: string }) => p.text ?? "").join("") ?? "";
+  if (!text) {
+    const reason = candidate?.finishReason ?? "unknown";
+    if (["SAFETY", "PROHIBITED_CONTENT", "BLOCKLIST", "SPII", "RECITATION"].includes(reason)) {
+      throw new Error(`Content blocked by the AI provider (${reason})`);
+    }
+    throw new RetryableError(`Gemini returned no content (${reason})`);
+  }
   return text;
 }
 

@@ -14,10 +14,10 @@ function withTransform(url: string, transformation: string, ext?: string) {
 export const TRANSFORMS = {
   thumb: (w: number, h: number) => `c_fill,g_auto,w_${w},h_${h},f_auto,q_auto`,
   display: "c_limit,w_1600,f_auto,q_auto",
-  poster: (w: number, h: number) => `so_1,c_fill,g_auto,w_${w},h_${h},q_auto`,
+  poster: (w: number, h: number) => `so_50p,c_fill,g_auto,w_${w},h_${h},q_auto`,
   video: "q_auto,f_auto:video",
   analysisImage: "c_limit,w_1024,f_jpg,q_auto",
-  analysisVideo: "so_2,c_limit,w_1024",
+  analysisVideo: "so_50p,c_limit,w_1024",
 };
 
 export function thumbUrl(a: Ref, w = 640, h = 420) {

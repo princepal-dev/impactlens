@@ -1,5 +1,6 @@
 import "server-only";
 import { generateJSON } from "./ai";
+import { UserError } from "./api";
 import { aiEngineLabel, aiProvider } from "./config";
 import { metadataCompare, pickPair } from "./compare";
 import { DEFAULT_PAIRS } from "./samples";
@@ -10,7 +11,10 @@ const MONTH = (d: string) =>
   new Date(`${d.slice(0, 7)}-01T00:00:00Z`).toLocaleString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
 
 const count = <T extends string>(list: T[]) =>
-  list.reduce<Record<string, number>>((m, k) => ((m[k] = (m[k] ?? 0) + 1), m), {});
+  list.filter((k) => k && k.trim()).reduce<Record<string, number>>((m, k) => ((m[k] = (m[k] ?? 0) + 1), m), {});
+
+const strings = (v: unknown, max: number) =>
+  Array.isArray(v) ? v.filter((x): x is string => typeof x === "string" && x.trim().length > 0).map((x) => x.trim()).slice(0, max) : [];
 
 const top = (m: Record<string, number>, n: number) =>
   Object.entries(m)
@@ -20,13 +24,13 @@ const top = (m: Record<string, number>, n: number) =>
 
 export async function buildReport(opts: { projectId: string; from: string; to: string }): Promise<ReportContent> {
   const project = getProject(opts.projectId);
-  if (!project) throw new Error("Unknown project");
+  if (!project) throw new UserError("Project not found.", 404);
 
   const all = await projectAssets(project.id);
   const assets = all
     .filter((a) => a.status === "indexed" && (!a.date || (a.date >= opts.from && a.date <= opts.to)))
     .sort((a, b) => a.date.localeCompare(b.date));
-  if (!assets.length) throw new Error("No evidence found for this project and period");
+  if (!assets.length) throw new UserError("No analyzed evidence found for this project and period.", 422);
 
   const stages = count(assets.map((a) => a.stage));
   const activities = top(count(assets.map((a) => a.activity.toLowerCase())), 4);
@@ -58,9 +62,11 @@ export async function buildReport(opts: { projectId: string; from: string; to: s
 
   const delivered = top(count(assets.filter((a) => a.stage !== "baseline").map((a) => a.activity.toLowerCase())), 3);
   const list = (xs: string[]) => (xs.length > 1 ? `${xs.slice(0, -1).join(", ")} and ${xs.at(-1)}` : xs[0] ?? "");
-  let summary = `Field evidence collected between ${MONTH(opts.from)} and ${MONTH(opts.to)} documents the implementation of ${project.category.toLowerCase()} work across ${list(
-    locations,
-  )} (${project.region.split(",")[0]}). The ${assets.length} uploaded media assets provide visual evidence of ${list(delivered)}, progressing from ${
+  let summary = `Field evidence collected between ${MONTH(opts.from)} and ${MONTH(opts.to)} documents the implementation of ${project.category.toLowerCase()} work${
+    locations.length ? ` across ${list(locations)}` : ""
+  } (${project.region.split(",")[0]}). The ${assets.length} uploaded media assets provide visual evidence of ${
+    delivered.length ? list(delivered) : "project activity"
+  }, progressing from ${
     stages.baseline ? "baseline site conditions" : "early implementation"
   } to ${stages.completed || stages.monitoring ? "completed and operational project areas" : "ongoing activity"}. Outcomes beyond what is visible in the media require additional verification.`;
 
@@ -68,10 +74,11 @@ export async function buildReport(opts: { projectId: string; from: string; to: s
     ...(comparison?.observations.slice(0, 3) ?? []),
     `${stages.completed ?? 0} assets show completed works and ${stages.monitoring ?? 0} document post-completion monitoring.`,
   ];
+  const signals = top(count(assets.flatMap((a) => a.tags)), 5);
   let patterns = [
     `Evidence spans ${coverageMonths} of the months in the reporting period, with the densest documentation in ${timeline.slice().sort((a, b) => b.count - a.count)[0].label}.`,
-    `Most frequently documented activities: ${activities.slice(0, 3).join(", ")}.`,
-    `Recurring visual signals: ${top(count(assets.flatMap((a) => a.tags)), 5).join(", ")}.`,
+    ...(activities.length ? [`Most frequently documented activities: ${activities.slice(0, 3).join(", ")}.`] : []),
+    ...(signals.length ? [`Recurring visual signals: ${signals.join(", ")}.`] : []),
   ];
   let potentialImpact = top(impact, 3).map(
     (k) => `Potential contribution to ${k.toLowerCase()}, based on ${impact[k]} assets tagged with this impact area.`,
@@ -86,7 +93,7 @@ export async function buildReport(opts: { projectId: string; from: string; to: s
   let engine = "Template narrative (AI unavailable)";
   if (aiProvider()) {
     try {
-      const facts = assets.map((a) => `${a.date} | ${a.location} | ${a.stage} | ${a.title} | ${a.description}`).join("\n");
+      const facts = assets.slice(-200).map((a) => `${a.date} | ${a.location} | ${a.stage} | ${a.title} | ${a.description}`).join("\n");
       const ai = await generateJSON<{ summary: string; observations: string[]; patterns: string[]; potentialImpact: string[] }>({
         system:
           "You write concise, credible impact evidence reports for NGOs. Use ONLY the supplied media metadata. Never invent statistics, beneficiary numbers, volumes, percentages or outcomes. Use wording like 'The uploaded evidence shows', 'Visual evidence suggests', 'Potential impact', 'Additional verification recommended'. Return JSON only.",
@@ -98,10 +105,13 @@ ${facts}
 Return { "summary": string (3 sentences max), "observations": string[] (3-4), "patterns": string[] (2-3), "potentialImpact": string[] (2-3) }`,
         timeoutMs: 25000,
       });
-      summary = ai.summary || summary;
-      observations = ai.observations?.length ? ai.observations : observations;
-      patterns = ai.patterns?.length ? ai.patterns : patterns;
-      potentialImpact = ai.potentialImpact?.length ? ai.potentialImpact : potentialImpact;
+      if (typeof ai.summary === "string" && ai.summary.trim()) summary = ai.summary.trim();
+      const aiObservations = strings(ai.observations, 5);
+      const aiPatterns = strings(ai.patterns, 4);
+      const aiImpact = strings(ai.potentialImpact, 4);
+      if (aiObservations.length) observations = aiObservations;
+      if (aiPatterns.length) patterns = aiPatterns;
+      if (aiImpact.length) potentialImpact = aiImpact;
       engine = aiEngineLabel();
     } catch (e) {
       console.warn("[report] AI narrative failed, using template", e);

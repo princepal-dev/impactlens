@@ -125,6 +125,32 @@ export function ruleInterpret(query: string, locations: Record<string, string>, 
   return it;
 }
 
+const CATEGORIES = ["Water & Sanitation", "Environment", "Renewable Energy", "Infrastructure", "Community", "Other"];
+const STAGES: Stage[] = ["baseline", "implementation", "completed", "monitoring"];
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Keep only well-formed fields from a model-produced interpretation. */
+function sanitizeInterpretation(raw: Partial<SearchInterpretation>): SearchInterpretation {
+  const short = (v: unknown, max = 60) => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : undefined);
+  const out: SearchInterpretation = {
+    keywords: Array.isArray(raw.keywords)
+      ? raw.keywords.filter((k): k is string => typeof k === "string" && k.trim().length > 1).map((k) => k.trim().toLowerCase().slice(0, 40)).slice(0, 8)
+      : [],
+  };
+  if (typeof raw.category === "string" && CATEGORIES.includes(raw.category)) out.category = raw.category;
+  if (typeof raw.stage === "string" && STAGES.includes(raw.stage as Stage)) out.stage = raw.stage as Stage;
+  if (typeof raw.dateAfter === "string" && ISO_DATE.test(raw.dateAfter)) out.dateAfter = raw.dateAfter;
+  if (typeof raw.dateBefore === "string" && ISO_DATE.test(raw.dateBefore)) out.dateBefore = raw.dateBefore;
+  if (typeof raw.beforeAfter === "boolean") out.beforeAfter = raw.beforeAfter;
+  const location = short(raw.location);
+  const project = short(raw.project, 80);
+  const activity = short(raw.activity);
+  if (location) out.location = location;
+  if (project) out.project = project;
+  if (activity) out.activity = activity;
+  return out;
+}
+
 async function aiInterpret(query: string, projects: Project[]): Promise<SearchInterpretation | null> {
   if (!aiProvider()) return null;
   try {
@@ -145,7 +171,7 @@ Return:
 Omit fields that the query does not specify.`,
       timeoutMs: 9000,
     });
-    return { ...raw, keywords: Array.isArray(raw.keywords) ? raw.keywords.map(String) : [] };
+    return sanitizeInterpretation(raw);
   } catch (e) {
     console.warn("[search] AI interpretation failed, using rules", e);
     return null;
