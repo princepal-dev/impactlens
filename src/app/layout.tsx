@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { Toaster } from "sonner";
 import { MobileNav, Sidebar } from "@/components/Sidebar";
+import { ThemedToaster } from "@/components/ThemeToggle";
 import { serviceStatus } from "@/lib/config";
+import { THEME_INIT_SCRIPT } from "@/lib/theme-script";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -23,7 +24,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   const s = serviceStatus();
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body className="min-h-full">
         <div className="no-print pointer-events-none fixed inset-0 bg-grid" />
         <div className="no-print pointer-events-none fixed inset-0 glow-bottom" />
@@ -34,13 +38,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <main className="print-root mx-auto w-full max-w-[1280px] px-6 pb-20 pt-8 lg:px-10 lg:pt-10">{children}</main>
           </div>
         </div>
-        <Toaster
-          theme="dark"
-          position="bottom-right"
-          toastOptions={{
-            style: { background: "#111", border: "1px solid rgba(255,255,255,0.1)", color: "#f5f5f4", borderRadius: 8 },
-          }}
-        />
+        <ThemedToaster />
       </body>
     </html>
   );

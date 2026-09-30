@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 export function Panel({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn("rounded-lg border border-line bg-panel backdrop-blur-sm", className)}
+      className={cn("rounded-lg border border-line bg-panel shadow-[var(--panel-shadow)] backdrop-blur-sm", className)}
       {...props}
     />
   );
@@ -37,7 +37,7 @@ export function Select({ className, children, ...props }: React.SelectHTMLAttrib
     <div className="relative">
       <select
         className={cn(
-          "h-10 w-full cursor-pointer appearance-none rounded-md border border-line-strong bg-[#111] pl-3 pr-9 text-sm text-foreground outline-none transition-colors hover:border-white/25 focus-visible:border-accent/60",
+          "h-10 w-full cursor-pointer appearance-none rounded-md border border-line-strong bg-surface pl-3 pr-9 text-sm text-foreground outline-none transition-colors hover:border-tint/25 focus-visible:border-accent/60",
           className,
         )}
         {...props}
@@ -55,7 +55,7 @@ export function Input({ className, ...props }: React.InputHTMLAttributes<HTMLInp
   return (
     <input
       className={cn(
-        "h-10 w-full rounded-md border border-line-strong bg-[#111] px-3 text-sm text-foreground outline-none placeholder:text-subtle transition-colors focus-visible:border-accent/60",
+        "h-10 w-full rounded-md border border-line-strong bg-surface px-3 text-sm text-foreground outline-none placeholder:text-subtle transition-colors focus-visible:border-accent/60",
         className,
       )}
       {...props}

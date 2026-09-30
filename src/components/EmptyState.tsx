@@ -22,7 +22,7 @@ export function EmptyState({
       <div
         className={cn(
           "grid size-11 place-items-center rounded-md border",
-          tone === "error" ? "border-warning/30 bg-warning/10 text-warning" : "border-line-strong bg-white/[0.03] text-muted",
+          tone === "error" ? "border-warning/30 bg-warning/10 text-warning" : "border-line-strong bg-tint/[0.03] text-muted",
         )}
       >
         <Icon className="size-5" />

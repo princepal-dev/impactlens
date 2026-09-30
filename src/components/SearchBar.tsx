@@ -37,7 +37,7 @@ export function SearchBar({
         e.preventDefault();
         if (value.trim()) onSubmit(value.trim());
       }}
-      className="group relative flex items-center gap-2 rounded-lg border border-line-strong bg-[#0e0e0e] p-2 shadow-[0_20px_60px_-30px_rgba(45,212,191,0.25)] transition-colors focus-within:border-accent/50"
+      className="group relative flex items-center gap-2 rounded-lg border border-line-strong bg-surface p-2 shadow-[0_20px_60px_-30px_rgba(45,212,191,0.25)] transition-colors focus-within:border-accent/50"
     >
       <Search className="ml-3 size-5 shrink-0 text-subtle transition-colors group-focus-within:text-accent" />
       <input

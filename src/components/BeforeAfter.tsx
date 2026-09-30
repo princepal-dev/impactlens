@@ -59,7 +59,7 @@ export function BeforeAfter({ before, after, mode }: { before: MediaAsset; after
     <div>
       <div
         ref={box}
-        className="relative aspect-[16/9] cursor-ew-resize select-none overflow-hidden rounded-lg border border-line bg-black"
+        className="relative aspect-[16/9] cursor-ew-resize select-none overflow-hidden rounded-lg border border-line bg-media"
         onPointerDown={(e) => {
           dragging.current = true;
           (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
@@ -90,7 +90,7 @@ export function BeforeAfter({ before, after, mode }: { before: MediaAsset; after
           </div>
         </div>
         <span className="absolute left-3 top-3 rounded-[3px] bg-black/60 px-2 py-1 font-mono text-[10.5px] uppercase tracking-widest text-white/85">Before</span>
-        <span className="absolute right-3 top-3 rounded-[3px] bg-accent px-2 py-1 font-mono text-[10.5px] uppercase tracking-widest text-black">After</span>
+        <span className="absolute right-3 top-3 rounded-[3px] bg-accent px-2 py-1 font-mono text-[10.5px] uppercase tracking-widest text-accent-foreground">After</span>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <Caption label="Before" asset={before} />

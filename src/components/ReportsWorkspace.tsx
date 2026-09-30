@@ -173,8 +173,8 @@ export function ReportsWorkspace({
                       router.replace(`/reports?id=${r.id}`, { scroll: false });
                     }}
                     className={cn(
-                      "w-full rounded-md px-2.5 py-2 pr-9 text-left transition-colors hover:bg-white/[0.04]",
-                      report?.id === r.id && "bg-white/[0.06]",
+                      "w-full rounded-md px-2.5 py-2 pr-9 text-left transition-colors hover:bg-tint/[0.04]",
+                      report?.id === r.id && "bg-tint/[0.06]",
                     )}
                   >
                     <div className="truncate text-[13px]">{r.project}</div>

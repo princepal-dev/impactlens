@@ -27,7 +27,7 @@ export function MediaThumb({
 
   if (failed) {
     return (
-      <div className={cn("grid place-items-center bg-white/[0.03] text-subtle", className)}>
+      <div className={cn("grid place-items-center bg-tint/[0.03] text-subtle", className)}>
         <ImageOff className="size-5" />
       </div>
     );
@@ -35,7 +35,7 @@ export function MediaThumb({
 
   if (asset.resourceType === "video" && full) {
     return (
-      <div className={cn("relative bg-black", className)}>
+      <div className={cn("relative bg-media", className)}>
         <video
           src={displayUrl(asset)}
           poster={thumbUrl(asset, w, h)}
@@ -58,7 +58,7 @@ export function MediaThumb({
       alt={asset.title ?? "Field media"}
       loading="lazy"
       onError={() => setFailed(true)}
-      className={cn("bg-white/[0.03] object-cover", className)}
+      className={cn("bg-tint/[0.03] object-cover", className)}
     />
   );
 }

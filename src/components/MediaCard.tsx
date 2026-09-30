@@ -30,7 +30,7 @@ export function MediaCard({ asset, highlight, relevance }: { asset: MediaAsset; 
         <div className="absolute inset-x-0 top-0 flex items-start justify-between p-2.5">
           <CloudinaryLabel asset={asset} />
           {relevance !== undefined ? (
-            <span className="rounded-[4px] bg-accent px-1.5 py-0.5 font-mono text-[11px] font-semibold text-black">{pct(relevance)} relevant</span>
+            <span className="rounded-[4px] bg-accent px-1.5 py-0.5 font-mono text-[11px] font-semibold text-accent-foreground">{pct(relevance)} relevant</span>
           ) : (
             asset.resourceType === "video" && <Film className="size-4 text-white/80" />
           )}
@@ -52,7 +52,7 @@ export function MediaCard({ asset, highlight, relevance }: { asset: MediaAsset; 
           <span className="flex items-center gap-1"><MapPin className="size-3" />{asset.location}</span>
           <span className="flex items-center gap-1"><CalendarDays className="size-3" />{fmtDate(asset.date)}</span>
         </div>
-        {asset.activity && <div className="mt-2 text-[12px] text-zinc-400">{asset.activity}</div>}
+        {asset.activity && <div className="mt-2 text-[12px] text-muted">{asset.activity}</div>}
         <div className="mt-3 flex flex-wrap gap-1">
           {asset.tags.slice(0, 4).map((t) => (
             <Tag key={t} active={hl.has(t) || [...hl].some((h) => t.includes(h))}>{t}</Tag>

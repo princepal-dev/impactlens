@@ -62,7 +62,7 @@ export function NewProjectDialog() {
               rows={3}
               maxLength={400}
               placeholder="What the project delivers and where."
-              className="mt-1.5 w-full rounded-md border border-line-strong bg-[#111] px-3 py-2 text-sm text-foreground outline-none placeholder:text-subtle focus-visible:border-accent/60"
+              className="mt-1.5 w-full rounded-md border border-line-strong bg-surface px-3 py-2 text-sm text-foreground outline-none placeholder:text-subtle focus-visible:border-accent/60"
             />
           </label>
           <div className="flex justify-end gap-2 pt-1">

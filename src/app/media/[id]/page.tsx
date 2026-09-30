@@ -36,7 +36,7 @@ export default async function AssetPage({ params }: PageProps<"/media/[id]">) {
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.25fr_1fr]">
         <div className="space-y-6">
           <Panel className="overflow-hidden">
-            <div className="relative bg-black">
+            <div className="relative bg-media">
               <MediaThumb asset={asset} full className="max-h-[560px] w-full object-contain" />
               <div className="absolute left-3 top-3"><CloudinaryLabel asset={asset} /></div>
             </div>
@@ -58,7 +58,7 @@ export default async function AssetPage({ params }: PageProps<"/media/[id]">) {
             <div className="p-5">
               <div className="mb-5 grid grid-cols-2 gap-2 md:grid-cols-4">
                 {["AI insight", "Evidence record", "Cloudinary asset", "Original media"].map((s, i) => (
-                  <div key={s} className="relative rounded-md border border-line bg-white/[0.02] px-3 py-2.5">
+                  <div key={s} className="relative rounded-md border border-line bg-tint/[0.02] px-3 py-2.5">
                     <div className="font-mono text-[10px] text-accent">0{i + 1}</div>
                     <div className="mt-0.5 text-[12.5px]">{s}</div>
                     {i < 3 && <ChevronRight className="absolute -right-3 top-1/2 z-10 hidden size-4 -translate-y-1/2 text-subtle md:block" />}

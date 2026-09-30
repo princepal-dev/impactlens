@@ -47,7 +47,7 @@ export function AIAnalysisPanel({ asset, compact }: { asset: MediaAsset; compact
         <div className="flex items-center gap-3">
           <span className="font-mono text-[11px] text-subtle">confidence</span>
           <div className="flex items-center gap-2">
-            <div className="h-1 w-16 overflow-hidden rounded-full bg-white/[0.08]">
+            <div className="h-1 w-16 overflow-hidden rounded-full bg-tint/[0.08]">
               <div className="h-full bg-accent" style={{ width: pct(asset.confidence) }} />
             </div>
             <span className="font-mono text-[12px] text-accent">{pct(asset.confidence)}</span>
@@ -95,7 +95,7 @@ export function AIAnalysisPanel({ asset, compact }: { asset: MediaAsset; compact
         </button>
       </div>
       {raw && (
-        <pre className="scrollbar-thin mt-3 max-h-72 overflow-auto rounded-md border border-line bg-black/50 p-3 font-mono text-[11.5px] leading-relaxed text-zinc-300">
+        <pre className="scrollbar-thin mt-3 max-h-72 overflow-auto rounded-md border border-line bg-inset p-3 font-mono text-[11.5px] leading-relaxed text-soft">
           {JSON.stringify(json, null, 2)}
         </pre>
       )}

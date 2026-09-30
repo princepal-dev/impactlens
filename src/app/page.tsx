@@ -116,7 +116,7 @@ export default async function OverviewPage() {
                   {p.cover ? (
                     <MediaThumb asset={p.cover} w={560} h={350} className="size-full transition-transform duration-500 group-hover:scale-[1.04]" />
                   ) : (
-                    <div className="grid size-full place-items-center bg-white/[0.02] font-mono text-[11px] text-subtle">No evidence yet</div>
+                    <div className="grid size-full place-items-center bg-tint/[0.02] font-mono text-[11px] text-subtle">No evidence yet</div>
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-transparent" />
                   <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between">
@@ -150,7 +150,7 @@ export default async function OverviewPage() {
                 { n: "03", t: "Search & compare", d: "Natural-language evidence search", href: "/search" },
                 { n: "04", t: "Report", d: "Traceable impact stories", href: "/reports" },
               ].map((s) => (
-                <Link key={s.n} href={s.href} className="group p-5 transition-colors hover:bg-white/[0.02]">
+                <Link key={s.n} href={s.href} className="group p-5 transition-colors hover:bg-tint/[0.02]">
                   <div className="font-mono text-[11px] text-accent">{s.n}</div>
                   <div className="mt-2 flex items-center gap-1.5 text-[14px] font-medium">{s.t}<ArrowRight className="size-3.5 -translate-x-1 text-accent opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100" /></div>
                   <div className="mt-1 text-[12.5px] text-muted">{s.d}</div>
@@ -171,7 +171,7 @@ export default async function OverviewPage() {
               return (
                 <li key={a.id} className="relative flex gap-3 py-3">
                   {i < activity.length - 1 && <span className="absolute left-[13px] top-10 h-[calc(100%-28px)] w-px bg-line" />}
-                  <span className="grid size-[27px] shrink-0 place-items-center rounded-md border border-line bg-white/[0.03]">
+                  <span className="grid size-[27px] shrink-0 place-items-center rounded-md border border-line bg-tint/[0.03]">
                     <Icon className="size-3.5 text-accent" />
                   </span>
                   <div className="min-w-0 flex-1">

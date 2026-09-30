@@ -104,7 +104,7 @@ export function CompareWorkspace({
               <button
                 key={m}
                 onClick={() => setMode(m)}
-                className={cn("flex h-9 items-center gap-1.5 rounded-[5px] px-3 text-[12.5px] transition-colors", mode === m ? "bg-white/10 text-foreground" : "text-muted hover:text-foreground")}
+                className={cn("flex h-9 items-center gap-1.5 rounded-[5px] px-3 text-[12.5px] transition-colors", mode === m ? "bg-tint/10 text-foreground" : "text-muted hover:text-foreground")}
               >
                 <Icon className="size-3.5" /> {label}
               </button>
@@ -142,7 +142,7 @@ export function CompareWorkspace({
             )}
             {!loading && result && (
               <div className="page-in">
-                <p className="text-[14px] leading-relaxed text-zinc-300">{result.summary}</p>
+                <p className="text-[14px] leading-relaxed text-soft">{result.summary}</p>
                 <div className="label-mono mb-2 mt-5">Observed changes</div>
                 <ul className="space-y-2">
                   {result.observations.map((o) => (
@@ -169,7 +169,7 @@ export function CompareWorkspace({
                 <div className="label-mono">Comparison confidence</div>
                 <div className="mt-1 text-[32px] font-semibold tabular-nums">{result ? pct(result.confidence) : "—"}</div>
               </div>
-              <div className="mb-2 h-1.5 w-32 overflow-hidden rounded-full bg-white/[0.06]">
+              <div className="mb-2 h-1.5 w-32 overflow-hidden rounded-full bg-tint/[0.06]">
                 <div className="h-full bg-accent transition-[width] duration-500" style={{ width: result ? pct(result.confidence) : "0%" }} />
               </div>
             </div>

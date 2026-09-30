@@ -111,7 +111,7 @@ export function SampleImporter({ compact = false }: { compact?: boolean }) {
             </span>
             <span>{pct}%</span>
           </div>
-          <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/[0.06]">
+          <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-tint/[0.06]">
             <div className="h-full rounded-full bg-accent transition-all duration-500" style={{ width: `${pct}%` }} />
           </div>
           {running && current.length > 0 && (

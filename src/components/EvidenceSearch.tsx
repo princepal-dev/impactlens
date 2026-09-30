@@ -152,12 +152,12 @@ export function EvidenceSearch() {
                 <ChevronDown className={cn("size-3.5 transition-transform", inspector && "rotate-180")} />
               </button>
               {inspector && (
-                <div className="grid grid-cols-1 gap-4 border-t border-line bg-black/30 px-5 py-4 font-mono text-[11.5px] md:grid-cols-3">
-                  <div><div className="text-subtle">interpreter</div><div className="mt-1 text-zinc-300">{data.diagnostics.interpreter}</div></div>
-                  <div><div className="text-subtle">ranking</div><div className="mt-1 text-zinc-300">{data.diagnostics.ranking}</div></div>
+                <div className="grid grid-cols-1 gap-4 border-t border-line bg-inset px-5 py-4 font-mono text-[11.5px] md:grid-cols-3">
+                  <div><div className="text-subtle">interpreter</div><div className="mt-1 text-soft">{data.diagnostics.interpreter}</div></div>
+                  <div><div className="text-subtle">ranking</div><div className="mt-1 text-soft">{data.diagnostics.ranking}</div></div>
                   <div>
                     <div className="text-subtle">filters{data.diagnostics.relaxed && " (relaxed)"}</div>
-                    <div className="mt-1 space-y-0.5 text-zinc-300">
+                    <div className="mt-1 space-y-0.5 text-soft">
                       {data.diagnostics.filtersApplied.length ? data.diagnostics.filtersApplied.map((f) => <div key={f}>{f}</div>) : "none"}
                     </div>
                   </div>

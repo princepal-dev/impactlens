@@ -4,22 +4,77 @@
 :root {
   --background: #0a0a0a;
   --foreground: #f5f5f4;
+  --soft: #d4d4d8;
+  --surface: #111111;
+  --surface-raised: #0f0f0f;
+  --chrome: rgba(11, 11, 11, 0.95);
   --panel: rgba(255, 255, 255, 0.025);
   --panel-strong: rgba(255, 255, 255, 0.045);
   --line: rgba(255, 255, 255, 0.08);
   --line-strong: rgba(255, 255, 255, 0.14);
+  --tint: #ffffff;
+  --inset: rgba(0, 0, 0, 0.4);
+  --media: #000000;
+  --overlay: rgba(0, 0, 0, 0.7);
   --muted: #8a8f98;
   --subtle: #5d626b;
   --accent: #2dd4bf;
+  --accent-foreground: #000000;
   --accent-dim: rgba(45, 212, 191, 0.12);
   --positive: #4ade80;
   --warning: #fb923c;
   --danger: #f87171;
+  --grid-line: rgba(255, 255, 255, 0.035);
+  --glow: rgba(45, 212, 191, 0.08);
+  --skeleton: rgba(255, 255, 255, 0.04);
+  --skeleton-shine: rgba(255, 255, 255, 0.05);
+  --panel-shadow: 0 0 #0000;
+  color-scheme: dark;
+}
+
+:root.light {
+  --background: #f6f6f4;
+  --foreground: #18181b;
+  --soft: #3f3f46;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --chrome: rgba(255, 255, 255, 0.92);
+  --panel: #ffffff;
+  --panel-strong: #fbfbfa;
+  --line: rgba(24, 24, 27, 0.09);
+  --line-strong: rgba(24, 24, 27, 0.16);
+  --tint: #18181b;
+  --inset: rgba(24, 24, 27, 0.04);
+  --media: #e7e5e4;
+  --overlay: rgba(24, 24, 27, 0.35);
+  --muted: #5b616b;
+  --subtle: #858a93;
+  --accent: #0d9488;
+  --accent-foreground: #ffffff;
+  --accent-dim: rgba(13, 148, 136, 0.1);
+  --positive: #16a34a;
+  --warning: #c2410c;
+  --danger: #dc2626;
+  --grid-line: rgba(24, 24, 27, 0.05);
+  --glow: rgba(13, 148, 136, 0.07);
+  --skeleton: rgba(24, 24, 27, 0.06);
+  --skeleton-shine: rgba(255, 255, 255, 0.6);
+  --panel-shadow: 0 1px 2px rgba(24, 24, 27, 0.04), 0 1px 1px rgba(24, 24, 27, 0.02);
+  color-scheme: light;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-soft: var(--soft);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-chrome: var(--chrome);
+  --color-tint: var(--tint);
+  --color-inset: var(--inset);
+  --color-media: var(--media);
+  --color-overlay: var(--overlay);
+  --color-accent-foreground: var(--accent-foreground);
   --color-panel: var(--panel);
   --color-panel-strong: var(--panel-strong);
   --color-line: var(--line);
@@ -39,14 +94,17 @@
   --radius-xl: 10px;
 }
 
-html {
-  color-scheme: dark;
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+.theme-switching,
+.theme-switching *,
+.theme-switching *::before,
+.theme-switching *::after {
+  transition: none !important;
 }
 
 ::selection {
@@ -55,14 +113,14 @@ body {
 
 .bg-grid {
   background-image:
-    linear-gradient(to right, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+    linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
   background-size: 56px 56px;
   mask-image: radial-gradient(ellipse at 50% 0%, black 30%, transparent 75%);
 }
 
 .glow-bottom {
-  background: radial-gradient(ellipse at 20% 110%, rgba(45, 212, 191, 0.08), transparent 55%);
+  background: radial-gradient(ellipse at 20% 110%, var(--glow), transparent 55%);
 }
 
 .eyebrow {
@@ -86,7 +144,7 @@ body {
   height: 8px;
 }
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--line);
   border-radius: 8px;
 }
 
@@ -124,14 +182,14 @@ body {
 .skeleton {
   position: relative;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--skeleton);
 }
 .skeleton::after {
   content: "";
   position: absolute;
   inset: 0;
   transform: translateX(-100%);
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+  background: linear-gradient(90deg, transparent, var(--skeleton-shine), transparent);
   animation: shimmer 1.4s infinite;
 }
 

@@ -10,7 +10,7 @@ import { Button } from "./ui/button";
 import { Input, Select } from "./ui/panel";
 
 const textarea =
-  "w-full rounded-md border border-line-strong bg-[#111] px-3 py-2 text-sm text-foreground outline-none placeholder:text-subtle focus-visible:border-accent/60";
+  "w-full rounded-md border border-line-strong bg-surface px-3 py-2 text-sm text-foreground outline-none placeholder:text-subtle focus-visible:border-accent/60";
 
 /** Edit (or manually create) an asset's evidence metadata. */
 export function ManualTagForm({ asset, projects, onSaved }: { asset: MediaAsset; projects: Project[]; onSaved?: () => void }) {
@@ -95,7 +95,7 @@ export function ManualTagForm({ asset, projects, onSaved }: { asset: MediaAsset;
           type="checkbox"
           checked={f.beforeAfterCandidate}
           onChange={(e) => set("beforeAfterCandidate", e.target.checked)}
-          className="size-4 accent-[#2dd4bf]"
+          className="size-4 accent-accent"
         />
         Usable as before/after evidence
       </label>

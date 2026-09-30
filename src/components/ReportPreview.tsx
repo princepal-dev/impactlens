@@ -40,7 +40,7 @@ export function ReportPreview({ report, assets }: { report: ReportContent; asset
   const traced = [...new Map([...(before ? [before] : []), ...(after ? [after] : []), ...evidence].map((a) => [a.id, a])).values()];
 
   return (
-    <article className="report-doc overflow-hidden rounded-lg border border-line-strong bg-[#0d0d0d]">
+    <article className="report-doc overflow-hidden rounded-lg border border-line-strong bg-surface">
       <header className="relative overflow-hidden px-8 pb-10 pt-8 md:px-12">
         <div className="bg-grid pointer-events-none absolute inset-0 opacity-60" />
         <div className="relative">
@@ -76,7 +76,7 @@ export function ReportPreview({ report, assets }: { report: ReportContent; asset
             ["Media assets", `${report.overview.assetCount} (${report.overview.imageCount} img · ${report.overview.videoCount} vid)`],
             ["Evidence coverage", report.overview.coverage],
           ].map(([k, v]) => (
-            <div key={k} className="bg-[#0d0d0d] p-4">
+            <div key={k} className="bg-surface p-4">
               <div className="label-mono">{k}</div>
               <div className="mt-1.5 text-[13.5px]">{v}</div>
             </div>
@@ -159,7 +159,7 @@ export function ReportPreview({ report, assets }: { report: ReportContent; asset
         </p>
         <div className="overflow-hidden rounded-md border border-line">
           <table className="w-full text-left text-[12px]">
-            <thead className="bg-white/[0.03] font-mono text-[10.5px] uppercase tracking-wider text-subtle">
+            <thead className="bg-tint/[0.03] font-mono text-[10.5px] uppercase tracking-wider text-subtle">
               <tr>
                 <th className="px-3 py-2 font-normal">Evidence</th>
                 <th className="px-3 py-2 font-normal max-md:hidden">Cloudinary public ID</th>
@@ -168,7 +168,7 @@ export function ReportPreview({ report, assets }: { report: ReportContent; asset
             </thead>
             <tbody className="divide-y divide-line">
               {traced.map((a) => (
-                <tr key={a.id} className="transition-colors hover:bg-white/[0.02]">
+                <tr key={a.id} className="transition-colors hover:bg-tint/[0.02]">
                   <td className="px-3 py-2">
                     <Link href={`/media/${a.id}`} className="flex items-center gap-3 hover:text-accent">
                       <MediaThumb asset={a} w={120} h={80} className="h-9 w-14 shrink-0 rounded-sm" />

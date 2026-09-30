@@ -279,7 +279,7 @@ export function UploadDropzone({
         }}
         className={cn(
           "relative overflow-hidden rounded-lg border border-dashed px-6 py-12 text-center outline-none transition-all duration-200 focus-visible:border-accent/70",
-          drag ? "border-accent bg-accent/[0.06]" : "border-line-strong bg-panel hover:border-white/25",
+          drag ? "border-accent bg-accent/[0.06]" : "border-line-strong bg-panel hover:border-tint/25",
         )}
       >
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(45,212,191,0.06),transparent_60%)]" />
@@ -332,7 +332,7 @@ export function UploadDropzone({
       {jobs.map((j) => (
         <Panel key={j.key} className="page-in overflow-hidden">
           <div className="grid grid-cols-1 lg:grid-cols-[240px_250px_1fr] 2xl:grid-cols-[320px_260px_1fr]">
-            <div className="relative aspect-[4/3] border-b border-line bg-black lg:aspect-auto lg:min-h-[260px] lg:border-b-0 lg:border-r">
+            <div className="relative aspect-[4/3] border-b border-line bg-media lg:aspect-auto lg:min-h-[260px] lg:border-b-0 lg:border-r">
               {j.asset && j.step >= 1 ? (
                 <MediaThumb asset={j.asset} w={600} h={460} className="absolute inset-0 size-full" />
               ) : j.preview ? (

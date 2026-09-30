@@ -16,7 +16,7 @@ function CopyButton({ value }: { value: string }) {
         setDone(true);
         setTimeout(() => setDone(false), 1200);
       }}
-      className="shrink-0 rounded p-1 text-subtle transition-colors hover:bg-white/5 hover:text-foreground"
+      className="shrink-0 rounded p-1 text-subtle transition-colors hover:bg-tint/5 hover:text-foreground"
       aria-label="Copy"
     >
       {done ? <Check className="size-3.5 text-accent" /> : <Copy className="size-3.5" />}
@@ -40,7 +40,7 @@ export function SourceTrace({ asset }: { asset: MediaAsset }) {
         {rows.map(([k, v]) => (
           <div key={k} className="flex items-center gap-3 px-3 py-2">
             <dt className="w-36 shrink-0 text-subtle">{k}</dt>
-            <dd className="min-w-0 flex-1 truncate text-zinc-300" title={v}>{v}</dd>
+            <dd className="min-w-0 flex-1 truncate text-soft" title={v}>{v}</dd>
             {(k === "secureUrl" || k === "cloudinaryPublicId") && <CopyButton value={v} />}
           </div>
         ))}

@@ -1,6 +1,7 @@
 import { Brain, Cloud, Database } from "lucide-react";
 import { ProjectManager } from "@/components/ProjectManager";
 import { SampleImporter } from "@/components/SampleImporter";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { TopBar } from "@/components/TopBar";
 import { Panel, PanelHeader } from "@/components/ui/panel";
 import { serviceStatus } from "@/lib/config";
@@ -27,7 +28,7 @@ export default async function SettingsPage() {
 
   return (
     <div className="page-in max-w-4xl">
-      <TopBar eyebrow="Settings" title="Workspace" subtitle="Manage projects, connected services and workspace data." />
+      <TopBar eyebrow="Settings" title="Workspace" subtitle="Manage projects, connected services, appearance and workspace data." />
       <div className="space-y-6">
         <ProjectManager projects={projects} />
 
@@ -37,7 +38,7 @@ export default async function SettingsPage() {
             {services.map(({ icon: Icon, title, detail }) => (
               <li key={title} className="flex items-center justify-between gap-4 px-5 py-3.5">
                 <div className="flex min-w-0 items-center gap-3">
-                  <div className="grid size-8 shrink-0 place-items-center rounded-md border border-line bg-white/[0.03]">
+                  <div className="grid size-8 shrink-0 place-items-center rounded-md border border-line bg-tint/[0.03]">
                     <Icon className="size-3.5 text-muted" />
                   </div>
                   <div className="min-w-0">
@@ -51,6 +52,17 @@ export default async function SettingsPage() {
               </li>
             ))}
           </ul>
+        </Panel>
+
+        <Panel>
+          <PanelHeader eyebrow="Preferences" title="Appearance" />
+          <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="text-[13.5px] font-medium">Theme</div>
+              <div className="text-[12px] text-subtle">Choose light or dark, or follow your system setting. Saved on this device.</div>
+            </div>
+            <ThemeToggle showLabels className="w-full sm:w-auto" />
+          </div>
         </Panel>
 
         <SampleImporter />

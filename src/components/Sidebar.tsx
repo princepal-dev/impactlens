@@ -4,6 +4,7 @@ import { BarChart3, Building2, FileText, Images, LayoutGrid, Search, Settings, S
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { ThemeCycleButton, ThemeToggle } from "./ThemeToggle";
 
 const NAV = [
   { href: "/", label: "Overview", icon: LayoutGrid },
@@ -31,7 +32,7 @@ export function Sidebar({ services }: { services: { storage: boolean; ai: string
   const live = services.storage && !!services.ai;
 
   return (
-    <aside className="no-print sticky top-0 z-30 flex h-screen w-[232px] shrink-0 flex-col border-r border-line bg-[#0b0b0b]/95 max-lg:hidden">
+    <aside className="no-print sticky top-0 z-30 flex h-screen w-[232px] shrink-0 flex-col border-r border-line bg-chrome max-lg:hidden">
       <div className="px-5 pb-6 pt-5">
         <Link href="/" className="block">
           <Logo />
@@ -47,7 +48,7 @@ export function Sidebar({ services }: { services: { storage: boolean; ai: string
             href={href}
             className={cn(
               "group relative flex items-center gap-3 rounded-md px-2.5 py-2 text-[13.5px] transition-colors",
-              isActive(href) ? "bg-white/[0.06] text-foreground" : "text-muted hover:bg-white/[0.03] hover:text-foreground",
+              isActive(href) ? "bg-tint/[0.06] text-foreground" : "text-muted hover:bg-tint/[0.03] hover:text-foreground",
             )}
           >
             {isActive(href) && <span className="absolute -left-3 top-1/2 h-4 w-[2px] -translate-y-1/2 rounded-r bg-accent" />}
@@ -71,17 +72,21 @@ export function Sidebar({ services }: { services: { storage: boolean; ai: string
       )}
 
       <div className="mt-auto border-t border-line p-3">
+        <div className="mb-2 flex items-center justify-between gap-2 px-2.5 py-1">
+          <span className="text-[12px] text-subtle">Theme</span>
+          <ThemeToggle />
+        </div>
         <Link
           href="/settings"
           className={cn(
             "flex items-center gap-3 rounded-md px-2.5 py-2 text-[13.5px] transition-colors",
-            pathname.startsWith("/settings") ? "bg-white/[0.06] text-foreground" : "text-muted hover:bg-white/[0.03] hover:text-foreground",
+            pathname.startsWith("/settings") ? "bg-tint/[0.06] text-foreground" : "text-muted hover:bg-tint/[0.03] hover:text-foreground",
           )}
         >
           <Settings className="size-4 text-subtle" /> Settings
         </Link>
         <div className="mt-2 flex items-center gap-3 rounded-md px-2.5 py-2">
-          <div className="grid size-7 place-items-center rounded-[5px] bg-white/[0.06] text-[11px] font-semibold text-muted">
+          <div className="grid size-7 place-items-center rounded-[5px] bg-tint/[0.06] text-[11px] font-semibold text-muted">
             <Building2 className="size-3.5" />
           </div>
           <div className="min-w-0">
@@ -97,22 +102,23 @@ export function Sidebar({ services }: { services: { storage: boolean; ai: string
 export function MobileNav() {
   const pathname = usePathname();
   return (
-    <div className="no-print sticky top-0 z-30 flex items-center gap-4 overflow-x-auto border-b border-line bg-[#0b0b0b]/95 px-4 py-3 backdrop-blur lg:hidden">
+    <div className="no-print sticky top-0 z-30 flex items-center gap-4 overflow-x-auto border-b border-line bg-chrome px-4 py-3 backdrop-blur lg:hidden">
       <Logo />
-      <div className="flex gap-1">
+      <div className="flex flex-1 gap-1">
         {[...NAV, { href: "/settings", label: "Settings", icon: BarChart3 }].map(({ href, label }) => (
           <Link
             key={href}
             href={href}
             className={cn(
               "whitespace-nowrap rounded px-2 py-1 text-xs",
-              (href === "/" ? pathname === "/" : pathname.startsWith(href)) ? "bg-white/10 text-foreground" : "text-muted",
+              (href === "/" ? pathname === "/" : pathname.startsWith(href)) ? "bg-tint/10 text-foreground" : "text-muted",
             )}
           >
             {label}
           </Link>
         ))}
       </div>
+      <ThemeCycleButton />
     </div>
   );
 }
