@@ -109,10 +109,12 @@ const GROQ_VISION_MODELS = ["qwen/qwen3.8-27b", "meta-llama/llama-4-scout-17b-16
 /** Text-only Groq models for prompts without images. */
 const GROQ_TEXT_MODELS = ["openai/gpt-oss-120b", "openai/gpt-oss-20b"];
 const MODEL_BLOCK_MS = 10 * 60_000;
+/** Models get enabled in the Groq console at any time, so an empty candidate list is re-checked this often. */
+const GROQ_RECHECK_MS = 60_000;
 let groqActive: { ids: Set<string> | null; at: number } | null = null;
 const groqBlocked = new Map<string, number>();
 
-async function groqModelOrder(vision: boolean): Promise<string[]> {
+async function groqModelOrder(vision: boolean, recheck = true): Promise<string[]> {
   const base = vision ? GROQ_VISION_MODELS : [...GROQ_TEXT_MODELS, ...GROQ_VISION_MODELS];
   const preferred = [...new Set([config.groq.model, ...base].filter(Boolean))];
   if (!groqActive || Date.now() - groqActive.at > MODELS_TTL_MS) {
@@ -128,7 +130,13 @@ async function groqModelOrder(vision: boolean): Promise<string[]> {
     }
   }
   const now = Date.now();
-  return preferred.filter((m) => (!groqActive?.ids || groqActive.ids.has(m)) && (groqBlocked.get(m) ?? 0) < now);
+  const models = preferred.filter((m) => (!groqActive?.ids || groqActive.ids.has(m)) && (groqBlocked.get(m) ?? 0) < now);
+  if (!models.length && recheck && groqActive && now - groqActive.at > GROQ_RECHECK_MS) {
+    groqActive = null;
+    for (const m of preferred) groqBlocked.delete(m);
+    return groqModelOrder(vision, false);
+  }
+  return models;
 }
 
 async function callGroq(opts: CallOptions): Promise<CallResult> {
