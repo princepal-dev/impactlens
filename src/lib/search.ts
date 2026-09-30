@@ -174,7 +174,7 @@ Omit fields that the query does not specify.`,
     });
     return { interpretation: sanitizeInterpretation(data), engine };
   } catch (e) {
-    console.warn("[search] AI interpretation failed, using rules", e);
+    console.warn("[search] AI interpretation unavailable, using rules:", e instanceof Error ? e.message : e);
     return null;
   }
 }

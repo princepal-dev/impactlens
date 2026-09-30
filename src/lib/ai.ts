@@ -66,6 +66,21 @@ class RetryableError extends Error {
 /** Credentials rejected or project blocked; the provider is skipped for a while instead of retried. */
 class ProviderAuthError extends Error {}
 
+/** Daily quota used up; the provider is skipped until the quota resets. */
+class QuotaExhaustedError extends Error {
+  constructor(
+    message: string,
+    public resetAt: number,
+  ) {
+    super(message);
+  }
+}
+
+const nextUtcMidnight = () => {
+  const d = new Date();
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1);
+};
+
 type CallOptions = { system: string; prompt: string; images: InlineImage[]; signal: AbortSignal };
 type CallResult = { text: string; engine: string };
 
@@ -103,6 +118,9 @@ async function callGemini(opts: CallOptions): Promise<CallResult> {
     }),
   });
   const json = await res.json().catch(() => ({}));
+  if (res.status === 429 && /per ?day|daily/i.test(JSON.stringify(json?.error ?? {}))) {
+    throw new QuotaExhaustedError(json?.error?.message ?? "Gemini daily quota exceeded", nextUtcMidnight());
+  }
   if (res.status === 429 || res.status >= 500) {
     const delay = json?.error?.details?.find((d: { retryDelay?: string }) => d.retryDelay)?.retryDelay;
     throw new RetryableError(json?.error?.message ?? `Gemini error ${res.status}`, delay ? parseFloat(delay) * 1000 : 0);
@@ -116,6 +134,7 @@ async function callGemini(opts: CallOptions): Promise<CallResult> {
       return callGemini(opts);
     }
     if (res.status === 401 || res.status === 403 || /denied access|api key not valid|permission/i.test(message)) throw new ProviderAuthError(message);
+    if (res.status === 404) throw new ProviderAuthError(`Gemini model "${model}" is not available to this API key`);
     throw new Error(message);
   }
   const blocked = json?.promptFeedback?.blockReason;
@@ -233,6 +252,10 @@ async function callOpenRouter(opts: CallOptions): Promise<CallResult> {
   const json = await res.json().catch(() => ({}));
   const message: string = json?.error?.message ?? `OpenRouter error ${res.status}`;
   if (res.status === 401 || res.status === 403) throw new ProviderAuthError(message);
+  if (res.status === 429 && /per-day|daily/i.test(`${message} ${json?.error?.metadata?.limit_source ?? ""}`)) {
+    const reset = Number(res.headers.get("x-ratelimit-reset") ?? json?.error?.metadata?.headers?.["X-RateLimit-Reset"]);
+    throw new QuotaExhaustedError(message, reset > Date.now() ? reset : nextUtcMidnight());
+  }
   if (res.status === 429 || res.status >= 500 || res.status === 408) throw new RetryableError(message);
   if (!res.ok || json?.error) throw new RetryableError(message);
   const text: string = json.choices?.[0]?.message?.content ?? "";
@@ -298,8 +321,10 @@ export async function generateJSON<T>(opts: {
     throw new NotConfiguredError("AI credentials missing", "AI analysis is unavailable right now. Please try again shortly.");
   }
   const now = Date.now();
-  const available = configured.filter((p) => (down.get(p) ?? 0) < now);
-  const chain = available.length ? available : configured;
+  const chain = configured.filter((p) => (down.get(p) ?? 0) < now);
+  if (!chain.length) {
+    throw new NotConfiguredError("All AI providers are cooling down", "AI analysis is temporarily unavailable. Please try again later.");
+  }
   const timeoutMs = opts.timeoutMs ?? 45000;
   const deadline = now + (opts.budgetMs ?? timeoutMs * 3);
 
@@ -317,10 +342,17 @@ export async function generateJSON<T>(opts: {
     } catch (e) {
       lastError = e;
       if (e instanceof ProviderAuthError) down.set(provider, Date.now() + AUTH_COOLDOWN_MS);
+      if (e instanceof QuotaExhaustedError) {
+        down.set(provider, e.resetAt);
+        console.warn(`[ai] ${PROVIDER_NAMES[provider]} daily quota used up; paused until ${new Date(e.resetAt).toISOString()}`);
+      }
       if (hasFallback) {
         console.warn(`[ai] ${PROVIDER_NAMES[provider]} failed (${e instanceof Error ? e.message : e}); trying ${PROVIDER_NAMES[chain[i + 1]]}`);
       }
     }
+  }
+  if (lastError instanceof QuotaExhaustedError || lastError instanceof ProviderAuthError) {
+    throw new NotConfiguredError(lastError.message, "AI analysis is temporarily unavailable. Please try again later.");
   }
   throw lastError instanceof Error ? lastError : new Error(String(lastError));
 }

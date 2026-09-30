@@ -87,7 +87,7 @@ Return: { "summary": string (1-2 sentences), "observations": string[] (3-5 short
       engine,
     };
   } catch (e) {
-    console.warn("[compare] AI comparison failed, using metadata comparison", e);
+    console.warn("[compare] AI comparison unavailable, using metadata comparison:", e instanceof Error ? e.message : e);
     return { ...fb, engine: "Metadata comparison (AI vision unavailable)" };
   }
 }
