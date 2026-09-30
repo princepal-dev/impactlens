@@ -1,11 +1,11 @@
 import "server-only";
 import { NotConfiguredError } from "./config";
 
-/** Map thrown errors to JSON responses; configuration gaps surface as 503 with an actionable message. */
+/** Map thrown errors to JSON responses without leaking configuration details to the client. */
 export function errorResponse(scope: string, e: unknown, fallback: string, status = 500) {
+  console.error(`[${scope}]`, e instanceof Error ? e.message : e);
   if (e instanceof NotConfiguredError) {
-    return Response.json({ error: e.message, code: "not_configured" }, { status: 503 });
+    return Response.json({ error: e.publicMessage, code: "service_unavailable" }, { status: 503 });
   }
-  console.error(`[${scope}]`, e);
   return Response.json({ error: e instanceof Error ? e.message : fallback }, { status });
 }

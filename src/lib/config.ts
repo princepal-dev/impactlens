@@ -22,8 +22,15 @@ export const config = {
   databasePath: path.resolve(/*turbopackIgnore: true*/ process.cwd(), env("DATABASE_PATH") || ".data/impactlens.db"),
 };
 
+/** Raised when a backing service is unavailable; `message` is logged, `publicMessage` is shown to users. */
 export class NotConfiguredError extends Error {
   status = 503;
+  constructor(
+    message: string,
+    public publicMessage: string,
+  ) {
+    super(message);
+  }
 }
 
 export const cloudinaryUploadMode = (): "signed" | "unsigned" | null => {
@@ -47,31 +54,29 @@ export const aiEngineLabel = () => {
   return "Not configured";
 };
 
-export function setupStatus() {
+/** Connected services, for display. Missing configuration is only reported in server logs. */
+export function serviceStatus() {
   const cloudinary = cloudinaryUploadMode();
   const ai = aiProvider();
-  const missing: string[] = [];
-  if (!cloudinary) {
-    if (!config.cloudinary.cloudName) missing.push("NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME");
-    missing.push("CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET");
+  const g = globalThis as unknown as { __impactlensWarned?: boolean };
+  if ((!cloudinary || !ai) && !g.__impactlensWarned) {
+    g.__impactlensWarned = true;
+    console.warn(
+      `[impactlens] ${[!cloudinary && "Cloudinary", !ai && "AI provider"].filter(Boolean).join(" and ")} not configured — see .env.example`,
+    );
   }
-  if (!ai) missing.push("GEMINI_API_KEY");
   return {
-    ready: Boolean(cloudinary && ai),
-    missing,
-    cloudinary: { mode: cloudinary, cloudName: config.cloudinary.cloudName || null, folder: config.cloudinary.folder },
-    ai: { provider: ai, label: aiEngineLabel() },
-    database: { path: path.relative(/*turbopackIgnore: true*/ process.cwd(), config.databasePath) },
+    storage: { connected: !!cloudinary, cloudName: config.cloudinary.cloudName || null, folder: config.cloudinary.folder },
+    ai: { connected: !!ai, provider: ai, label: aiEngineLabel() },
   };
 }
-
-export type SetupStatus = ReturnType<typeof setupStatus>;
 
 export function requireCloudinary() {
   const mode = cloudinaryUploadMode();
   if (!mode) {
     throw new NotConfiguredError(
-      "Cloudinary is not configured. Set NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET in .env.local.",
+      "Cloudinary credentials missing (NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET)",
+      "Media storage is unavailable right now. Please try again shortly.",
     );
   }
   return mode;
@@ -79,6 +84,8 @@ export function requireCloudinary() {
 
 export function requireAI() {
   const provider = aiProvider();
-  if (!provider) throw new NotConfiguredError("AI is not configured. Set GEMINI_API_KEY in .env.local.");
+  if (!provider) {
+    throw new NotConfiguredError("AI credentials missing (GEMINI_API_KEY)", "AI analysis is unavailable right now. Please try again shortly.");
+  }
   return provider;
 }

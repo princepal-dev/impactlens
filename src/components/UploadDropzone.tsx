@@ -31,12 +31,10 @@ type Job = {
 
 export function UploadDropzone({
   projects,
-  ready,
   autoFocus,
   onIndexed,
 }: {
   projects: Project[];
-  ready: boolean;
   autoFocus?: boolean;
   onIndexed?: (a: MediaAsset) => void;
 }) {
@@ -142,10 +140,6 @@ export function UploadDropzone({
   );
 
   const addFiles = (files: FileList | File[]) => {
-    if (!ready) {
-      toast.error("Connect Cloudinary and Gemini first", { description: "Add your keys on the Settings page." });
-      return;
-    }
     const list = Array.from(files).filter((f) => ACCEPT.split(",").includes(f.type));
     if (!list.length) {
       toast.error("Unsupported format", { description: `Use ${FORMATS.join(", ")}.` });
@@ -165,10 +159,6 @@ export function UploadDropzone({
   };
 
   const importFromUrl = () => {
-    if (!ready) {
-      toast.error("Connect Cloudinary and Gemini first", { description: "Add your keys on the Settings page." });
-      return;
-    }
     if (!/^https?:\/\//.test(importUrl.trim())) {
       toast.error("Enter a valid Cloudinary or public media URL");
       return;
@@ -261,11 +251,6 @@ export function UploadDropzone({
               className="h-8 w-60 text-[12.5px]"
             />
           </div>
-          {!ready && (
-            <p className="mt-4 text-[12.5px] text-warning">
-              Uploads are disabled until Cloudinary and Gemini are connected. <Link href="/settings" className="underline underline-offset-4">Open settings</Link>
-            </p>
-          )}
           <div className="mt-5 flex items-center justify-center gap-1.5">
             {FORMATS.map((f) => (
               <span key={f} className="rounded-[3px] border border-line px-1.5 py-0.5 font-mono text-[10px] text-subtle">{f}</span>
@@ -326,7 +311,7 @@ export function UploadDropzone({
                   <p className="text-[13px] text-muted">{j.errorMessage ? `${j.errorMessage} ` : ""}The asset is saved in Cloudinary and can be retried or tagged manually.</p>
                   <div className="flex gap-2">
                     <Button size="sm" onClick={() => j.asset && analyze(j.key, j.asset)}><RotateCcw /> Retry analysis</Button>
-                    {j.asset && <Button size="sm" variant="ghost" asChild><Link href={`/media/${j.asset.id}?tag=1`}>Tag manually</Link></Button>}
+                    {j.asset && <Button size="sm" variant="ghost" asChild><Link href={`/media/${j.asset.id}`}>Tag manually</Link></Button>}
                   </div>
                 </div>
               )}

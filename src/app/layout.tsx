@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import { MobileNav, Sidebar } from "@/components/Sidebar";
-import { SetupBanner } from "@/components/SetupBanner";
-import { setupStatus } from "@/lib/config";
+import { serviceStatus } from "@/lib/config";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -22,20 +21,17 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
-  const s = setupStatus();
+  const s = serviceStatus();
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="min-h-full">
         <div className="no-print pointer-events-none fixed inset-0 bg-grid" />
         <div className="no-print pointer-events-none fixed inset-0 glow-bottom" />
         <div className="relative flex min-h-screen">
-          <Sidebar status={{ ready: s.ready, cloudinary: s.cloudinary.mode, ai: s.ai.provider }} />
+          <Sidebar services={{ storage: s.storage.connected, ai: s.ai.connected ? s.ai.provider : null }} />
           <div className="min-w-0 flex-1">
             <MobileNav />
-            <main className="print-root mx-auto w-full max-w-[1280px] px-6 pb-20 pt-8 lg:px-10 lg:pt-10">
-              {!s.ready && <SetupBanner missing={s.missing} />}
-              {children}
-            </main>
+            <main className="print-root mx-auto w-full max-w-[1280px] px-6 pb-20 pt-8 lg:px-10 lg:pt-10">{children}</main>
           </div>
         </div>
         <Toaster

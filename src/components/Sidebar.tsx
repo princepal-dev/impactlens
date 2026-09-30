@@ -25,10 +25,10 @@ export function Logo({ className }: { className?: string }) {
   );
 }
 
-export function Sidebar({ status }: { status: { ready: boolean; cloudinary: string | null; ai: string | null } }) {
+export function Sidebar({ services }: { services: { storage: boolean; ai: string | null } }) {
   const pathname = usePathname();
   const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
-  const live = status.ready;
+  const live = services.storage && !!services.ai;
 
   return (
     <aside className="no-print sticky top-0 z-30 flex h-screen w-[232px] shrink-0 flex-col border-r border-line bg-[#0b0b0b]/95 max-lg:hidden">
@@ -57,22 +57,18 @@ export function Sidebar({ status }: { status: { ready: boolean; cloudinary: stri
         ))}
       </nav>
 
-      <div className="mx-5 mt-8 rounded-md border border-line p-3">
-        <div className="flex items-center gap-2">
-          <span className={cn("size-1.5 rounded-full", live ? "bg-positive" : "bg-warning")} />
-          <span className="font-mono text-[10.5px] uppercase tracking-wider text-muted">{live ? "Live pipeline" : "Setup required"}</span>
-        </div>
-        <div className="mt-2 space-y-1 text-[11px] text-subtle">
-          <div className="flex justify-between">
-            <span>Storage</span>
-            <span className={status.cloudinary ? "text-muted" : "text-warning"}>{status.cloudinary ? "Cloudinary" : "Not connected"}</span>
+      {live && (
+        <div className="mx-5 mt-8 rounded-md border border-line p-3">
+          <div className="flex items-center gap-2">
+            <span className="size-1.5 rounded-full bg-positive" />
+            <span className="font-mono text-[10.5px] uppercase tracking-wider text-muted">Live pipeline</span>
           </div>
-          <div className="flex justify-between">
-            <span>AI</span>
-            <span className={status.ai ? "text-muted" : "text-warning"}>{status.ai === "gemini" ? "Gemini" : status.ai === "openai" ? "OpenAI" : "Not connected"}</span>
+          <div className="mt-2 space-y-1 text-[11px] text-subtle">
+            <div className="flex justify-between"><span>Storage</span><span className="text-muted">Cloudinary</span></div>
+            <div className="flex justify-between"><span>AI</span><span className="text-muted">{services.ai === "openai" ? "OpenAI" : "Gemini"}</span></div>
           </div>
         </div>
-      </div>
+      )}
 
       <div className="mt-auto border-t border-line p-3">
         <Link

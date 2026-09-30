@@ -1,6 +1,5 @@
 import { MediaLibrary } from "@/components/MediaLibrary";
 import { TopBar } from "@/components/TopBar";
-import { setupStatus } from "@/lib/config";
 import { listAssets, listProjects } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +17,6 @@ export default async function MediaPage({ searchParams }: PageProps<"/media">) {
       <MediaLibrary
         initial={assets}
         projects={listProjects()}
-        ready={setupStatus().ready}
         initialProject={typeof sp.project === "string" ? sp.project : undefined}
         autoUpload={sp.upload === "1"}
       />
