@@ -22,7 +22,7 @@ npm run dev                  # http://localhost:3000
 | `AI_PROVIDERS` (optional) | Provider order, defaults to `groq,openrouter` |
 | `DATABASE_PATH` (optional) | Defaults to `.data/impactlens.db` |
 
-Groq is tried first, then OpenRouter: `stealth/space-bunny-alpha` (zero-priced, not counted against the daily free-model quota), then other free models from the live catalogue, with `openrouter/free` as the last resort. Providers listed in `AI_PROVIDERS` are tried in order with retries per provider; a provider whose key is rejected is skipped for 10 minutes. Without storage or any AI key, upload/analysis endpoints return `503` with a neutral message and the missing variables are logged server-side. `GET /api/health` reports database, storage and AI status.
+Groq is tried first, then OpenRouter's free models: `stealth/space-bunny-alpha` (not counted against the daily free-model quota), dots-3, Gemma 4, Nemotron 3, Qwen 3.8, Inkling, Ling, Laguna and North, three per request (OpenRouter's fallback limit), with `openrouter/free` as the last resort. Photos only go to models that read images, and only models the live catalogue prices at zero are called. Providers listed in `AI_PROVIDERS` are tried in order with retries per provider; a provider whose key is rejected is skipped for 10 minutes. Without storage or any AI key, upload/analysis endpoints return `503` with a neutral message and the missing variables are logged server-side. `GET /api/health` reports database, storage and AI status.
 
 ## Getting evidence in
 

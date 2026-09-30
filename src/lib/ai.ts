@@ -202,54 +202,85 @@ type OpenRouterModel = {
 
 /** OpenRouter's own router across whatever free models are currently up; always the last resort. */
 const FREE_ROUTER = "openrouter/free";
-/** Zero-priced vision model that isn't counted against the daily `:free` request quota; tried first. */
-const DEFAULT_MODEL = "stealth/space-bunny-alpha";
-/** Used when the live model catalogue can't be fetched. */
-const FALLBACK_FREE_MODELS = [DEFAULT_MODEL, "google/gemma-4-31b-it:free", "google/gemma-4-26b-a4b-it:free", "qwen/qwen3.8-27b:free"];
+/** Free models in the order they're tried; `vision` marks those that read images. */
+const FREE_MODELS: { id: string; vision: boolean }[] = [
+  { id: "stealth/space-bunny-alpha", vision: true },
+  { id: "dots-studio/dots-3-note-preview:free", vision: true },
+  { id: "google/gemma-4-31b-it:free", vision: true },
+  { id: "nvidia/nemotron-3-super-120b-a12b:free", vision: false },
+  { id: "google/gemma-4-26b-a4b-it:free", vision: true },
+  { id: "qwen/qwen3.8-27b:free", vision: true },
+  { id: "thinkingmachines/inkling:free", vision: true },
+  { id: "nvidia/nemotron-3-ultra-550b-a55b:free", vision: false },
+  { id: "nvidia/nemotron-3.5-lightning:free", vision: false },
+  { id: "thinkingmachines/inkling-small:free", vision: true },
+  { id: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free", vision: true },
+  { id: "inclusionai/ling-3.0-flash-sante:free", vision: false },
+  { id: "poolside/laguna-s-2.1:free", vision: false },
+  { id: "poolside/laguna-xs-2.1:free", vision: false },
+  { id: "cohere/north-mini-code:free", vision: false },
+];
+/** OpenRouter rejects fallback lists longer than this. */
+const MODELS_PER_REQUEST = 3;
+const MAX_REQUESTS = 3;
 const isFree = (m: OpenRouterModel) => m.id.endsWith(":free") || (m.pricing?.prompt === "0" && m.pricing?.completion === "0");
 /** Models that count against the daily free-model request quota. */
 const quotaLimited = (id: string) => id.endsWith(":free") || id === FREE_ROUTER;
 let freeQuotaUntil = 0;
-const PREFERRED = [/gemma/i, /qwen/i, /inkling/i, /nemotron-3-super/i, /llama/i, /mistral/i];
-const EXCLUDED = /safety|guard|code|coder|lyria/i;
 const MODELS_TTL_MS = 60 * 60_000;
-let freeModels: { vision: string[]; text: string[]; live: boolean; at: number } | null = null;
+let freeCatalogue: { ids: Set<string> | null; at: number } | null = null;
 
-const rank = (m: OpenRouterModel) => {
-  const i = PREFERRED.findIndex((re) => re.test(m.id));
-  return (m.supported_parameters?.includes("response_format") ? 0 : 100) + (i < 0 ? PREFERRED.length : i);
-};
-
-/** Free chat models from OpenRouter's live catalogue, JSON-capable and best-known families first. */
-async function openRouterFreeModels(): Promise<{ vision: string[]; text: string[]; live: boolean }> {
-  if (freeModels && Date.now() - freeModels.at < MODELS_TTL_MS) return freeModels;
+/** Zero-priced model IDs currently listed by OpenRouter, or null when the catalogue can't be fetched. */
+async function openRouterFreeIds(): Promise<Set<string> | null> {
+  if (freeCatalogue && Date.now() - freeCatalogue.at < MODELS_TTL_MS) return freeCatalogue.ids;
   try {
     const res = await fetch("https://openrouter.ai/api/v1/models", { signal: AbortSignal.timeout(10000) });
     if (!res.ok) throw new Error(`catalogue ${res.status}`);
     const list = ((await res.json())?.data ?? []) as OpenRouterModel[];
-    const free = list
-      .filter((m) => isFree(m) && m.id !== FREE_ROUTER && !EXCLUDED.test(m.id))
-      .filter((m) => (m.architecture?.output_modalities ?? ["text"]).join() === "text")
-      .sort((a, b) => rank(a) - rank(b) || (b.context_length ?? 0) - (a.context_length ?? 0));
-    const vision = free.filter((m) => m.architecture?.input_modalities?.includes("image")).map((m) => m.id);
-    freeModels = { vision, text: free.map((m) => m.id), live: true, at: Date.now() };
+    freeCatalogue = { ids: new Set(list.filter(isFree).map((m) => m.id)), at: Date.now() };
   } catch (e) {
     console.warn("[ai] OpenRouter model catalogue unavailable, using built-in list:", e instanceof Error ? e.message : e);
-    freeModels = { vision: FALLBACK_FREE_MODELS, text: FALLBACK_FREE_MODELS, live: false, at: Date.now() - MODELS_TTL_MS + 5 * 60_000 };
+    freeCatalogue = { ids: null, at: Date.now() - MODELS_TTL_MS + 5 * 60_000 };
   }
-  return freeModels;
+  return freeCatalogue.ids;
 }
 
+/** Walk the free models a few at a time (one request per batch), ending with OpenRouter's free router. */
 async function callOpenRouter(opts: CallOptions): Promise<CallResult> {
-  const discovered = await openRouterFreeModels();
-  const pool = opts.images.length ? discovered.vision : discovered.text;
-  const available = new Set(pool);
-  const quotaOut = Date.now() < freeQuotaUntil;
-  const allowed = (m: string) =>
-    m !== FREE_ROUTER && (discovered.live ? available.has(m) : m.endsWith(":free") || m === DEFAULT_MODEL) && !(quotaOut && quotaLimited(m));
-  const models = [...new Set([DEFAULT_MODEL, ...config.openrouter.models, ...pool].filter(allowed))].slice(0, 2);
-  if (!quotaOut) models.push(FREE_ROUTER);
-  if (!models.length) throw new QuotaExhaustedError("OpenRouter free-model quota used up", freeQuotaUntil);
+  const listed = await openRouterFreeIds();
+  const vision = opts.images.length > 0;
+  const known = new Map(FREE_MODELS.map((m) => [m.id, m.vision]));
+  const candidates = () => {
+    const quotaOut = Date.now() < freeQuotaUntil;
+    const ids = [...new Set([...config.openrouter.models, ...FREE_MODELS.map((m) => m.id)])].filter(
+      (id) =>
+        id !== FREE_ROUTER &&
+        (listed ? listed.has(id) : known.has(id)) &&
+        (!vision || known.get(id) !== false) &&
+        !(quotaOut && quotaLimited(id)),
+    );
+    return quotaOut ? ids : [...ids, FREE_ROUTER];
+  };
+
+  const tried = new Set<string>();
+  let lastError: unknown;
+  for (let i = 0; i < MAX_REQUESTS; i++) {
+    const left = candidates().filter((id) => !tried.has(id));
+    const batch = i === MAX_REQUESTS - 1 && left.includes(FREE_ROUTER) ? [...left.slice(0, MODELS_PER_REQUEST - 1), FREE_ROUTER] : left.slice(0, MODELS_PER_REQUEST);
+    if (!batch.length) break;
+    batch.forEach((id) => tried.add(id));
+    try {
+      return await openRouterRequest(opts, [...new Set(batch)]);
+    } catch (e) {
+      if (e instanceof ProviderAuthError || opts.signal.aborted) throw e;
+      lastError = e;
+    }
+  }
+  if (lastError instanceof QuotaExhaustedError && candidates().length) throw new RetryableError(lastError.message);
+  throw lastError ?? new QuotaExhaustedError("OpenRouter free-model quota used up", freeQuotaUntil);
+}
+
+async function openRouterRequest(opts: CallOptions, models: string[]): Promise<CallResult> {
   const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     signal: opts.signal,
@@ -273,10 +304,8 @@ async function callOpenRouter(opts: CallOptions): Promise<CallResult> {
   if (res.status === 429 && /per-day|daily/i.test(`${message} ${json?.error?.metadata?.limit_source ?? ""}`)) {
     const reset = Number(res.headers.get("x-ratelimit-reset") ?? json?.error?.metadata?.headers?.["X-RateLimit-Reset"]);
     freeQuotaUntil = reset > Date.now() ? reset : nextUtcMidnight();
-    if (models.some((m) => !quotaLimited(m))) throw new RetryableError(message);
     throw new QuotaExhaustedError(message, freeQuotaUntil);
   }
-  if (res.status === 429 || res.status >= 500 || res.status === 408) throw new RetryableError(message);
   if (!res.ok || json?.error) throw new RetryableError(message);
   const text: string = json.choices?.[0]?.message?.content ?? "";
   if (!text) throw new RetryableError("OpenRouter returned no content");
