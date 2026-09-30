@@ -1,63 +1,63 @@
 # ImpactLens
 
-**AI-powered impact & sustainability media intelligence.** ImpactLens turns raw field photos and videos into structured, searchable, traceable evidence — stored and transformed by Cloudinary, analyzed by AI, and compiled into impact reports that link every claim back to the original media.
+**AI-powered impact & sustainability media intelligence.** ImpactLens turns raw field photos and videos into structured, searchable, traceable evidence. Originals are stored and transformed by Cloudinary, analyzed by Gemini vision, indexed in SQLite and compiled into impact reports that link every claim back to the original media.
 
 Upload → Cloudinary → AI analyze → Auto-tag → Search → Compare → Generate report → Trace back to original evidence.
 
-## Quick start
+## Setup
+
+Requires Node.js 22.13+ (uses the built-in `node:sqlite`).
 
 ```bash
 npm install
-npm run dev
-# open http://localhost:3000
+cp .env.example .env.local   # add your Cloudinary + Gemini keys
+npm run dev                  # http://localhost:3000
 ```
 
-No credentials are required. Without keys the app runs in **demo mode**: uploads are stored locally in `.data/`, and analysis uses a deterministic metadata engine (it reads filenames and project context, not pixels). 30 pre-analyzed evidence records across three Indian projects are always available.
-
-## Enabling real integrations
-
-Copy `.env.example` to `.env.local`, then restart the dev server.
-
-| Capability | Variables |
+| Variable | Where to get it |
 | --- | --- |
-| Cloudinary storage + transformations | `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` plus either `CLOUDINARY_API_KEY`/`CLOUDINARY_API_SECRET` (signed, also enables URL import) or `NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET` (unsigned) |
-| AI vision analysis | `GEMINI_API_KEY` (default `gemini-2.5-flash`) or `OPENAI_API_KEY` (default `gpt-4o-mini`) |
-| Persistence | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` — run `supabase/schema.sql` first |
-| Force demo mode | `DEMO_MODE=true` |
+| `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | [Cloudinary console](https://console.cloudinary.com/) → Settings → API Keys |
+| `GEMINI_API_KEY` | [Google AI Studio](https://aistudio.google.com/apikey) (free tier works) |
+| `DATABASE_PATH` (optional) | Defaults to `.data/impactlens.db` |
 
-To serve the seeded demo evidence from your own Cloudinary account (so every card shows real `f_auto,q_auto,g_auto` delivery URLs):
+Until both Cloudinary and Gemini are configured, the app shows a setup banner and upload/analysis endpoints return `503` with the missing variables. Settings shows live integration status.
 
-```bash
-npm run seed:cloudinary
-```
+## Getting evidence in
 
-This uploads `public/demo/*.jpg` as `impactlens/demo/<project>/<file>` and writes `src/data/cloudinary-seed.json`. The Settings page shows which integrations are live.
+- **Upload** field photos or videos on **Media Library** (JPG, PNG, WEBP, MP4, MOV, ≤100 MB). Optionally assign a project and site location — both are passed to the AI as uploader context. Capture dates come from EXIF when present.
+- **Import from Cloudinary** by pasting a delivery URL; the original public ID is preserved.
+- **Import sample evidence** (Overview or Settings): uploads 30 bundled photos from three Indian projects to your Cloudinary account and runs real Gemini analysis on each. Only project, site and capture date are supplied; titles, descriptions, tags, stages and impact areas are generated from the pixels.
+- **New Project** on the Overview creates additional projects.
+
+If analysis fails (rate limit, network), the asset stays in Cloudinary and can be retried or tagged manually from its evidence page.
 
 ## Cloudinary usage
 
-- Originals are uploaded untouched (signed `upload_stream`, unsigned preset, or remote URL import).
+- Originals are uploaded untouched (signed `upload_stream` with `image_metadata`, or unsigned preset).
 - Thumbnails: `c_fill,g_auto,w_640,h_420,f_auto,q_auto` (smart crop keeps the subject).
 - Display: `c_limit,w_1600,f_auto,q_auto`; videos get a generated poster frame (`so_1`) and `q_auto,f_auto:video` delivery.
-- AI analysis receives a Cloudinary-derived frame (`c_limit,w_1024,f_jpg`) — never a re-upload.
+- AI analysis receives a Cloudinary-derived frame (`c_limit,w_1024,f_jpg`, or `so_2` for video) — never a re-upload.
 - Every evidence record lists its public ID, original URL and derived transformations for traceability.
 
 ## API
 
 | Route | Purpose |
 | --- | --- |
-| `POST /api/upload` | multipart file or `{ url, projectId }` import → pending asset |
-| `POST /api/analyze` | `{ assetId }` → AI metadata (schema-validated); `{ assetId, metadata }` for manual tagging |
-| `GET /api/search?q=` | natural-language evidence search with query interpretation |
-| `POST /api/compare` | `{ beforeId, afterId }` → visual-change insights |
+| `POST /api/upload` | multipart `file` (+ `projectId`, `location`) or JSON `{ url, projectId, location }` → pending asset in Cloudinary |
+| `POST /api/analyze` | `{ assetId }` → Gemini metadata (schema-normalized); `{ assetId, metadata }` saves manual tags |
+| `POST /api/search` | `{ query }` → natural-language evidence search with query interpretation |
+| `POST /api/compare` | `{ beforeId, afterId }` → two-image visual change analysis |
 | `POST /api/report` / `GET /api/report?id=` | generate / fetch impact reports |
+| `GET/POST /api/projects` | list / create projects |
+| `GET/POST /api/samples` | sample import status / import one sample |
 
-## 2-minute demo script
+## Demo walkthrough (2 minutes)
 
-1. **Overview** (`/`) — portfolio KPIs, recent activity, three active projects.
-2. **Media Library** (`/media`) — drop a photo (e.g. `borewell_handpump_osian.jpg`). Watch it upload, get analyzed and indexed with tags, stage, location and impact areas. Click **Open evidence** to see the traceability chain: AI insight → evidence record → Cloudinary asset → original media.
-3. **Evidence Search** (`/search`) — try *"Show me water infrastructure projects in Rajasthan"*. Note the query interpretation (location, category, concepts) and relevance scores.
-4. **Compare** (`/compare`) — pick Rajasthan Water Access, drag the before/after slider, read the AI comparison insights.
-5. **Impact Reports** (`/reports`) — generate a report for Rajasthan Water Access. Every section cites source evidence; **Export Report** prints a clean PDF.
+1. **Overview** — KPIs computed from indexed evidence, recent activity, projects.
+2. **Media Library** — drop a field photo, watch it upload to Cloudinary, get analyzed and indexed. **Open evidence** shows the traceability chain: AI insight → evidence record → Cloudinary asset → original media.
+3. **Evidence Search** — *"Show me water infrastructure projects in Rajasthan"*. Note the query interpretation and relevance scores.
+4. **Compare** — pick a project, drag the before/after slider, read Gemini's comparison of the two frames.
+5. **Impact Reports** — generate a report; every section cites source evidence. **Export Report** prints a clean PDF.
 
 ## Responsible AI
 
@@ -65,6 +65,6 @@ The analysis prompt only describes what is visible. ImpactLens never invents ben
 
 ## Stack
 
-Next.js (App Router) · TypeScript · Tailwind CSS · Radix/shadcn-style UI · Lucide · Cloudinary · Gemini / OpenAI (optional) · Supabase (optional)
+Next.js 16 (App Router) · TypeScript · Tailwind CSS v4 · Radix UI · Lucide · Cloudinary · Gemini (or OpenAI) · SQLite (`node:sqlite`)
 
-Demo images: Wikimedia Commons contributors (used as illustrative field media).
+Sample images: Wikimedia Commons contributors.
