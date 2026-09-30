@@ -2,6 +2,7 @@ import { ArrowLeft, ChevronRight, ExternalLink, FileText, Search, SplitSquareHor
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AIAnalysisPanel } from "@/components/AIAnalysisPanel";
+import { AssetActions } from "@/components/AssetActions";
 import { CloudinaryLabel, MediaCard } from "@/components/MediaCard";
 import { ManualTagForm } from "@/components/ManualTagForm";
 import { MediaThumb } from "@/components/MediaThumb";
@@ -9,18 +10,19 @@ import { SourceTrace } from "@/components/SourceTrace";
 import { Button } from "@/components/ui/button";
 import { Panel, PanelHeader } from "@/components/ui/panel";
 import { displayUrl } from "@/lib/media-url";
+import { fmtDate } from "@/lib/utils";
 import { getAsset, getProject, listProjects, projectAssets } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
-export default async function AssetPage({ params, searchParams }: PageProps<"/media/[id]">) {
+export default async function AssetPage({ params }: PageProps<"/media/[id]">) {
   const { id } = await params;
-  const sp = await searchParams;
   const asset = await getAsset(id);
   if (!asset) notFound();
   const project = asset.projectId ? getProject(asset.projectId) : null;
   const related = project ? (await projectAssets(project.id)).filter((a) => a.id !== asset.id).slice(0, 3) : [];
-  const needsTags = asset.status === "analysis_failed" || asset.status === "uploaded" || sp.tag === "1";
+  const needsTags = asset.status !== "indexed";
+  const projects = listProjects();
 
   return (
     <div className="page-in">
@@ -69,23 +71,31 @@ export default async function AssetPage({ params, searchParams }: PageProps<"/me
         </div>
 
         <div className="space-y-6">
+          <div className="no-print">
+            <AssetActions asset={asset} projects={projects} />
+          </div>
           <Panel className="p-5">
-            {needsTags && asset.status !== "indexed" ? (
+            {needsTags ? (
               <div>
-                <div className="mb-1 text-[15px] font-medium text-warning">AI analysis unavailable</div>
-                <p className="mb-5 text-[13px] text-muted">The asset is still saved and can be manually tagged.</p>
-                <ManualTagForm asset={asset} projects={listProjects()} />
+                <div className="mb-1 text-[15px] font-medium text-warning">Needs tagging</div>
+                <p className="mb-5 text-[13px] text-muted">
+                  {asset.status === "analyzing"
+                    ? "Analysis is still running. Refresh in a moment, or tag the evidence yourself."
+                    : "AI analysis did not complete for this asset. Re-analyze it or add the metadata below."}
+                </p>
+                <ManualTagForm asset={asset} projects={projects} />
               </div>
             ) : (
-              <AIAnalysisPanel asset={asset} />
+              <>
+                <AIAnalysisPanel asset={asset} />
+                {asset.editedAt && (
+                  <p className="mt-4 border-t border-line pt-3 font-mono text-[11px] text-subtle">
+                    Edited by your team · {fmtDate(asset.editedAt)}
+                  </p>
+                )}
+              </>
             )}
           </Panel>
-          {needsTags && asset.status === "indexed" && (
-            <Panel className="p-5">
-              <div className="mb-4 text-[14px] font-medium">Edit tags</div>
-              <ManualTagForm asset={asset} projects={listProjects()} />
-            </Panel>
-          )}
 
           <div className="no-print grid grid-cols-1 gap-2 sm:grid-cols-3">
             <Button variant="secondary" asChild><Link href={`/compare?project=${project?.slug ?? ""}&after=${asset.id}`}><SplitSquareHorizontal /> Compare</Link></Button>

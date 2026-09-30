@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Download, FileText, History, RotateCcw, Sparkles } from "lucide-react";
+import { AlertTriangle, Download, FileText, History, RotateCcw, Sparkles, Trash2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -92,6 +92,17 @@ export function ReportsWorkspace({
     }
   }, [params, generate]);
 
+  async function removeReport(id: string) {
+    const res = await fetch(`/api/report?id=${id}`, { method: "DELETE" }).catch(() => null);
+    if (!res?.ok) return toast.error("Could not delete report");
+    setHistory((h) => h.filter((r) => r.id !== id));
+    if (report?.id === id) {
+      setReport(null);
+      router.replace("/reports", { scroll: false });
+    }
+    toast.success("Report deleted");
+  }
+
   const states = STEPS.map((label, i): { label: string; state: StepState } => ({
     label,
     state: step > i ? "done" : step === i ? "active" : "pending",
@@ -154,7 +165,7 @@ export function ReportsWorkspace({
           {history.length ? (
             <ul className="scrollbar-thin mt-3 max-h-56 space-y-1 overflow-auto">
               {history.map((r) => (
-                <li key={r.id}>
+                <li key={r.id} className="group relative">
                   <button
                     onClick={() => {
                       setReport(r);
@@ -162,12 +173,19 @@ export function ReportsWorkspace({
                       router.replace(`/reports?id=${r.id}`, { scroll: false });
                     }}
                     className={cn(
-                      "w-full rounded-md px-2.5 py-2 text-left transition-colors hover:bg-white/[0.04]",
+                      "w-full rounded-md px-2.5 py-2 pr-9 text-left transition-colors hover:bg-white/[0.04]",
                       report?.id === r.id && "bg-white/[0.06]",
                     )}
                   >
                     <div className="truncate text-[13px]">{r.project}</div>
                     <div className="font-mono text-[11px] text-subtle">#{r.id} · {timeAgo(r.generatedAt)}</div>
+                  </button>
+                  <button
+                    onClick={() => removeReport(r.id)}
+                    aria-label={`Delete report ${r.id}`}
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-1.5 text-subtle opacity-0 transition-all hover:bg-danger/10 hover:text-danger focus-visible:opacity-100 group-hover:opacity-100"
+                  >
+                    <Trash2 className="size-3.5" />
                   </button>
                 </li>
               ))}
